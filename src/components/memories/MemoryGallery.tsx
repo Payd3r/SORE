@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Image, X, ZoomIn, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Calendar, MapPin, Image, X, ZoomIn, ChevronLeft, ChevronRight, Download, Grid, LayoutMasonry } from 'lucide-react';
 
 type MemoryGalleryProps = {
   images: ImageType[];
@@ -60,14 +60,18 @@ export const MemoryGallery: React.FC<MemoryGalleryProps> = ({ images, title }) =
             variant={viewMode === 'grid' ? 'default' : 'outline'} 
             size="sm" 
             onClick={() => setViewMode('grid')}
+            className="flex items-center"
           >
+            <Grid className="h-4 w-4 mr-2" />
             Griglia
           </Button>
           <Button 
             variant={viewMode === 'masonry' ? 'default' : 'outline'} 
             size="sm" 
             onClick={() => setViewMode('masonry')}
+            className="flex items-center"
           >
+            <LayoutMasonry className="h-4 w-4 mr-2" />
             Mosaico
           </Button>
         </div>

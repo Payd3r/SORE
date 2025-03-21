@@ -48,29 +48,35 @@ export const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ images }) => {
 
         {days.map(day => (
           <TabsContent key={day} value={day} className="mt-4">
-            <div className="relative border-l-2 border-primary/30 ml-2 pl-8 md:ml-4 md:pl-12 space-y-8">
-              {imagesByDay[day].map((image, i) => (
-                <div 
-                  key={image.id} 
-                  className="relative mb-10 fade-in-slide"
-                  style={{ animationDelay: `${i * 100}ms` }}
-                >
-                  <div className="absolute -left-14 md:-left-16 top-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <ImageIcon className="h-5 w-5 text-primary" />
-                  </div>
-                  
-                  <time className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-                    <Clock className="inline mr-1 h-4 w-4" />
-                    {format(image.date, 'HH:mm')}
-                  </time>
-                  
-                  <div className="bg-card rounded-lg overflow-hidden shadow-md transition-all hover:shadow-lg">
-                    <div className="relative aspect-video">
+            <div className="relative border-l-2 border-primary/30 ml-2 pl-8 md:ml-4 md:pl-12">
+              {/* Day header */}
+              <div className="mb-6">
+                <div className="absolute -left-14 md:-left-16 top-0 w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-medium">
+                  {format(new Date(day), 'dd MMMM yyyy')}
+                </h3>
+              </div>
+              
+              {/* Masonry layout for images */}
+              <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4 mb-10">
+                {imagesByDay[day].map((image, i) => (
+                  <div 
+                    key={image.id} 
+                    className="relative break-inside-avoid mb-4 fade-in-slide bg-card rounded-lg overflow-hidden shadow-md transition-all hover:shadow-lg"
+                    style={{ animationDelay: `${i * 100}ms` }}
+                  >
+                    <div className="relative">
                       <img 
                         src={image.url} 
                         alt={image.name} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto"
                       />
+                      <time className="absolute top-2 left-2 text-xs font-medium bg-black/50 text-white px-2 py-1 rounded-full flex items-center">
+                        <Clock className="inline mr-1 h-3 w-3" />
+                        {format(image.date, 'HH:mm')}
+                      </time>
                     </div>
                     <div className="p-4">
                       <div className="font-medium mb-1">{image.name}</div>
@@ -82,8 +88,8 @@ export const MemoryTimeline: React.FC<MemoryTimelineProps> = ({ images }) => {
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </TabsContent>
         ))}
