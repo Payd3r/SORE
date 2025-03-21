@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/context/theme-context';
 import { AppLayout } from '@/components/layout/AppLayout';
 import HomePage from './pages/HomePage';
 import MemoriesPage from './pages/MemoriesPage';
+import MemoryDetailPage from './pages/MemoryDetailPage';
 import GalleryPage from './pages/GalleryPage';
 import IdeasPage from './pages/IdeasPage';
 import MapPage from './pages/MapPage';
@@ -31,6 +32,7 @@ const App = () => (
                 <Route index element={<Navigate to="/home" replace />} />
                 <Route path="home" element={<HomePage />} />
                 <Route path="memories" element={<MemoriesPage />} />
+                <Route path="memories/:id" element={<MemoryDetailPage />} />
                 <Route path="gallery" element={<GalleryPage />} />
                 <Route path="ideas" element={<IdeasPage />} />
                 <Route path="map" element={<MapPage />} />

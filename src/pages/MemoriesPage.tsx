@@ -27,7 +27,7 @@ import { Memory, MemoryType, EventTag } from '@/types';
 import { format } from 'date-fns';
 
 // Mock data for demonstration
-const mockMemories: Memory[] = [
+export const mockMemories: Memory[] = [
   {
     id: '1',
     type: 'travel',
