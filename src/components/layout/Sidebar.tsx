@@ -40,21 +40,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
     { to: '/recap', icon: <BarChart3 size={20} />, label: 'Recap' },
   ];
 
+  // Ensure that z-index values are properly set
   const sidebarClass = `
     fixed inset-y-0 left-0 z-50 w-64 bg-sidebar transition-transform duration-300 ease-in-out 
     border-r border-sidebar-border flex flex-col h-full
-    ${open ? 'translate-x-0' : isMobile ? '-translate-x-full' : 'translate-x-0'}
+    ${open ? 'translate-x-0' : '-translate-x-full'}
     ${isMobile ? 'shadow-xl' : ''}
   `;
 
   const overlayClass = `
     fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300
-    ${open && isMobile ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-  `;
-
-  const mainContentClass = `
-    ml-0 md:ml-64 transition-all duration-300
-    ${!isMobile && !open ? 'md:ml-0' : ''}
+    ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}
   `;
 
   const handleSignOut = async () => {
@@ -65,13 +61,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
     }
   };
 
+  const toggleSidebar = () => {
+    setOpen(!open);
+  };
+
   return (
     <>
-      {/* Mobile Hamburger Button */}
+      {/* Mobile Hamburger Button with improved positioning and z-index */}
       {isMobile && (
         <button 
           className="fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-primary-foreground shadow-md"
-          onClick={() => setOpen(!open)}
+          onClick={toggleSidebar}
           aria-label={open ? "Chiudi menu" : "Apri menu"}
           type="button"
         >
@@ -79,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         </button>
       )}
       
-      {/* Sidebar Overlay (Mobile) */}
+      {/* Sidebar Overlay (Mobile) - Make sure z-index is correct */}
       <div 
         className={overlayClass}
         onClick={() => setOpen(false)}
