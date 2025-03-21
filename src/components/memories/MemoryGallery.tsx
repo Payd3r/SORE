@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Image as ImageType } from '@/types';
 import { 
@@ -12,7 +11,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Image, X, ZoomIn, ChevronLeft, ChevronRight, Download, Grid, LayoutMasonry } from 'lucide-react';
+import { Calendar, MapPin, Image, X, ZoomIn, ChevronLeft, ChevronRight, Download, Grid, LayoutList } from 'lucide-react';
 
 type MemoryGalleryProps = {
   images: ImageType[];
@@ -71,7 +70,7 @@ export const MemoryGallery: React.FC<MemoryGalleryProps> = ({ images, title }) =
             onClick={() => setViewMode('masonry')}
             className="flex items-center"
           >
-            <LayoutMasonry className="h-4 w-4 mr-2" />
+            <LayoutList className="h-4 w-4 mr-2" />
             Mosaico
           </Button>
         </div>

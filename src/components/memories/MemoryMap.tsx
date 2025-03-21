@@ -6,7 +6,7 @@ import { GeoLocation, Image } from '@/types';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { MapPin, Image as ImageIcon, Info } from 'lucide-react';
+import { MapPin, Image as ImageIcon, Info, Calendar } from 'lucide-react';
 
 type MemoryMapProps = {
   location: GeoLocation;
