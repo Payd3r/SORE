@@ -41,8 +41,8 @@ export const AppLayout: React.FC = () => {
     <div className="flex h-screen overflow-hidden">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
-      <main className="flex-1 overflow-y-auto transform transition-all duration-300 ml-0 md:ml-64">
-        <div className="p-4 md:p-6 h-full">
+      <main className="flex-1 overflow-y-auto transform transition-all duration-300 ml-0 md:ml-64 w-full">
+        <div className="p-2 sm:p-4 md:p-6 h-full pt-14 md:pt-4">
           <Outlet />
         </div>
       </main>

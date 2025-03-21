@@ -10,7 +10,8 @@ import {
   Heart, 
   Share2, 
   BookMarked,
-  Edit
+  Edit,
+  MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +21,13 @@ import { format } from 'date-fns';
 import { MemoryMap } from '@/components/memories/MemoryMap';
 import { MemoryTimeline } from '@/components/memories/MemoryTimeline';
 import { MemoryGallery } from '@/components/memories/MemoryGallery';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // This would be fetched from a real API
 // Mock data to match the one from MemoriesPage
@@ -30,6 +38,7 @@ const MemoryDetailPage: React.FC = () => {
   const [memory, setMemory] = useState<Memory | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Simulate API call to fetch memory details
@@ -102,7 +111,7 @@ const MemoryDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[50vh]">
+      <div className="container mx-auto px-2 sm:px-4 py-6 flex items-center justify-center min-h-[50vh]">
         <div className="animate-pulse space-y-6 w-full max-w-3xl">
           <div className="h-8 bg-muted rounded w-1/3"></div>
           <div className="h-72 bg-muted rounded"></div>
@@ -115,7 +124,7 @@ const MemoryDetailPage: React.FC = () => {
 
   if (!memory) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center min-h-[50vh] flex flex-col items-center justify-center">
+      <div className="container mx-auto px-2 sm:px-4 py-6 text-center min-h-[50vh] flex flex-col items-center justify-center">
         <BookMarked className="h-16 w-16 text-muted-foreground mb-4" />
         <h2 className="text-2xl font-bold mb-2">Ricordo non trovato</h2>
         <p className="text-muted-foreground mb-6">
@@ -129,17 +138,17 @@ const MemoryDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 animate-fade-in">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 animate-fade-in max-w-5xl">
       {/* Header with back button */}
-      <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild className="mb-4">
+      <div className="mb-4 sm:mb-6">
+        <Button variant="ghost" size="sm" asChild className="mb-2 sm:mb-4">
           <Link to="/memories" className="flex items-center">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Torna ai ricordi
           </Link>
         </Button>
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col space-y-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge className={typeStyles[memory.type].color}>
@@ -156,11 +165,11 @@ const MemoryDetailPage: React.FC = () => {
               )}
             </div>
             
-            <h1 className="text-4xl font-bold">{memory.title}</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">{memory.title}</h1>
             
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-muted-foreground text-xs sm:text-sm">
               <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1.5" />
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 <span>
                   {format(memory.startDate, 'dd/MM/yyyy')}
                   {memory.endDate && ` - ${format(memory.endDate, 'dd/MM/yyyy')}`}
@@ -169,14 +178,14 @@ const MemoryDetailPage: React.FC = () => {
               
               {memory.location?.name && (
                 <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1.5" />
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span>{memory.location.name}</span>
                 </div>
               )}
               
               {memory.song && (
                 <div className="flex items-center">
-                  <Music2 className="h-4 w-4 mr-1.5" />
+                  <Music2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span>{memory.song}</span>
                 </div>
               )}
@@ -184,26 +193,53 @@ const MemoryDetailPage: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Heart className="mr-1 h-4 w-4" />
-              Aggiungi ai preferiti
-            </Button>
-            <Button variant="outline" size="sm">
-              <Share2 className="mr-1 h-4 w-4" />
-              Condividi
-            </Button>
-            <Button size="sm">
-              <Edit className="mr-1 h-4 w-4" />
-              Modifica
-            </Button>
+            {isMobile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="ml-2">Azioni</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem>
+                    <Heart className="h-4 w-4 mr-2" />
+                    <span>Aggiungi ai preferiti</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    <span>Condividi</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Edit className="h-4 w-4 mr-2" />
+                    <span>Modifica</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="outline" size="sm">
+                  <Heart className="mr-1 h-4 w-4" />
+                  Aggiungi ai preferiti
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Share2 className="mr-1 h-4 w-4" />
+                  Condividi
+                </Button>
+                <Button size="sm">
+                  <Edit className="mr-1 h-4 w-4" />
+                  Modifica
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Featured image */}
-      <div className="mb-8 rounded-lg overflow-hidden shadow-md">
+      <div className="mb-6 rounded-lg overflow-hidden shadow-md">
         {memory.images.length > 0 ? (
-          <div className="aspect-[21/9] relative">
+          <div className="aspect-video relative">
             <img 
               src={memory.images[0].url} 
               alt={memory.title}
@@ -217,7 +253,7 @@ const MemoryDetailPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="aspect-[21/9] bg-muted flex items-center justify-center">
+          <div className="aspect-video bg-muted flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <BookMarked className="h-12 w-12 mx-auto mb-2" />
               <p>Nessuna immagine disponibile</p>
@@ -227,14 +263,14 @@ const MemoryDetailPage: React.FC = () => {
       </div>
 
       {/* Tabs for different views */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-10">
-        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 sm:mb-10">
+        <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="overview">Panoramica</TabsTrigger>
           <TabsTrigger value="timeline">Cronologia</TabsTrigger>
           <TabsTrigger value="gallery">Galleria</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-10 animate-fade-in">
+        <TabsContent value="overview" className="space-y-6 sm:space-y-10 animate-fade-in">
           {/* Memory details card */}
           <Card>
             <CardContent className="pt-6">
@@ -242,7 +278,7 @@ const MemoryDetailPage: React.FC = () => {
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-medium mb-2">Dettagli del ricordo</h3>
-                    <dl className="grid grid-cols-[120px_1fr] gap-2">
+                    <dl className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2 text-sm">
                       <dt className="text-muted-foreground">Tipo:</dt>
                       <dd>{typeStyles[memory.type].label}</dd>
                       

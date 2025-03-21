@@ -95,10 +95,15 @@
   body {
     @apply bg-background text-foreground antialiased transition-colors duration-300;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
     scroll-behavior: smooth;
+  }
+  
+  input, textarea, button, select, a {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -144,22 +149,30 @@
   }
 
   .page-container {
-    @apply container mx-auto px-4 py-8 sm:px-6 lg:px-8 transition-all animate-fade-in;
+    @apply container mx-auto px-2 sm:px-4 py-4 sm:py-8 transition-all animate-fade-in;
   }
 
   .page-header {
-    @apply mb-8 text-4xl font-bold tracking-tight;
+    @apply mb-4 sm:mb-8 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight;
   }
 
   .page-description {
-    @apply mt-4 text-lg text-muted-foreground;
+    @apply mt-2 sm:mt-4 text-base sm:text-lg text-muted-foreground;
+  }
+  
+  .mobile-safe-area {
+    @apply pt-14 md:pt-0;
+  }
+  
+  .mobile-safe-button {
+    @apply text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2;
   }
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -233,4 +246,16 @@
   opacity: 0;
   transform: translateY(-10px);
   transition: opacity 300ms, transform 300ms;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  button, .button {
+    min-height: 40px;
+  }
 }

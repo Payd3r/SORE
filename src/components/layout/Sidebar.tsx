@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   if (!user) return null;
 
   const navItems = [
-    { to: '/', icon: <Home size={20} />, label: 'Home' },
+    { to: '/home', icon: <Home size={20} />, label: 'Home' },
     { to: '/memories', icon: <BookMarked size={20} />, label: 'Ricordi' },
     { to: '/gallery', icon: <Image size={20} />, label: 'Galleria' },
     { to: '/ideas', icon: <Lightbulb size={20} />, label: 'Idee' },
@@ -72,6 +72,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         <button 
           className="fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-primary-foreground shadow-md"
           onClick={() => setOpen(!open)}
+          aria-label={open ? "Chiudi menu" : "Apri menu"}
+          type="button"
         >
           {open ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -129,6 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
                       : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     }
                   `}
+                  onClick={() => isMobile && setOpen(false)}
                 >
                   <span className="mr-3">{item.icon}</span>
                   <span>{item.label}</span>
@@ -144,6 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
             <NavLink 
               to="/settings" 
               className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
+              onClick={() => isMobile && setOpen(false)}
             >
               <Settings size={20} className="mr-3" />
               <span>Impostazioni</span>

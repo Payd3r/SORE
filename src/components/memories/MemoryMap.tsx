@@ -3,10 +3,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { GeoLocation, Image } from '@/types';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { MapPin, Image as ImageIcon, Info, Calendar } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type MemoryMapProps = {
   location: GeoLocation;
@@ -19,6 +20,7 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title })
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapBoxToken, setMapBoxToken] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+  const isMobile = useIsMobile();
 
   // Filter only images with location data
   const imagesWithLocation = images.filter(img => img.location);
@@ -99,7 +101,7 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title })
         }
       });
       
-      newMap.fitBounds(bounds, { padding: 70, maxZoom: 15 });
+      newMap.fitBounds(bounds, { padding: isMobile ? 30 : 70, maxZoom: 15 });
     }
 
     map.current = newMap;
@@ -107,13 +109,13 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title })
     return () => {
       newMap.remove();
     };
-  }, [location, images, mapBoxToken, title, imagesWithLocation]);
+  }, [location, images, mapBoxToken, title, imagesWithLocation, isMobile]);
 
   if (!location) {
     return (
       <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
         <div className="text-center text-muted-foreground">
-          <MapPin className="h-10 w-10 mx-auto mb-2" />
+          <MapPin className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2" />
           <p>Nessuna posizione disponibile per questo ricordo</p>
         </div>
       </div>
@@ -121,17 +123,18 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title })
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <MapPin className="h-5 w-5 mr-2 text-primary" />
-          <h2 className="text-2xl font-bold">Posizione</h2>
+          <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary" />
+          <h2 className="text-xl sm:text-2xl font-bold">Posizione</h2>
         </div>
         
         {imagesWithLocation.length > 0 && (
-          <div className="text-sm text-muted-foreground flex items-center">
-            <Info className="h-4 w-4 mr-1" />
-            <span>Clicca sui marker per visualizzare le immagini</span>
+          <div className="text-xs sm:text-sm text-muted-foreground flex items-center">
+            <Info className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Clicca sui marker per visualizzare le immagini</span>
+            <span className="sm:hidden">Tocca i marker</span>
           </div>
         )}
       </div>
@@ -141,7 +144,7 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title })
       </div>
 
       <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl p-2 sm:p-6">
           {selectedImage && (
             <div className="space-y-4">
               <div className="relative aspect-video rounded-md overflow-hidden">
@@ -153,14 +156,14 @@ export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title })
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold">{selectedImage.name}</h3>
-                <div className="flex items-center text-muted-foreground text-sm">
-                  <Calendar className="h-4 w-4 mr-1" />
+                <h3 className="text-base sm:text-lg font-semibold">{selectedImage.name}</h3>
+                <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span>{format(selectedImage.date, 'dd/MM/yyyy HH:mm')}</span>
                 </div>
                 {selectedImage.location?.name && (
-                  <div className="flex items-center text-muted-foreground text-sm">
-                    <MapPin className="h-4 w-4 mr-1" />
+                  <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     <span>{selectedImage.location.name}</span>
                   </div>
                 )}
