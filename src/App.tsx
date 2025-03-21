@@ -23,20 +23,22 @@ const App = () => (
     <ThemeProvider>
       <AuthProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/" element={<AppLayout />}>
-              <Route index element={<Navigate to="/home" replace />} />
-              <Route path="home" element={<HomePage />} />
-              <Route path="memories" element={<MemoriesPage />} />
-              <Route path="gallery" element={<GalleryPage />} />
-              <Route path="ideas" element={<IdeasPage />} />
-              <Route path="map" element={<MapPage />} />
-              <Route path="recap" element={<RecapPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
+          <BrowserRouter>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<AppLayout />}>
+                <Route index element={<Navigate to="/home" replace />} />
+                <Route path="home" element={<HomePage />} />
+                <Route path="memories" element={<MemoriesPage />} />
+                <Route path="gallery" element={<GalleryPage />} />
+                <Route path="ideas" element={<IdeasPage />} />
+                <Route path="map" element={<MapPage />} />
+                <Route path="recap" element={<RecapPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>
