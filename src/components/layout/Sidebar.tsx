@@ -1,161 +1,133 @@
 
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  X, Home, BookMarked, Image, Lightbulb, 
-  MapPin, BarChart3, LogOut, User, Settings,
-  Heart
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/auth-context';
-import { useTheme } from '@/context/theme-context';
-import { ThemeToggle } from './ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  Home,
+  BookMarked,
+  ImageIcon,
+  Lightbulb,
+  Map,
+  PieChart,
+  LogOut,
+  User,
+  X
+} from 'lucide-react';
 
-interface SidebarProps {
+type SidebarProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
-}
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
+  const { user, logout } = useAuth();
   const location = useLocation();
-  const isMobile = useIsMobile();
-  const { user, couple, signOut } = useAuth();
-  const { theme } = useTheme();
   
-  if (!user) return null;
-
+  // Define the navigation items
   const navItems = [
-    { to: '/home', icon: <Home size={20} />, label: 'Home' },
-    { to: '/memories', icon: <BookMarked size={20} />, label: 'Ricordi' },
-    { to: '/gallery', icon: <Image size={20} />, label: 'Galleria' },
-    { to: '/ideas', icon: <Lightbulb size={20} />, label: 'Idee' },
-    { to: '/map', icon: <MapPin size={20} />, label: 'Mappa' },
-    { to: '/recap', icon: <BarChart3 size={20} />, label: 'Recap' },
-    { to: '/profile', icon: <User size={20} />, label: 'Profilo' },
+    { name: 'Home', path: '/home', icon: <Home className="w-5 h-5" /> },
+    { name: 'Ricordi', path: '/memories', icon: <BookMarked className="w-5 h-5" /> },
+    { name: 'Galleria', path: '/gallery', icon: <ImageIcon className="w-5 h-5" /> },
+    { name: 'Idee', path: '/ideas', icon: <Lightbulb className="w-5 h-5" /> },
+    { name: 'Mappa', path: '/map', icon: <Map className="w-5 h-5" /> },
+    { name: 'Recap', path: '/recap', icon: <PieChart className="w-5 h-5" /> },
   ];
 
-  // Ensure that z-index values are properly set
-  const sidebarClass = `
-    fixed inset-y-0 left-0 z-50 w-64 bg-background transition-transform duration-300 ease-in-out 
-    border-r border-border flex flex-col h-full
-    ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-    ${isMobile && 'shadow-xl'}
-  `;
-
-  const overlayClass = `
-    fixed inset-0 z-40 bg-black/50 transition-opacity duration-300
-    ${open ? 'opacity-100 md:opacity-0 md:pointer-events-none' : 'opacity-0 pointer-events-none'}
-  `;
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      console.log("User signed out");
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
+  // Extract initials from user name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
-    <>
-      {/* Sidebar Overlay (Mobile) */}
-      <div 
-        className={overlayClass}
-        onClick={() => setOpen(false)}
-        data-testid="sidebar-overlay"
-      />
-
-      {/* Sidebar */}
-      <div className={sidebarClass} data-testid="sidebar">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h1 className="text-xl font-bold flex items-center">
-            <Heart className="h-5 w-5 mr-2 text-pink-500" />
-            {couple ? couple.name : 'Ricordi'}
-          </h1>
-          {isMobile && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setOpen(false)}
-              aria-label="Chiudi menu"
-            >
-              <X size={20} />
-            </Button>
-          )}
-        </div>
-
-        {/* User Profile */}
-        <div className="flex items-center space-x-3 p-4 border-b border-border">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            {user.avatar ? (
-              <img 
-                src={user.avatar} 
-                alt={user.name} 
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <User size={20} />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">
-              {user.name}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user.email}
-            </p>
+    <aside 
+      className={`fixed inset-y-0 left-0 z-30 w-64 bg-background border-r transition-transform duration-300 ease-in-out 
+        ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+    >
+      <div className="flex flex-col h-full">
+        {/* Close button - only visible on mobile */}
+        <button 
+          className="md:hidden absolute top-4 right-4 p-1 rounded-full hover:bg-muted"
+          onClick={() => setOpen(false)}
+          aria-label="Close sidebar"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        
+        {/* Header */}
+        <div className="p-4">
+          <div className="flex items-center space-x-3 mt-8 md:mt-0">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={user?.avatar} alt={user?.name} />
+              <AvatarFallback>{user?.name ? getInitials(user.name) : 'U'}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="font-medium text-lg">{user?.name}</h2>
+            </div>
           </div>
         </div>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) => `
-                    flex items-center px-4 py-3 text-sm font-medium rounded-md 
-                    transition-colors duration-200 group
-                    ${isActive 
-                      ? 'bg-primary/10 text-primary' 
-                      : 'text-foreground hover:bg-muted hover:text-foreground'}
-                  `}
-                  onClick={() => isMobile && setOpen(false)}
-                >
-                  <span className="mr-3">{item.icon}</span>
-                  <span>{item.label}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Footer Actions */}
-        <div className="p-4 border-t border-border space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <NavLink 
-              to="/profile" 
-              className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-foreground hover:bg-muted hover:text-foreground transition-colors duration-200"
-              onClick={() => isMobile && setOpen(false)}
+        
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `
+                flex items-center px-4 py-3 rounded-lg transition-colors
+                ${isActive 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-muted'
+                }
+              `}
+              onClick={() => {
+                if (window.innerWidth < 768) {
+                  setOpen(false);
+                }
+              }}
             >
-              <Settings size={20} className="mr-3" />
-              <span>Impostazioni</span>
+              {item.icon}
+              <span className="ml-3">{item.name}</span>
             </NavLink>
-            <ThemeToggle />
-          </div>
+          ))}
+        </nav>
+        
+        {/* Footer */}
+        <div className="p-4 border-t">
+          <NavLink
+            to="/profile"
+            className={({ isActive }) => `
+              flex items-center px-4 py-3 rounded-lg transition-colors mb-2
+              ${isActive 
+                ? 'bg-primary text-primary-foreground' 
+                : 'hover:bg-muted'
+              }
+            `}
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setOpen(false);
+              }
+            }}
+          >
+            <User className="w-5 h-5" />
+            <span className="ml-3">Profilo</span>
+          </NavLink>
           
           <Button 
             variant="outline" 
-            className="w-full flex items-center justify-center"
-            onClick={handleSignOut}
+            className="w-full justify-start"
+            onClick={logout}
           >
-            <LogOut size={16} className="mr-2" />
-            <span>Disconnetti</span>
+            <LogOut className="w-5 h-5 mr-2" />
+            Logout
           </Button>
         </div>
       </div>
-    </>
+    </aside>
   );
 };

@@ -7,14 +7,15 @@ import {
   Calendar, 
   MapPin, 
   Music2, 
-  Heart, 
   Share2, 
   BookMarked,
   Edit,
-  MoreHorizontal,
   Trash,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Image,
+  User,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,14 +25,17 @@ import { format } from 'date-fns';
 import { MemoryMap } from '@/components/memories/MemoryMap';
 import { MemoryTimeline } from '@/components/memories/MemoryTimeline';
 import { MemoryGallery } from '@/components/memories/MemoryGallery';
-import MemoryModal from '@/components/modals/MemoryModal';
+import MemoryFormModal from '@/components/modals/MemoryFormModal';
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useIsMobile } from '@/hooks/use-mobile';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/components/ui/use-toast';
 
 // This would be fetched from a real API
@@ -43,11 +47,10 @@ const MemoryDetailPage: React.FC = () => {
   const [memory, setMemory] = useState<Memory | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     // Simulate API call to fetch memory details
@@ -113,7 +116,9 @@ const MemoryDetailPage: React.FC = () => {
 
   // Handle delete memory
   const handleDeleteMemory = () => {
-    console.log("Memory deleted:", memory?.id);
+    if (!memory) return;
+    
+    console.log("Memory deleted:", memory.id);
     
     // In a real app, this would be an API call
     toast({
@@ -126,20 +131,23 @@ const MemoryDetailPage: React.FC = () => {
     window.location.href = "/memories";
   };
 
-  // Memory type styles (same as in MemoriesPage for consistency)
-  const typeStyles: Record<MemoryType, { color: string, icon: React.ReactNode, label: string }> = {
+  // Memory type styles 
+  const typeStyles: Record<MemoryType, { color: string, icon: React.ReactNode, label: string, bgColor: string }> = {
     'travel': { 
-      color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300', 
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/10',
       icon: <BookMarked className="h-5 w-5" />,
       label: 'Viaggio'
     },
     'event': { 
-      color: 'bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300', 
+      color: 'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300',
+      bgColor: 'bg-pink-50 dark:bg-pink-900/10',
       icon: <Calendar className="h-5 w-5" />,
       label: 'Evento'
     },
     'simple': { 
-      color: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300', 
+      color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-300',
+      bgColor: 'bg-green-50 dark:bg-green-900/10',
       icon: <MapPin className="h-5 w-5" />,
       label: 'Ricordo'
     }
@@ -214,17 +222,17 @@ const MemoryDetailPage: React.FC = () => {
   });
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 animate-fade-in max-w-5xl">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 animate-fade-in max-w-6xl">
       {/* Header with back button */}
-      <div className="mb-4 sm:mb-6">
-        <Button variant="ghost" size="sm" asChild className="mb-2 sm:mb-4">
+      <div className="mb-4 sm:mb-6 flex flex-col space-y-4">
+        <Button variant="ghost" size="sm" asChild className="self-start">
           <Link to="/memories" className="flex items-center">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Torna ai ricordi
           </Link>
         </Button>
         
-        <div className="flex flex-col space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge className={typeStyles[memory.type].color}>
@@ -241,11 +249,11 @@ const MemoryDetailPage: React.FC = () => {
               )}
             </div>
             
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">{memory.title}</h1>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold">{memory.title}</h1>
             
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-muted-foreground text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-muted-foreground text-sm">
               <div className="flex items-center">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <Calendar className="h-4 w-4 mr-1" />
                 <span>
                   {format(memory.startDate, 'dd/MM/yyyy')}
                   {memory.endDate && ` - ${format(memory.endDate, 'dd/MM/yyyy')}`}
@@ -254,89 +262,48 @@ const MemoryDetailPage: React.FC = () => {
               
               {memory.location?.name && (
                 <div className="flex items-center">
-                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <MapPin className="h-4 w-4 mr-1" />
                   <span>{memory.location.name}</span>
                 </div>
               )}
               
               {memory.song && (
                 <div className="flex items-center">
-                  <Music2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <Music2 className="h-4 w-4 mr-1" />
                   <span>{memory.song}</span>
                 </div>
               )}
               
               {memory.creatorName && (
                 <div className="flex items-center">
-                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <User className="h-4 w-4 mr-1" />
                   <span>Creato da {memory.creatorName}</span>
                 </div>
               )}
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            {isMobile ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="ml-2">Azioni</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => {}}>
-                    <Heart className="h-4 w-4 mr-2" />
-                    <span>Aggiungi ai preferiti</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => {}}>
-                    <Share2 className="h-4 w-4 mr-2" />
-                    <span>Condividi</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setEditModalOpen(true)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    <span>Modifica</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setDeleteConfirmOpen(true)} className="text-destructive focus:text-destructive">
-                    <Trash className="h-4 w-4 mr-2" />
-                    <span>Elimina</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Button variant="outline" size="sm">
-                  <Heart className="mr-1 h-4 w-4" />
-                  Aggiungi ai preferiti
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Share2 className="mr-1 h-4 w-4" />
-                  Condividi
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditModalOpen(true)}
-                >
-                  <Edit className="mr-1 h-4 w-4" />
-                  Modifica
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => setDeleteConfirmOpen(true)}
-                >
-                  <Trash className="mr-1 h-4 w-4" />
-                  Elimina
-                </Button>
-              </>
-            )}
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setEditModalOpen(true)}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Modifica
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Elimina
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Featured images carousel */}
-      <div className="mb-6 rounded-lg overflow-hidden shadow-md relative">
+      <div className="mb-8 rounded-xl overflow-hidden shadow-md relative">
         {memory.images.length > 0 ? (
           <div className="aspect-video relative group">
             <img 
@@ -345,10 +312,16 @@ const MemoryDetailPage: React.FC = () => {
               className="w-full h-full object-cover"
               style={{ objectPosition: 'center' }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent">
-              <div className="absolute bottom-4 left-4 text-white">
-                <div className="text-sm font-medium">{memory.images[currentImageIndex].name}</div>
-                <div className="text-xs opacity-80">{currentImageIndex + 1} di {memory.images.length}</div>
+            <div className="absolute inset-0 flex flex-col justify-end p-6 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+              <div className="text-white">
+                <div className="text-lg font-medium">{memory.images[currentImageIndex].name}</div>
+                <div className="text-sm opacity-90 flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {format(memory.images[currentImageIndex].date, 'dd/MM/yyyy HH:mm')}
+                </div>
+                <div className="mt-1 text-sm opacity-90">
+                  {currentImageIndex + 1} di {memory.images.length}
+                </div>
               </div>
             </div>
             
@@ -357,14 +330,14 @@ const MemoryDetailPage: React.FC = () => {
               <>
                 <button 
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </button>
                 <button 
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Next image"
                 >
                   <ChevronRight className="h-6 w-6" />
@@ -392,7 +365,7 @@ const MemoryDetailPage: React.FC = () => {
         ) : (
           <div className="aspect-video bg-muted flex items-center justify-center">
             <div className="text-center text-muted-foreground">
-              <BookMarked className="h-12 w-12 mx-auto mb-2" />
+              <Image className="h-12 w-12 mx-auto mb-2" />
               <p>Nessuna immagine disponibile</p>
             </div>
           </div>
@@ -400,118 +373,139 @@ const MemoryDetailPage: React.FC = () => {
       </div>
 
       {/* Tabs for different views */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 sm:mb-10">
-        <TabsList className="w-full grid grid-cols-3">
-          <TabsTrigger value="overview">Panoramica</TabsTrigger>
-          <TabsTrigger value="timeline">Cronologia</TabsTrigger>
-          <TabsTrigger value="gallery">Galleria</TabsTrigger>
-        </TabsList>
+      <div className="bg-card shadow-sm rounded-xl overflow-hidden mb-10">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full grid grid-cols-3 rounded-none bg-muted/50">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-background">Panoramica</TabsTrigger>
+            <TabsTrigger value="timeline" className="data-[state=active]:bg-background">Cronologia</TabsTrigger>
+            <TabsTrigger value="gallery" className="data-[state=active]:bg-background">Galleria</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="overview" className="space-y-6 sm:space-y-10 animate-fade-in">
-          {/* Memory details card */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Dettagli del ricordo</h3>
-                    <dl className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2 text-sm">
-                      <dt className="text-muted-foreground">Tipo:</dt>
-                      <dd>{typeStyles[memory.type].label}</dd>
-                      
-                      <dt className="text-muted-foreground">Data:</dt>
-                      <dd>
-                        {format(memory.startDate, 'dd/MM/yyyy')}
-                        {memory.endDate && ` - ${format(memory.endDate, 'dd/MM/yyyy')}`}
-                      </dd>
-                      
-                      {memory.eventTag && (
-                        <>
-                          <dt className="text-muted-foreground">Occasione:</dt>
-                          <dd>{tagStyles[memory.eventTag].label}</dd>
-                        </>
-                      )}
-                      
-                      {memory.location?.name && (
-                        <>
-                          <dt className="text-muted-foreground">Luogo:</dt>
-                          <dd>{memory.location.name}</dd>
-                        </>
-                      )}
-                      
-                      {memory.song && (
-                        <>
-                          <dt className="text-muted-foreground">Canzone:</dt>
-                          <dd>{memory.song}</dd>
-                        </>
-                      )}
-                      
-                      <dt className="text-muted-foreground">Immagini:</dt>
-                      <dd>{memory.images.length}</dd>
-                      
-                      <dt className="text-muted-foreground">Creato da:</dt>
-                      <dd>{memory.creatorName || 'Utente'}</dd>
-                      
-                      <dt className="text-muted-foreground">Creato il:</dt>
-                      <dd>{format(memory.createdAt, 'dd/MM/yyyy')}</dd>
-                    </dl>
-                  </div>
-                </div>
+          <TabsContent value="overview" className="p-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`rounded-xl p-6 ${typeStyles[memory.type].bgColor}`}>
+                <h3 className="text-xl font-semibold mb-4 flex items-center">
+                  {typeStyles[memory.type].icon}
+                  <span className="ml-2">Dettagli del ricordo</span>
+                </h3>
                 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium mb-2">Anteprima immagini</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {memory.images.slice(0, 6).map((image, index) => (
-                      <div 
-                        key={image.id} 
-                        className="relative aspect-square rounded-md overflow-hidden cursor-pointer"
-                        onClick={() => setActiveTab('gallery')}
-                      >
-                        <img 
-                          src={image.thumbnailUrl} 
-                          alt={`Immagine ${index + 1}`}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform"
-                        />
-                        {index === 5 && memory.images.length > 6 && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-medium">
-                            +{memory.images.length - 6}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-[120px_1fr] gap-2">
+                    <div className="text-muted-foreground">Tipo:</div>
+                    <div className="font-medium">{typeStyles[memory.type].label}</div>
+                    
+                    <div className="text-muted-foreground">Data:</div>
+                    <div>
+                      {format(memory.startDate, 'dd/MM/yyyy')}
+                      {memory.endDate && ` - ${format(memory.endDate, 'dd/MM/yyyy')}`}
+                    </div>
+                    
+                    {memory.eventTag && (
+                      <>
+                        <div className="text-muted-foreground">Occasione:</div>
+                        <div>{tagStyles[memory.eventTag].label}</div>
+                      </>
+                    )}
+                    
+                    {memory.location?.name && (
+                      <>
+                        <div className="text-muted-foreground">Luogo:</div>
+                        <div>{memory.location.name}</div>
+                      </>
+                    )}
+                    
+                    {memory.song && (
+                      <>
+                        <div className="text-muted-foreground">Canzone:</div>
+                        <div>{memory.song}</div>
+                      </>
+                    )}
+                    
+                    <div className="text-muted-foreground">Creato da:</div>
+                    <div>{memory.creatorName || 'Utente'}</div>
+                    
+                    <div className="text-muted-foreground">Creato il:</div>
+                    <div>{format(memory.createdAt, 'dd/MM/yyyy')}</div>
+                    
+                    <div className="text-muted-foreground">Immagini:</div>
+                    <div>{memory.images.length}</div>
                   </div>
                   
-                  <Button variant="outline" className="w-full" onClick={() => setActiveTab('gallery')}>
-                    Visualizza tutte le immagini
-                  </Button>
+                  {memory.description && (
+                    <div>
+                      <h4 className="text-muted-foreground mb-1">Descrizione:</h4>
+                      <p>{memory.description}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Map section */}
-          {locations.length > 0 && (
-            <div className="p-1">
-              <MemoryMap 
-                locations={locations} 
-                images={memory.images} 
-                title={memory.title} 
-              />
+              
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center">
+                  <Image className="h-5 w-5 mr-2" />
+                  Galleria fotografica
+                </h3>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  {memory.images.slice(0, 6).map((image, index) => (
+                    <div 
+                      key={image.id} 
+                      className="relative aspect-square rounded-md overflow-hidden cursor-pointer image-hover-zoom"
+                      onClick={() => setActiveTab('gallery')}
+                    >
+                      <img 
+                        src={image.thumbnailUrl} 
+                        alt={`Immagine ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {index === 5 && memory.images.length > 6 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-medium">
+                          +{memory.images.length - 6}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4" 
+                  onClick={() => setActiveTab('gallery')}
+                >
+                  Visualizza tutte le immagini
+                </Button>
+                
+                {locations.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-semibold mb-4 flex items-center">
+                      <MapPin className="h-5 w-5 mr-2" />
+                      Mappa dei luoghi
+                    </h3>
+                    <div className="h-48 rounded-md overflow-hidden">
+                      <MemoryMap 
+                        locations={locations} 
+                        images={memory.images} 
+                        title={memory.title} 
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="timeline" className="animate-fade-in">
-          <MemoryTimeline images={memory.images} />
-        </TabsContent>
+          <TabsContent value="timeline" className="p-6 animate-fade-in">
+            <MemoryTimeline images={memory.images} />
+          </TabsContent>
 
-        <TabsContent value="gallery" className="animate-fade-in">
-          <MemoryGallery images={memory.images} title={memory.title} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="gallery" className="p-6 animate-fade-in">
+            <MemoryGallery images={memory.images} title={memory.title} />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Memory edit modal */}
-      <MemoryModal
+      <MemoryFormModal
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         onSave={handleEditMemory}
@@ -519,25 +513,23 @@ const MemoryDetailPage: React.FC = () => {
         mode="edit"
       />
 
-      {/* Delete confirmation modal */}
-      {deleteConfirmOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg shadow-lg max-w-md w-full p-6 animate-in zoom-in-90">
-            <h3 className="text-lg font-semibold mb-2">Elimina ricordo</h3>
-            <p className="text-muted-foreground mb-4">
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina ricordo</AlertDialogTitle>
+            <AlertDialogDescription>
               Sei sicuro di voler eliminare questo ricordo? Questa azione non può essere annullata.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
-                Annulla
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteMemory}>
-                Elimina
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteMemory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

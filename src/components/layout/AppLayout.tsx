@@ -39,7 +39,7 @@ export const AppLayout: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-pattern">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="w-full max-w-md px-4">
           <AuthForm />
         </div>
@@ -66,7 +66,7 @@ export const AppLayout: React.FC = () => {
       
       {/* Mobile Hamburger Button - Fixed at bottom left */}
       <Button
-        variant="primary"
+        variant="outline"
         size="icon"
         className="md:hidden fixed bottom-6 left-6 z-50 rounded-full shadow-lg"
         onClick={() => setSidebarOpen(!sidebarOpen)}

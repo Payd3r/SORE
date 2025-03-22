@@ -6,13 +6,12 @@ import {
   ChevronDown, 
   Calendar, 
   MapPin, 
-  Info,
-  Grid3X3,
+  User,
   Grid2X2,
   Grid,
-  User,
   Trash,
-  Check
+  Check,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,12 +22,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem
 } from '@/components/ui/dropdown-menu';
 import { Image as ImageType, ImageType as ImageCategory, Memory } from '@/types';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 import ImageModal from '@/components/modals/ImageModal';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const generateMockImages = (): ImageType[] => {
   const images: ImageType[] = [];
@@ -127,6 +129,7 @@ const GalleryPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [selectedType, setSelectedType] = useState<ImageCategory | 'all'>('all');
   const [selectedUser, setSelectedUser] = useState<string | 'all'>('all');
+  const [showFavorites, setShowFavorites] = useState(false);
   const [images, setImages] = useState<ImageType[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -149,9 +152,10 @@ const GalleryPage: React.FC = () => {
       const matchesSearch = image.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = selectedType === 'all' || image.type === selectedType;
       const matchesUser = selectedUser === 'all' || image.userId === selectedUser;
-      return matchesSearch && matchesType && matchesUser;
+      const matchesFavorites = !showFavorites || image.isFavorite;
+      return matchesSearch && matchesType && matchesUser && matchesFavorites;
     });
-  }, [images, searchTerm, selectedType, selectedUser]);
+  }, [images, searchTerm, selectedType, selectedUser, showFavorites]);
   
   const sortedImages = useMemo(() => {
     return [...filteredImages].sort((a, b) => {
@@ -285,189 +289,83 @@ const GalleryPage: React.FC = () => {
       setSelectedImages(sortedImages.map(img => img.id));
     }
   };
-
-  const renderImageGrid = () => {
-    const columns = gridSize === 'small' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' :
-                   gridSize === 'medium' ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' :
-                   'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-    
-    const height = gridSize === 'small' ? 'h-40' :
-                 gridSize === 'medium' ? 'h-56' :
-                 'h-80';
-    
-    return (
-      <div className={`grid ${columns} gap-3 md:gap-4`}>
-        {sortedImages.map((image) => (
-          <div 
-            key={image.id} 
-            className={`${height} rounded-lg overflow-hidden relative cursor-pointer group card-hover ${
-              isSelectionMode && selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
-            }`}
-            onClick={() => handleImageClick(image)}
-          >
-            <img 
-              src={image.url} 
-              alt={image.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute bottom-0 left-0 right-0 p-2 text-white">
-                <p className="text-sm font-medium truncate">{image.name}</p>
-                <div className="flex justify-between items-center">
-                  <p className="text-xs opacity-80">{format(new Date(image.date), 'dd/MM/yyyy')}</p>
-                  <p className="text-xs opacity-80">{image.uploaderName}</p>
-                </div>
-              </div>
-            </div>
-            {isSelectionMode && (
-              <div className="absolute top-2 right-2 z-10">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  selectedImages.includes(image.id) 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-background/80 text-foreground border'
-                }`}>
-                  {selectedImages.includes(image.id) && <Check className="h-4 w-4" />}
-                </div>
-              </div>
-            )}
-            <div className="absolute top-2 left-2 flex flex-col gap-1">
-              {image.type && (
-                <Badge variant="secondary" className="bg-black/50 text-white border-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  {image.type === 'landscape' ? 'Paesaggio' : 
-                   image.type === 'singlePerson' ? 'Persona' : 'Coppia'}
-                </Badge>
-              )}
-              {image.location && (
-                <Badge variant="secondary" className="bg-black/50 text-white border-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <MapPin className="h-3 w-3 mr-1" />
-                </Badge>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
   
-  const renderTimelineView = () => {
-    return (
-      <div className="space-y-8">
-        {Object.entries(groupedImages).map(([monthYear, images]) => (
-          <div key={monthYear} className="animate-in" style={{ animationDelay: "50ms" }}>
-            <h3 className="text-lg font-medium mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">
-              {monthYear}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {images.map((image) => (
-                <div 
-                  key={image.id} 
-                  className={`h-48 rounded-lg overflow-hidden relative cursor-pointer group card-hover ${
-                    isSelectionMode && selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => handleImageClick(image)}
-                >
-                  <img 
-                    src={image.url} 
-                    alt={image.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-0 left-0 right-0 p-2 text-white">
-                      <p className="text-sm font-medium truncate">{image.name}</p>
-                      <div className="flex justify-between items-center">
-                        <p className="text-xs opacity-80">{format(new Date(image.date), 'dd/MM/yyyy')}</p>
-                        <p className="text-xs opacity-80">{image.uploaderName}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {isSelectionMode && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        selectedImages.includes(image.id) 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-background/80 text-foreground border'
-                      }`}>
-                        {selectedImages.includes(image.id) && <Check className="h-4 w-4" />}
-                      </div>
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {image.type && (
-                      <Badge variant="secondary" className="bg-black/50 text-white border-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        {image.type === 'landscape' ? 'Paesaggio' : 
-                         image.type === 'singlePerson' ? 'Persona singola' : 'Coppia'}
-                      </Badge>
-                    )}
-                    {image.location && (
-                      <Badge variant="secondary" className="bg-black/50 text-white border-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <MapPin className="h-3 w-3 mr-1" />
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+  const toggleFavorite = (imageId: string) => {
+    const updatedImages = images.map(image => 
+      image.id === imageId 
+        ? { ...image, isFavorite: !image.isFavorite }
+        : image
     );
+    
+    setImages(updatedImages);
+    localStorage.setItem('images', JSON.stringify(updatedImages));
+    
+    toast.success('Preferiti aggiornati');
+    console.log(`Toggled favorite for image: ${imageId}`);
   };
 
   return (
     <div className="container mx-auto px-4 py-6 animate-fade-in">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-4xl font-bold">Galleria</h1>
+          <h1 className="text-4xl font-bold">La tua Galleria</h1>
           <p className="text-muted-foreground mt-1">
-            Esplora i ricordi fotografici della coppia
+            Sfoglia e gestisci i tuoi ricordi fotografici
           </p>
         </div>
+        
         <div className="flex flex-wrap gap-2">
-          {isSelectionMode ? (
-            <>
-              <Button variant="outline" onClick={toggleSelectionMode}>
-                Annulla
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={deleteSelectedImages}
-                disabled={selectedImages.length === 0}
-                className="flex items-center"
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Elimina ({selectedImages.length})
-              </Button>
-              <Button
-                variant="outline"
-                onClick={selectAllImages}
-              >
-                {selectedImages.length === sortedImages.length ? 'Deseleziona tutto' : 'Seleziona tutto'}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={toggleSelectionMode}
-                className="flex items-center"
-              >
+          <Button 
+            variant={isSelectionMode ? "default" : "outline"} 
+            onClick={toggleSelectionMode}
+          >
+            {isSelectionMode ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Selezione ({selectedImages.length})
+              </>
+            ) : (
+              <>
                 <Check className="mr-2 h-4 w-4" />
                 Seleziona
-              </Button>
-              <Button 
-                onClick={() => setUploadModalOpen(true)}
-                className="flex items-center"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Carica Immagini
-              </Button>
-            </>
-          )}
+              </>
+            )}
+          </Button>
+          
+          <Button onClick={() => setUploadModalOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Carica
+          </Button>
         </div>
       </div>
-      
+
+      {isSelectionMode && (
+        <div className="mb-4 p-3 bg-muted rounded-lg flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center">
+            <span className="text-sm mr-2">
+              {selectedImages.length} immagini selezionate
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={selectAllImages}
+            >
+              {selectedImages.length === sortedImages.length ? 'Deseleziona tutte' : 'Seleziona tutte'}
+            </Button>
+          </div>
+          
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={deleteSelectedImages}
+            disabled={selectedImages.length === 0}
+          >
+            <Trash className="mr-2 h-4 w-4" />
+            Elimina selezionate
+          </Button>
+        </div>
+      )}
+
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-grow">
@@ -480,184 +378,449 @@ const GalleryPage: React.FC = () => {
             />
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center">
                   <Filter className="mr-2 h-4 w-4" />
-                  Tipo
+                  Filtra
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSelectedType('all')}>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuCheckboxItem
+                  checked={showFavorites}
+                  onCheckedChange={setShowFavorites}
+                >
+                  Solo Preferiti
+                  <Heart className="ml-2 h-4 w-4 text-red-500" fill={showFavorites ? "#ef4444" : "none"} />
+                </DropdownMenuCheckboxItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem 
+                  onClick={() => setSelectedType('all')}
+                  className={selectedType === 'all' ? 'bg-accent text-accent-foreground' : ''}
+                >
                   Tutti i tipi
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedType('landscape')}>
-                  Paesaggio
+                <DropdownMenuItem 
+                  onClick={() => setSelectedType('landscape')}
+                  className={selectedType === 'landscape' ? 'bg-accent text-accent-foreground' : ''}
+                >
+                  Solo Paesaggi
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedType('singlePerson')}>
-                  Persona singola
+                <DropdownMenuItem 
+                  onClick={() => setSelectedType('singlePerson')}
+                  className={selectedType === 'singlePerson' ? 'bg-accent text-accent-foreground' : ''}
+                >
+                  Solo Persone
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedType('couple')}>
-                  Coppia
+                <DropdownMenuItem 
+                  onClick={() => setSelectedType('couple')}
+                  className={selectedType === 'couple' ? 'bg-accent text-accent-foreground' : ''}
+                >
+                  Solo Coppia
                 </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem 
+                  onClick={() => setSelectedUser('all')}
+                  className={selectedUser === 'all' ? 'bg-accent text-accent-foreground' : ''}
+                >
+                  Tutti gli utenti
+                </DropdownMenuItem>
+                
+                {uploaders.map(uploader => (
+                  <DropdownMenuItem 
+                    key={uploader.id}
+                    onClick={() => setSelectedUser(uploader.id)}
+                    className={selectedUser === uploader.id ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    Solo {uploader.name}
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            
-            {uploaders.length > 1 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    Fotografo
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSelectedUser('all')}>
-                    Tutti
-                  </DropdownMenuItem>
-                  {uploaders.map(uploader => (
-                    <DropdownMenuItem 
-                      key={uploader.id} 
-                      onClick={() => setSelectedUser(uploader.id)}
-                    >
-                      {uploader.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center">
-                  <ChevronDown className="mr-2 h-4 w-4" />
+                <Button variant="outline" className="flex items-center gap-2 min-w-[120px]">
+                  {sortBy === 'newest' ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
                   {sortBy === 'newest' ? 'Più recenti' : 'Più vecchie'}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setSortBy('newest')}>
-                  Più recenti
+                  Data (più recenti)
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSortBy('oldest')}>
-                  Più vecchie
+                  Data (più vecchie)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <div className="flex rounded-md border">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`rounded-none rounded-l-md ${gridSize === 'small' ? 'bg-accent' : ''}`}
-                onClick={() => setGridSize('small')}
-              >
-                <Grid3X3 className="h-4 w-4" />
-                <span className="sr-only">Griglia piccola</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`rounded-none border-x ${gridSize === 'medium' ? 'bg-accent' : ''}`}
-                onClick={() => setGridSize('medium')}
-              >
-                <Grid2X2 className="h-4 w-4" />
-                <span className="sr-only">Griglia media</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`rounded-none rounded-r-md ${gridSize === 'large' ? 'bg-accent' : ''}`}
-                onClick={() => setGridSize('large')}
-              >
-                <Grid className="h-4 w-4" />
-                <span className="sr-only">Griglia grande</span>
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Grid className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setGridSize('small')}>
+                  <Grid2X2 className="mr-2 h-4 w-4" />
+                  Griglia piccola
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setGridSize('medium')}>
+                  <Grid className="mr-2 h-4 w-4" />
+                  Griglia media
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setGridSize('large')}>
+                  <Grid className="mr-2 h-4 w-4" />
+                  Griglia grande
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
-        {(selectedType !== 'all' || selectedUser !== 'all') && (
-          <div className="flex items-center flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground">Filtri attivi:</span>
-            {selectedType !== 'all' && (
-              <Badge 
-                variant="secondary" 
-                className="cursor-pointer"
-                onClick={() => setSelectedType('all')}
-              >
-                {selectedType === 'landscape' ? 'Paesaggio' : 
-                 selectedType === 'singlePerson' ? 'Persona singola' : 'Coppia'}
-                <span className="ml-1">×</span>
-              </Badge>
-            )}
-            {selectedUser !== 'all' && (
-              <Badge 
-                variant="secondary" 
-                className="cursor-pointer"
-                onClick={() => setSelectedUser('all')}
-              >
-                {uploaders.find(u => u.id === selectedUser)?.name || 'Utente'}
-                <span className="ml-1">×</span>
-              </Badge>
-            )}
-          </div>
-        )}
+        {/* Active Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedType !== 'all' && (
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer"
+              onClick={() => setSelectedType('all')}
+            >
+              {selectedType === 'landscape' ? 'Paesaggio' : 
+               selectedType === 'singlePerson' ? 'Persona' : 'Coppia'}
+              <span className="ml-1">×</span>
+            </Badge>
+          )}
+          
+          {selectedUser !== 'all' && (
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer"
+              onClick={() => setSelectedUser('all')}
+            >
+              {uploaders.find(u => u.id === selectedUser)?.name || 'Utente'}
+              <span className="ml-1">×</span>
+            </Badge>
+          )}
+          
+          {showFavorites && (
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400"
+              onClick={() => setShowFavorites(false)}
+            >
+              <Heart className="h-3 w-3 mr-1" fill="#ef4444" />
+              Preferiti
+              <span className="ml-1">×</span>
+            </Badge>
+          )}
+        </div>
       </div>
-      
-      <Tabs defaultValue="grid" className="w-full">
-        <TabsList className="w-full justify-start mb-6">
+
+      <Tabs defaultValue="grid" className="space-y-6">
+        <TabsList className="mb-6">
           <TabsTrigger value="grid">Griglia</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="month">Per mese</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="grid" className="animate-in">
+        <TabsContent value="grid" className="space-y-6 animate-fade-in">
           {sortedImages.length === 0 ? (
-            <div className="text-center py-20">
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-medium mb-2">Nessuna immagine trovata</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm || selectedType !== 'all' || selectedUser !== 'all'
-                  ? 'Prova a modificare i filtri o a cercare altro.' 
-                  : 'Inizia a caricare le immagini dei momenti speciali della coppia.'}
-              </p>
-              <Button onClick={() => setUploadModalOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Carica Immagini
-              </Button>
+            <div className="text-center py-12">
+              <div className="bg-muted/50 rounded-lg p-8 max-w-md mx-auto">
+                <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-medium mb-2">Nessuna immagine trovata</h3>
+                <p className="text-muted-foreground mb-6">
+                  {(searchTerm || selectedType !== 'all' || selectedUser !== 'all' || showFavorites) 
+                    ? 'Prova a modificare i filtri di ricerca.' 
+                    : 'Carica la tua prima immagine per iniziare.'}
+                </p>
+                <Button onClick={() => setUploadModalOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Carica immagini
+                </Button>
+              </div>
             </div>
-          ) : renderImageGrid()}
+          ) : (
+            <div>
+              <div className={`grid ${
+                gridSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8' :
+                gridSize === 'medium' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' :
+                'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+              } gap-3 md:gap-4`}>
+                {sortedImages.map((image) => (
+                  <div 
+                    key={image.id} 
+                    className={`relative rounded-lg overflow-hidden group cursor-pointer ${
+                      isSelectionMode && selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => handleImageClick(image)}
+                  >
+                    <div className={`${
+                      gridSize === 'small' ? 'h-32 sm:h-40' :
+                      gridSize === 'medium' ? 'h-48 sm:h-52' :
+                      'h-64 sm:h-72'
+                    }`}>
+                      <img 
+                        src={image.url} 
+                        alt={image.name}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    </div>
+                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-3">
+                      <div className="self-end">
+                        {image.isFavorite && (
+                          <div className="bg-red-500 text-white rounded-full p-1.5">
+                            <Heart className="h-4 w-4" fill="white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-white">
+                        <div className="text-sm font-medium truncate">{image.name}</div>
+                        <div className="text-xs flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {format(image.date, 'dd/MM/yyyy')}
+                        </div>
+                        {image.type && (
+                          <Badge variant="outline" className="mt-1 text-xs border-white/50 text-white">
+                            {image.type === 'landscape' ? 'Paesaggio' : 
+                             image.type === 'singlePerson' ? 'Persona' : 'Coppia'}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {isSelectionMode && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                          selectedImages.includes(image.id) 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-background/80 text-foreground border'
+                        }`}>
+                          {selectedImages.includes(image.id) && <Check className="h-4 w-4" />}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-center pt-6 text-sm text-muted-foreground">
+                {sortedImages.length} immagini
+              </div>
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="timeline" className="animate-in">
+        <TabsContent value="month" className="space-y-10 animate-fade-in">
           {Object.keys(groupedImages).length === 0 ? (
-            <div className="text-center py-20">
-              <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-medium mb-2">Nessuna immagine trovata</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm || selectedType !== 'all' || selectedUser !== 'all'
-                  ? 'Prova a modificare i filtri o a cercare altro.' 
-                  : 'Inizia a caricare le immagini dei momenti speciali.'}
-              </p>
-              <Button onClick={() => setUploadModalOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Carica Immagini
-              </Button>
+            <div className="text-center py-12">
+              <div className="bg-muted/50 rounded-lg p-8 max-w-md mx-auto">
+                <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-medium mb-2">Nessuna immagine trovata</h3>
+                <p className="text-muted-foreground mb-6">
+                  Carica la tua prima immagine per iniziare.
+                </p>
+                <Button onClick={() => setUploadModalOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Carica immagini
+                </Button>
+              </div>
             </div>
-          ) : renderTimelineView()}
+          ) : (
+            <div className="space-y-10">
+              {Object.entries(groupedImages).map(([month, monthImages]) => (
+                <div key={month} className="space-y-4">
+                  <div className="flex items-center gap-2 border-b pb-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <h2 className="text-2xl font-bold capitalize">{month}</h2>
+                    <Badge variant="outline">{monthImages.length} immagini</Badge>
+                  </div>
+                  
+                  <div className={`grid ${
+                    gridSize === 'small' ? 'grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8' :
+                    gridSize === 'medium' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' :
+                    'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+                  } gap-3 md:gap-4`}>
+                    {monthImages.map((image) => (
+                      <div 
+                        key={image.id} 
+                        className={`relative rounded-lg overflow-hidden group cursor-pointer ${
+                          isSelectionMode && selectedImages.includes(image.id) ? 'ring-2 ring-primary' : ''
+                        }`}
+                        onClick={() => handleImageClick(image)}
+                      >
+                        <div className={`${
+                          gridSize === 'small' ? 'h-32 sm:h-40' :
+                          gridSize === 'medium' ? 'h-48 sm:h-52' :
+                          'h-64 sm:h-72'
+                        }`}>
+                          <img 
+                            src={image.url} 
+                            alt={image.name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        </div>
+                        
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-3">
+                          <div className="self-end">
+                            {image.isFavorite && (
+                              <div className="bg-red-500 text-white rounded-full p-1.5">
+                                <Heart className="h-4 w-4" fill="white" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-white">
+                            <div className="text-sm font-medium truncate">{image.name}</div>
+                            <div className="text-xs flex items-center">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {format(image.date, 'dd/MM/yyyy')}
+                            </div>
+                            {image.type && (
+                              <Badge variant="outline" className="mt-1 text-xs border-white/50 text-white">
+                                {image.type === 'landscape' ? 'Paesaggio' : 
+                                 image.type === 'singlePerson' ? 'Persona' : 'Coppia'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isSelectionMode && (
+                          <div className="absolute top-2 right-2 z-10">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              selectedImages.includes(image.id) 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'bg-background/80 text-foreground border'
+                            }`}>
+                              {selectedImages.includes(image.id) && <Check className="h-4 w-4" />}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
-      
-      <ImageModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        image={selectedImage || undefined}
-        mode="view"
-        onDelete={deleteSingleImage}
-        onEdit={updateImage}
-        memories={memories}
-      />
-      
+
+      {selectedImage && (
+        <Dialog open={modalOpen} onOpenChange={(open) => !open && setSelectedImage(null)}>
+          <DialogContent className="sm:max-w-4xl">
+            <div className="space-y-4">
+              <div className="relative aspect-video rounded-md overflow-hidden bg-black/5">
+                <img 
+                  src={selectedImage.url} 
+                  alt={selectedImage.name} 
+                  className="w-full h-full object-contain"
+                />
+                <button 
+                  className={`absolute top-3 right-3 rounded-full p-2 ${selectedImage.isFavorite ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700'}`}
+                  onClick={() => toggleFavorite(selectedImage.id)}
+                >
+                  <Heart className="h-5 w-5" fill={selectedImage.isFavorite ? "#fff" : "none"} />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">{selectedImage.name}</h3>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      <span>{format(selectedImage.date, 'dd/MM/yyyy HH:mm')}</span>
+                    </div>
+                    
+                    {selectedImage.location?.name && (
+                      <div className="flex items-center text-muted-foreground text-sm">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span>{selectedImage.location.name}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center text-muted-foreground text-sm">
+                      <User className="h-4 w-4 mr-1" />
+                      <span>Caricata da: {selectedImage.uploaderName}</span>
+                    </div>
+                    
+                    {selectedImage.type && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Badge>
+                          {selectedImage.type === 'landscape' ? 'Paesaggio' : 
+                           selectedImage.type === 'singlePerson' ? 'Persona' : 'Coppia'}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-medium mb-2">Azioni</h4>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => window.open(selectedImage.url, '_blank')}
+                        className="w-full justify-center"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Scarica
+                      </Button>
+                      
+                      <Button 
+                        variant="outline"
+                        onClick={() => toggleFavorite(selectedImage.id)}
+                        className={`w-full justify-center ${selectedImage.isFavorite ? 'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400' : ''}`}
+                      >
+                        <Heart className="h-4 w-4 mr-2" fill={selectedImage.isFavorite ? "#ef4444" : "none"} />
+                        {selectedImage.isFavorite ? 'Rimuovi' : 'Preferiti'}
+                      </Button>
+                      
+                      <Button 
+                        variant="destructive" 
+                        onClick={deleteSingleImage}
+                        className="w-full justify-center col-span-2"
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Elimina
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {selectedImage.location && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">Posizione</h4>
+                      <div className="bg-muted h-36 rounded-md">
+                        {/* Map placeholder */}
+                        <div className="h-full flex items-center justify-center">
+                          <MapPin className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       <ImageModal
         open={uploadModalOpen}
         onOpenChange={setUploadModalOpen}
