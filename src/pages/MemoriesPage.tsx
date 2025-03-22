@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -23,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Memory, MemoryType, EventTag } from '@/types';
+import { Memory, MemoryType, EventTag, Image, ImageType } from '@/types';
 import { format } from 'date-fns';
 
 // Mock data for demonstration
@@ -48,9 +47,14 @@ export const mockMemories: Memory[] = [
         longitude: 12.4964 + (Math.random() * 0.01 - 0.005) 
       },
       userId: '1',
+      uploaderName: 'Mario Rossi',
+      coupleId: 'couple1',
+      type: i % 3 === 0 ? 'landscape' : i % 3 === 1 ? 'singlePerson' : 'couple',
       createdAt: new Date()
     })),
     userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -72,9 +76,14 @@ export const mockMemories: Memory[] = [
         longitude: 9.1900 + (Math.random() * 0.01 - 0.005) 
       },
       userId: '1',
+      uploaderName: 'Mario Rossi',
+      coupleId: 'couple1',
+      type: i % 3 === 0 ? 'landscape' : i % 3 === 1 ? 'singlePerson' : 'couple',
       createdAt: new Date()
     })),
     userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -92,9 +101,14 @@ export const mockMemories: Memory[] = [
       date: new Date(2023, 4, 20),
       location: { latitude: 45.4773, longitude: 9.1815 },
       userId: '1',
+      uploaderName: 'Mario Rossi',
+      coupleId: 'couple1',
+      type: 'landscape',
       createdAt: new Date()
     }],
     userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -117,9 +131,14 @@ export const mockMemories: Memory[] = [
         longitude: 11.2558 + (Math.random() * 0.01 - 0.005) 
       },
       userId: '1',
+      uploaderName: 'Mario Rossi',
+      coupleId: 'couple1',
+      type: i % 3 === 0 ? 'landscape' : i % 3 === 1 ? 'singlePerson' : 'couple',
       createdAt: new Date()
     })),
     userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -142,9 +161,14 @@ export const mockMemories: Memory[] = [
         longitude: 9.1217 + (Math.random() * 0.01 - 0.005) 
       },
       userId: '1',
+      uploaderName: 'Mario Rossi',
+      coupleId: 'couple1',
+      type: i % 3 === 0 ? 'landscape' : i % 3 === 1 ? 'singlePerson' : 'couple',
       createdAt: new Date()
     })),
     userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
     createdAt: new Date(),
     updatedAt: new Date()
   }

@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  Menu, X, Home, BookMarked, Image, Lightbulb, 
+  X, Home, BookMarked, Image, Lightbulb, 
   MapPin, BarChart3, LogOut, User, Settings,
   Heart
 } from 'lucide-react';
@@ -23,13 +23,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   const { user, couple, signOut } = useAuth();
   const { theme } = useTheme();
   
-  // Close sidebar on route change on mobile
-  useEffect(() => {
-    if (isMobile && open) {
-      setOpen(false);
-    }
-  }, [location.pathname, isMobile, open, setOpen]);
-
   if (!user) return null;
 
   const navItems = [
@@ -44,61 +37,56 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
 
   // Ensure that z-index values are properly set
   const sidebarClass = `
-    fixed inset-y-0 left-0 z-50 w-64 bg-sidebar/80 backdrop-blur-sm transition-transform duration-300 ease-in-out 
-    border-r border-sidebar-border flex flex-col h-full
-    ${open ? 'translate-x-0' : '-translate-x-full'}
-    ${isMobile ? 'shadow-xl' : ''}
+    fixed inset-y-0 left-0 z-50 w-64 bg-background transition-transform duration-300 ease-in-out 
+    border-r border-border flex flex-col h-full
+    ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+    ${isMobile && 'shadow-xl'}
   `;
 
   const overlayClass = `
-    fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300
-    ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+    fixed inset-0 z-40 bg-black/50 transition-opacity duration-300
+    ${open ? 'opacity-100 md:opacity-0 md:pointer-events-none' : 'opacity-0 pointer-events-none'}
   `;
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      console.log("User signed out");
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
-  const toggleSidebar = () => {
-    setOpen(!open);
-  };
-
   return (
     <>
-      {/* Mobile Hamburger Button with improved positioning and z-index */}
-      {isMobile && (
-        <button 
-          className="fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-primary-foreground shadow-md"
-          onClick={toggleSidebar}
-          aria-label={open ? "Chiudi menu" : "Apri menu"}
-          type="button"
-          data-hamburger="true"
-        >
-          {open ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      )}
-      
-      {/* Sidebar Overlay (Mobile) - Make sure z-index is correct */}
+      {/* Sidebar Overlay (Mobile) */}
       <div 
         className={overlayClass}
         onClick={() => setOpen(false)}
+        data-testid="sidebar-overlay"
       />
 
       {/* Sidebar */}
-      <div className={sidebarClass} data-sidebar="true">
-        <div className="flex items-center justify-center p-4 border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-sidebar-foreground flex items-center">
+      <div className={sidebarClass} data-testid="sidebar">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h1 className="text-xl font-bold flex items-center">
             <Heart className="h-5 w-5 mr-2 text-pink-500" />
             {couple ? couple.name : 'Ricordi'}
           </h1>
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setOpen(false)}
+              aria-label="Chiudi menu"
+            >
+              <X size={20} />
+            </Button>
+          )}
         </div>
 
         {/* User Profile */}
-        <div className="flex items-center space-x-3 p-4 border-b border-sidebar-border">
+        <div className="flex items-center space-x-3 p-4 border-b border-border">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
             {user.avatar ? (
               <img 
@@ -111,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
+            <p className="text-sm font-medium truncate">
               {user.name}
             </p>
             <p className="text-xs text-muted-foreground truncate">
@@ -131,9 +119,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
                     flex items-center px-4 py-3 text-sm font-medium rounded-md 
                     transition-colors duration-200 group
                     ${isActive 
-                      ? 'bg-sidebar-primary/70 backdrop-blur-sm text-sidebar-primary-foreground' 
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:backdrop-blur-sm hover:text-sidebar-accent-foreground'
-                    }
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-foreground hover:bg-muted hover:text-foreground'}
                   `}
                   onClick={() => isMobile && setOpen(false)}
                 >
@@ -146,11 +133,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         </nav>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-sidebar-border space-y-2">
+        <div className="p-4 border-t border-border space-y-2">
           <div className="flex items-center justify-between mb-2">
             <NavLink 
               to="/profile" 
-              className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:backdrop-blur-sm hover:text-sidebar-accent-foreground transition-colors duration-200"
+              className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-foreground hover:bg-muted hover:text-foreground transition-colors duration-200"
               onClick={() => isMobile && setOpen(false)}
             >
               <Settings size={20} className="mr-3" />
@@ -161,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           
           <Button 
             variant="outline" 
-            className="w-full flex items-center justify-center backdrop-blur-sm"
+            className="w-full flex items-center justify-center"
             onClick={handleSignOut}
           >
             <LogOut size={16} className="mr-2" />

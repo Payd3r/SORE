@@ -1,888 +1,570 @@
 
-import React, { useEffect, useState } from 'react';
-import { 
-  BarChart3, 
-  BookMarked, 
-  Calendar, 
-  Image as ImageIcon, 
-  Lightbulb, 
-  MapPin, 
-  CheckCircle,
-  Award,
-  Users,
-  Camera,
-  Flag
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Stats, Memory, MemoryType, IdeaType, ImageType as ImageCategory, UserStats } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BookMarked, CalendarDays, MapPin, Image as ImageIcon, Heart, Star, Music2, Users } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { mockMemories } from './MemoriesPage';
+import { Memory, Idea, Image, ImageType } from '@/types';
 import { useAuth } from '@/context/auth-context';
-import { 
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
 
-const COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f97316', '#8b5cf6', '#ef4444'];
-
-// Generate comprehensive stats based on stored data
-const generateStats = (): Stats => {
-  // Load data from localStorage
-  const memories = JSON.parse(localStorage.getItem('memories') || '[]');
-  const ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
-  const images = JSON.parse(localStorage.getItem('images') || '[]');
-  
-  // Initialize stats
-  const stats: Stats = {
-    totalMemories: memories.length,
-    memoriesByType: {
-      travel: 0,
-      event: 0,
-      simple: 0
-    },
-    memoriesByUser: {},
-    totalImages: images.length,
-    imagesByType: {
-      landscape: 0,
-      singlePerson: 0,
-      couple: 0
-    },
-    imagesByUser: {},
-    totalIdeas: ideas.length,
-    completedIdeas: ideas.filter((idea: any) => idea.completed).length,
-    ideasByType: {
-      travel: 0,
-      restaurant: 0,
-      general: 0,
-      challenge: 0
-    },
-    ideasCreatedByUser: {},
-    ideasCompletedByUser: {},
-    locationsVisited: 0,
-    userStats: []
-  };
-  
-  // Count unique locations
-  const uniqueLocations = new Set();
-  
-  // Process memories
-  memories.forEach((memory: Memory) => {
-    // Count by type
-    stats.memoriesByType[memory.type]++;
-    
-    // Count by user
-    if (!stats.memoriesByUser[memory.userId]) {
-      stats.memoriesByUser[memory.userId] = 0;
-    }
-    stats.memoriesByUser[memory.userId]++;
-    
-    // Add location if exists
-    if (memory.location && memory.location.name) {
-      uniqueLocations.add(memory.location.name);
-    }
-  });
-  
-  // Process ideas
-  ideas.forEach((idea: any) => {
-    // Count by type
-    if (stats.ideasByType[idea.type] !== undefined) {
-      stats.ideasByType[idea.type]++;
-    }
-    
-    // Count created by user
-    if (!stats.ideasCreatedByUser[idea.userId]) {
-      stats.ideasCreatedByUser[idea.userId] = 0;
-    }
-    stats.ideasCreatedByUser[idea.userId]++;
-    
-    // Count completed by user
-    if (idea.completed && idea.completedById) {
-      if (!stats.ideasCompletedByUser[idea.completedById]) {
-        stats.ideasCompletedByUser[idea.completedById] = 0;
-      }
-      stats.ideasCompletedByUser[idea.completedById]++;
-    }
-  });
-  
-  // Process images
-  images.forEach((image: any) => {
-    // Count by type
-    if (image.type && stats.imagesByType[image.type] !== undefined) {
-      stats.imagesByType[image.type]++;
-    }
-    
-    // Count by user
-    if (!stats.imagesByUser[image.userId]) {
-      stats.imagesByUser[image.userId] = 0;
-    }
-    stats.imagesByUser[image.userId]++;
-    
-    // Add location if exists
-    if (image.location && image.location.name) {
-      uniqueLocations.add(image.location.name);
-    }
-  });
-  
-  // Set locations count
-  stats.locationsVisited = uniqueLocations.size;
-  
-  // Generate user stats
-  const userIds = new Set([
-    ...Object.keys(stats.memoriesByUser),
-    ...Object.keys(stats.ideasCreatedByUser),
-    ...Object.keys(stats.ideasCompletedByUser),
-    ...Object.keys(stats.imagesByUser)
-  ]);
-  
-  // Find names for users
-  const userNames: Record<string, string> = {};
-  [...memories, ...ideas, ...images].forEach(item => {
-    if (item.userId && item.creatorName) {
-      userNames[item.userId] = item.creatorName;
-    } else if (item.userId && item.uploaderName) {
-      userNames[item.userId] = item.uploaderName;
-    }
-  });
-  
-  // Create user stats
-  Array.from(userIds).forEach(userId => {
-    stats.userStats.push({
-      userId,
-      name: userNames[userId] || `Utente ${userId}`,
-      memoriesCreated: stats.memoriesByUser[userId] || 0,
-      ideasCreated: stats.ideasCreatedByUser[userId] || 0,
-      ideasCompleted: stats.ideasCompletedByUser[userId] || 0,
-      imagesUploaded: stats.imagesByUser[userId] || 0,
-      locationsVisited: 0 // Difficult to compute from this data
-    });
-  });
-  
-  return stats;
-};
-
-// Top locations data
-const mockTopLocations = [
-  { name: 'Roma, Italia', count: 15 },
-  { name: 'Milano, Italia', count: 12 },
-  { name: 'Firenze, Italia', count: 8 },
-  { name: 'Lago di Como, Italia', count: 5 },
-  { name: 'Amalfi, Italia', count: 3 }
+// Mock data for ideas
+const mockIdeas: Idea[] = [
+  { 
+    id: '1', 
+    title: 'Weekend a Venezia', 
+    type: 'travel', 
+    completed: true, 
+    completedAt: new Date('2023-09-15'), 
+    completedById: '1',
+    completedByName: 'Mario Rossi',
+    userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
+    createdAt: new Date('2023-08-10')
+  },
+  { 
+    id: '2', 
+    title: 'Cena al ristorante stellato', 
+    type: 'restaurant', 
+    completed: false,
+    userId: '2',
+    creatorName: 'Laura Bianchi',
+    coupleId: 'couple1',
+    createdAt: new Date('2023-08-15')
+  },
+  { 
+    id: '3', 
+    title: 'Concerto di Ed Sheeran', 
+    type: 'general', 
+    completed: true, 
+    completedAt: new Date('2023-09-10'), 
+    completedById: '2',
+    completedByName: 'Laura Bianchi',
+    userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
+    createdAt: new Date('2023-08-05')
+  },
+  { 
+    id: '4', 
+    title: 'Escursione in montagna', 
+    type: 'general', 
+    completed: false,
+    userId: '1',
+    creatorName: 'Mario Rossi',
+    coupleId: 'couple1',
+    createdAt: new Date('2023-08-20')
+  },
+  { 
+    id: '5', 
+    title: 'Visita al museo', 
+    type: 'challenge', 
+    completed: true, 
+    completedAt: new Date('2023-09-05'), 
+    completedById: '1',
+    completedByName: 'Mario Rossi',
+    userId: '2',
+    creatorName: 'Laura Bianchi',
+    coupleId: 'couple1',
+    createdAt: new Date('2023-07-25')
+  }
 ];
 
+// Mock images for gallery stats
+const mockImages: Image[] = [
+  ...mockMemories.flatMap(memory => memory.images)
+];
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
 const RecapPage: React.FC = () => {
-  const { couple } = useAuth();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [timelineData, setTimelineData] = useState([]);
+  const { user, couple } = useAuth();
+  const [timeRange, setTimeRange] = useState<'all' | 'year' | 'month' | 'week'>('all');
+  const [activeTab, setActiveTab] = useState('overview');
   
-  useEffect(() => {
-    // Generate stats
-    const generatedStats = generateStats();
-    setStats(generatedStats);
-    
-    // Create mock timeline data
-    const mockTimelineData = [
-      { name: 'Gen', memories: 3, images: 15 },
-      { name: 'Feb', memories: 2, images: 8 },
-      { name: 'Mar', memories: 1, images: 5 },
-      { name: 'Apr', memories: 4, images: 20 },
-      { name: 'Mag', memories: 2, images: 12 },
-      { name: 'Giu', memories: 5, images: 18 },
-    ];
-    setTimelineData(mockTimelineData);
-  }, []);
-  
-  if (!stats) {
-    return <div className="flex justify-center items-center h-[50vh]">Caricamento statistiche...</div>;
-  }
-  
-  // Calculations for percentages
-  const completedIdeasPercentage = Math.round((stats.completedIdeas / stats.totalIdeas) * 100) || 0;
-  
-  // Memory type display names
-  const memoryTypeNames: Record<MemoryType, string> = {
-    travel: 'Viaggi',
-    event: 'Eventi',
-    simple: 'Semplici'
+  // Generate statistics based on the data
+  const stats = {
+    totalMemories: mockMemories.length,
+    totalIdeas: mockIdeas.length,
+    completedIdeas: mockIdeas.filter(i => i.completed).length,
+    totalPhotos: mockImages.length,
+    totalLocations: [...new Set(mockMemories.map(m => m.location?.name).filter(Boolean))].length,
+    totalSongs: [...new Set(mockMemories.filter(m => m.song).map(m => m.song))].length,
   };
-  
-  // Idea type display names
-  const ideaTypeNames: Record<IdeaType, string> = {
-    travel: 'Viaggi',
-    restaurant: 'Ristoranti',
-    general: 'Generiche',
-    challenge: 'Sfide'
+
+  // User comparison stats
+  const userStats = {
+    'user1': {
+      name: 'Mario Rossi',
+      id: '1',
+      memoriesCreated: mockMemories.filter(m => m.userId === '1').length,
+      ideasCreated: mockIdeas.filter(i => i.userId === '1').length,
+      ideasCompleted: mockIdeas.filter(i => i.completedById === '1').length,
+      photosUploaded: mockImages.filter(i => i.userId === '1').length,
+    },
+    'user2': {
+      name: 'Laura Bianchi',
+      id: '2',
+      memoriesCreated: mockMemories.filter(m => m.userId === '2').length,
+      ideasCreated: mockIdeas.filter(i => i.userId === '2').length,
+      ideasCompleted: mockIdeas.filter(i => i.completedById === '2').length,
+      photosUploaded: mockImages.filter(i => i.userId === '2').length,
+    }
   };
-  
-  // Image type display names
-  const imageTypeNames: Record<ImageCategory, string> = {
-    landscape: 'Paesaggio',
-    singlePerson: 'Persona singola',
-    couple: 'Coppia'
-  };
-  
-  // Memory type colors
-  const memoryTypeColors: Record<MemoryType, string> = {
-    travel: 'bg-blue-500',
-    event: 'bg-pink-500',
-    simple: 'bg-green-500'
-  };
-  
-  // Idea type colors
-  const ideaTypeColors: Record<IdeaType, string> = {
-    travel: 'bg-blue-400',
-    restaurant: 'bg-orange-400',
-    general: 'bg-purple-400',
-    challenge: 'bg-red-400'
-  };
-  
-  // Image type colors
-  const imageTypeColors: Record<ImageCategory, string> = {
-    landscape: 'bg-cyan-400',
-    singlePerson: 'bg-indigo-400',
-    couple: 'bg-pink-400'
-  };
-  
+
   // Prepare chart data
-  const memoryTypeData = Object.entries(stats.memoriesByType).map(([type, count]) => ({
-    name: memoryTypeNames[type as MemoryType],
-    value: count
-  }));
-  
-  const ideaTypeData = Object.entries(stats.ideasByType).map(([type, count]) => ({
-    name: ideaTypeNames[type as IdeaType],
-    value: count
-  }));
-  
-  const imageTypeData = Object.entries(stats.imagesByType).map(([type, count]) => ({
-    name: imageTypeNames[type as ImageCategory],
-    value: count
-  }));
-  
-  // Prepare user comparison data
-  const userComparisonMemories = stats.userStats.map(user => ({
-    name: user.name,
-    value: user.memoriesCreated
-  }));
-  
-  const userComparisonIdeas = stats.userStats.map(user => ({
-    name: user.name,
-    created: user.ideasCreated,
-    completed: user.ideasCompleted
-  }));
-  
-  const userComparisonImages = stats.userStats.map(user => ({
-    name: user.name,
-    value: user.imagesUploaded
-  }));
-  
-  const userComparisonTotal = stats.userStats.map(user => ({
-    name: user.name,
-    memories: user.memoriesCreated,
-    ideas: user.ideasCreated,
-    images: user.imagesUploaded
-  }));
+  const memoryTypeData = [
+    { name: 'Viaggi', value: mockMemories.filter(m => m.type === 'travel').length },
+    { name: 'Eventi', value: mockMemories.filter(m => m.type === 'event').length },
+    { name: 'Semplici', value: mockMemories.filter(m => m.type === 'simple').length },
+  ];
+
+  const ideaTypeData = [
+    { name: 'Viaggi', value: mockIdeas.filter(i => i.type === 'travel').length },
+    { name: 'Ristoranti', value: mockIdeas.filter(i => i.type === 'restaurant').length },
+    { name: 'Generiche', value: mockIdeas.filter(i => i.type === 'general').length },
+    { name: 'Sfide', value: mockIdeas.filter(i => i.type === 'challenge').length },
+  ];
+
+  const imageTypeData = [
+    { name: 'Paesaggi', value: mockImages.filter(i => i.type === 'landscape').length },
+    { name: 'Persona singola', value: mockImages.filter(i => i.type === 'singlePerson').length },
+    { name: 'Coppia', value: mockImages.filter(i => i.type === 'couple').length },
+  ];
+
+  const eventTagData = [
+    { name: 'Compleanno', value: mockMemories.filter(m => m.eventTag === 'birthday').length },
+    { name: 'Regalo', value: mockMemories.filter(m => m.eventTag === 'gift').length },
+    { name: 'Anniversario', value: mockMemories.filter(m => m.eventTag === 'anniversary').length },
+    { name: 'Vacanza', value: mockMemories.filter(m => m.eventTag === 'holiday').length },
+    { name: 'Altro', value: mockMemories.filter(m => m.eventTag === 'other').length },
+  ];
+
+  // Timeline data by month
+  const timelineData = (() => {
+    const months: Record<string, { memories: number; ideas: number; photos: number }> = {};
+    
+    // Get start and end dates
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    
+    // Initialize all months
+    for (let d = new Date(startDate); d <= now; d.setMonth(d.getMonth() + 1)) {
+      const monthKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+      months[monthKey] = { memories: 0, ideas: 0, photos: 0 };
+    }
+    
+    // Count items by month
+    mockMemories.forEach(memory => {
+      const date = memory.createdAt;
+      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (months[monthKey]) {
+        months[monthKey].memories += 1;
+        months[monthKey].photos += memory.images.length;
+      }
+    });
+    
+    mockIdeas.forEach(idea => {
+      const date = idea.createdAt;
+      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (months[monthKey]) {
+        months[monthKey].ideas += 1;
+      }
+    });
+    
+    // Format for chart
+    return Object.entries(months).map(([month, counts]) => {
+      const [year, monthNum] = month.split('-');
+      return {
+        month: `${monthNum}/${year.slice(2)}`,
+        ...counts
+      };
+    });
+  })();
+
+  // Comparison chart data
+  const comparisonData = [
+    { name: 'Ricordi creati', user1: userStats.user1.memoriesCreated, user2: userStats.user2.memoriesCreated },
+    { name: 'Idee proposte', user1: userStats.user1.ideasCreated, user2: userStats.user2.ideasCreated },
+    { name: 'Idee completate', user1: userStats.user1.ideasCompleted, user2: userStats.user2.ideasCompleted },
+    { name: 'Foto caricate', user1: userStats.user1.photosUploaded, user2: userStats.user2.photosUploaded },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-6 animate-fade-in">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Riepilogo</h1>
-        <p className="text-muted-foreground mt-1">
-          Statistiche dei vostri ricordi e momenti insieme
-        </p>
-      </div>
-
-      {/* Overview cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 staggered-animate">
-        <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Ricordi Totali</CardTitle>
-            <BookMarked className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalMemories}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Momenti catturati insieme
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Immagini</CardTitle>
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalImages}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Fotografie dei vostri momenti
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Idee</CardTitle>
-            <Lightbulb className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalIdeas}</div>
-            <div className="flex items-center mt-1">
-              <Progress value={completedIdeasPercentage} className="h-2" />
-              <span className="text-xs ml-2">{completedIdeasPercentage}%</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.completedIdeas} completate, {stats.totalIdeas - stats.completedIdeas} in attesa
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Luoghi Visitati</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.locationsVisited}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Posti esplorati insieme
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full justify-start mb-8">
-          <TabsTrigger value="overview" className="flex items-center">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Panoramica
-          </TabsTrigger>
-          <TabsTrigger value="comparison" className="flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            Confronto
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-6">
-          {/* Memory type distribution */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <Card className="animate-in backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg" style={{ animationDelay: "100ms" }}>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookMarked className="mr-2 h-5 w-5" />
-                  Distribuzione Ricordi
-                </CardTitle>
-                <CardDescription>
-                  Tipi di ricordi creati insieme
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.memoriesByType).map(([type, count]) => {
-                    const typeName = memoryTypeNames[type as MemoryType];
-                    const percentage = Math.round((count / stats.totalMemories) * 100) || 0;
-                    
-                    return (
-                      <div key={type} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full ${memoryTypeColors[type as MemoryType]} mr-2`}></div>
-                            <span className="text-sm">{typeName}</span>
-                          </div>
-                          <div className="text-sm">
-                            {count} ({percentage}%)
-                          </div>
-                        </div>
-                        <Progress value={percentage} className={`h-2 ${memoryTypeColors[type as MemoryType]} bg-muted`} />
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                <div className="mt-6 h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={memoryTypeData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {memoryTypeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, 'Ricordi']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="animate-in backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg" style={{ animationDelay: "150ms" }}>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Lightbulb className="mr-2 h-5 w-5" />
-                  Distribuzione Idee
-                </CardTitle>
-                <CardDescription>
-                  Tipi di idee pianificate insieme
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.ideasByType).map(([type, count]) => {
-                    const typeName = ideaTypeNames[type as IdeaType];
-                    const percentage = Math.round((count / stats.totalIdeas) * 100) || 0;
-                    
-                    return (
-                      <div key={type} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full ${ideaTypeColors[type as IdeaType]} mr-2`}></div>
-                            <span className="text-sm">{typeName}</span>
-                          </div>
-                          <div className="text-sm">
-                            {count} ({percentage}%)
-                          </div>
-                        </div>
-                        <Progress value={percentage} className={`h-2 ${ideaTypeColors[type as IdeaType]} bg-muted`} />
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                <div className="mt-6 h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={ideaTypeData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {ideaTypeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, 'Idee']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {/* Idea completion */}
-                <div className="p-4 bg-muted rounded-md">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span className="text-sm font-medium">Tasso di completamento</span>
-                    </div>
-                    <span className="text-sm font-medium">{completedIdeasPercentage}%</span>
-                  </div>
-                  <Progress value={completedIdeasPercentage} className="h-2 bg-muted-foreground/20" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Image types and Timeline */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <Card className="animate-in backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg" style={{ animationDelay: "200ms" }}>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ImageIcon className="mr-2 h-5 w-5" />
-                  Distribuzione Immagini
-                </CardTitle>
-                <CardDescription>
-                  Tipi di immagini caricate
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.imagesByType).map(([type, count]) => {
-                    const typeName = imageTypeNames[type as ImageCategory];
-                    const percentage = Math.round((count / stats.totalImages) * 100) || 0;
-                    
-                    return (
-                      <div key={type} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full ${imageTypeColors[type as ImageCategory]} mr-2`}></div>
-                            <span className="text-sm">{typeName}</span>
-                          </div>
-                          <div className="text-sm">
-                            {count} ({percentage}%)
-                          </div>
-                        </div>
-                        <Progress value={percentage} className={`h-2 ${imageTypeColors[type as ImageCategory]} bg-muted`} />
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                <div className="mt-6 h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={imageTypeData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {imageTypeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, 'Immagini']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="animate-in backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg" style={{ animationDelay: "250ms" }}>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="mr-2 h-5 w-5" />
-                  Momenti nel Tempo
-                </CardTitle>
-                <CardDescription>
-                  Storia dei vostri ricordi insieme
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={timelineData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 0,
-                        bottom: 5,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                      <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar yAxisId="left" dataKey="memories" name="Ricordi" fill="#8884d8" />
-                      <Bar yAxisId="right" dataKey="images" name="Immagini" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Top Locations */}
-          <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <MapPin className="mr-2 h-5 w-5" />
-                Luoghi più Visitati
-              </CardTitle>
-              <CardDescription>
-                I vostri posti preferiti
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockTopLocations.map((location, index) => {
-                  const maxCount = mockTopLocations[0].count;
-                  const percentage = Math.round((location.count / maxCount) * 100);
-                  
-                  return (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          {index < 3 && (
-                            <Award className={`h-4 w-4 mr-2 ${
-                              index === 0 ? 'text-yellow-500' : 
-                              index === 1 ? 'text-gray-400' : 'text-amber-600'
-                            }`} />
-                          )}
-                          <span className="text-sm">{location.name}</span>
-                        </div>
-                        <div className="text-sm">
-                          {location.count} {location.count === 1 ? 'visita' : 'visite'}
-                        </div>
-                      </div>
-                      <Progress value={percentage} className="h-2" />
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="comparison" className="space-y-6">
-          <div className="flex items-center mb-2">
-            <Users className="h-5 w-5 mr-2 text-primary" />
-            <h2 className="text-2xl font-bold">Confronto tra {couple?.name || 'Membri'}</h2>
-          </div>
-          <p className="text-muted-foreground mb-6">
-            Confronta i contributi e le statistiche tra i membri della coppia
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-4xl font-bold">Recap</h1>
+          <p className="text-muted-foreground mt-1">
+            Statistiche e riassunto della vostra storia d'amore
           </p>
+        </div>
+        <Select 
+          value={timeRange} 
+          onValueChange={(value: 'all' | 'year' | 'month' | 'week') => setTimeRange(value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Periodo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutto il tempo</SelectItem>
+            <SelectItem value="year">Ultimo anno</SelectItem>
+            <SelectItem value="month">Ultimo mese</SelectItem>
+            <SelectItem value="week">Ultima settimana</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="w-full grid grid-cols-2 mb-6">
+          <TabsTrigger value="overview">Panoramica</TabsTrigger>
+          <TabsTrigger value="comparison">Confronto</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Cards overview */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl flex items-center">
+                  <BookMarked className="mr-2 h-6 w-6 text-primary" />
+                  {stats.totalMemories}
+                </CardTitle>
+                <CardDescription>Ricordi totali</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                    {mockMemories.filter(m => m.type === 'travel').length} viaggi
+                  </Badge>
+                  <Badge variant="outline" className="bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300">
+                    {mockMemories.filter(m => m.type === 'event').length} eventi
+                  </Badge>
+                  <Badge variant="outline" className="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                    {mockMemories.filter(m => m.type === 'simple').length} semplici
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl flex items-center">
+                  <Star className="mr-2 h-6 w-6 text-primary" />
+                  {stats.totalIdeas}
+                </CardTitle>
+                <CardDescription>Idee totali</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <Badge variant="outline" className="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                    {stats.completedIdeas} completate
+                  </Badge>
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300">
+                    {stats.totalIdeas - stats.completedIdeas} da fare
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl flex items-center">
+                  <ImageIcon className="mr-2 h-6 w-6 text-primary" />
+                  {stats.totalPhotos}
+                </CardTitle>
+                <CardDescription>Foto totali</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                    {mockImages.filter(i => i.type === 'landscape').length} paesaggi
+                  </Badge>
+                  <Badge variant="outline" className="bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300">
+                    {mockImages.filter(i => i.type === 'singlePerson').length} singole
+                  </Badge>
+                  <Badge variant="outline" className="bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300">
+                    {mockImages.filter(i => i.type === 'couple').length} coppia
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl flex items-center">
+                  <MapPin className="mr-2 h-6 w-6 text-primary" />
+                  {stats.totalLocations}
+                </CardTitle>
+                <CardDescription>Luoghi visitati</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Avete visitato {stats.totalLocations} posti diversi insieme.
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl flex items-center">
+                  <Music2 className="mr-2 h-6 w-6 text-primary" />
+                  {stats.totalSongs}
+                </CardTitle>
+                <CardDescription>Canzoni collegate</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Avete {stats.totalSongs} canzoni che vi ricordano momenti speciali.
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl flex items-center">
+                  <Heart className="mr-2 h-6 w-6 text-primary" />
+                  {couple ? couple.anniversaryDate ? 
+                    Math.floor((new Date().getTime() - new Date(couple.anniversaryDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                    '?' : '?'}
+                </CardTitle>
+                <CardDescription>Giorni insieme</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  State costruendo i vostri ricordi insieme da {couple ? couple.anniversaryDate ? 
+                    Math.floor((new Date().getTime() - new Date(couple.anniversaryDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                    '?' : '?'} giorni.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
           
-          {/* Overall Contributions */}
-          <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Flag className="mr-2 h-5 w-5" />
-                Contributi Totali
-              </CardTitle>
-              <CardDescription>
-                Confronto dei contributi totali tra i membri
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
+          {/* Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tipi di ricordi</CardTitle>
+                <CardDescription>
+                  Distribuzione dei ricordi per tipologia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={memoryTypeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={90}
+                      fill="#8884d8"
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {memoryTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Tipi di idee</CardTitle>
+                <CardDescription>
+                  Distribuzione delle idee per tipologia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={ideaTypeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={90}
+                      fill="#8884d8"
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {ideaTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Tipi di immagini</CardTitle>
+                <CardDescription>
+                  Distribuzione delle immagini per tipologia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={imageTypeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={90}
+                      fill="#8884d8"
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {imageTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Crescita nel tempo</CardTitle>
+                <CardDescription>
+                  Andamento di ricordi, idee e foto negli ultimi 12 mesi
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={userComparisonTotal}
-                    layout="vertical"
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 40,
-                      bottom: 5,
-                    }}
+                    data={timelineData}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="memories" name="Ricordi" fill="#8884d8" />
-                    <Bar dataKey="ideas" name="Idee" fill="#82ca9d" />
-                    <Bar dataKey="images" name="Immagini" fill="#ffc658" />
+                    <Bar dataKey="memories" name="Ricordi" fill="#0088FE" />
+                    <Bar dataKey="ideas" name="Idee" fill="#00C49F" />
+                    <Bar dataKey="photos" name="Foto" fill="#FFBB28" />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        {/* Comparison tab */}
+        <TabsContent value="comparison" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Confronto tra partner</CardTitle>
+              <CardDescription>
+                Chi contribuisce di più alla vostra storia?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={comparisonData}
+                  layout="vertical"
+                  margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="user1" name={userStats.user1.name} fill="#8884d8" />
+                  <Bar dataKey="user2" name={userStats.user2.name} fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
           
-          {/* Grid of comparison stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Memories Comparison */}
-            <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <BookMarked className="mr-2 h-5 w-5" />
-                  Ricordi Creati
+                  <Users className="h-5 w-5 mr-2 text-primary" />
+                  {userStats.user1.name}
                 </CardTitle>
-                <CardDescription>
-                  Chi ha creato più ricordi
-                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={userComparisonMemories}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {userComparisonMemories.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, 'Ricordi']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="space-y-4 mt-4">
-                  {userComparisonMemories.map((user, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className={`w-3 h-3 rounded-full bg-${COLORS[index % COLORS.length].substring(1)} mr-2`} 
-                               style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                          <span className="text-sm">{user.name}</span>
-                        </div>
-                        <div className="text-sm">{user.value}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <dl className="grid grid-cols-[120px_1fr] gap-2 text-sm">
+                  <dt className="text-muted-foreground">Ricordi creati:</dt>
+                  <dd className="font-medium">{userStats.user1.memoriesCreated}</dd>
+                  
+                  <dt className="text-muted-foreground">Idee proposte:</dt>
+                  <dd className="font-medium">{userStats.user1.ideasCreated}</dd>
+                  
+                  <dt className="text-muted-foreground">Idee realizzate:</dt>
+                  <dd className="font-medium">{userStats.user1.ideasCompleted}</dd>
+                  
+                  <dt className="text-muted-foreground">Foto caricate:</dt>
+                  <dd className="font-medium">{userStats.user1.photosUploaded}</dd>
+                </dl>
               </CardContent>
             </Card>
             
-            {/* Ideas Comparison */}
-            <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Lightbulb className="mr-2 h-5 w-5" />
-                  Idee
+                  <Users className="h-5 w-5 mr-2 text-primary" />
+                  {userStats.user2.name}
                 </CardTitle>
-                <CardDescription>
-                  Idee create e completate
-                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={userComparisonIdeas}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 0,
-                        bottom: 5,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="created" name="Create" fill="#8884d8" />
-                      <Bar dataKey="completed" name="Completate" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="space-y-4 mt-4">
-                  {userComparisonIdeas.map((user, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">{user.name}</span>
-                        <div className="text-sm flex gap-2">
-                          <span className="text-purple-600">{user.created} create</span>
-                          <span className="text-green-600">{user.completed} completate</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Images Comparison */}
-            <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Camera className="mr-2 h-5 w-5" />
-                  Foto Caricate
-                </CardTitle>
-                <CardDescription>
-                  Chi ha caricato più foto
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={userComparisonImages}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {userComparisonImages.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, 'Immagini']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="space-y-4 mt-4">
-                  {userComparisonImages.map((user, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className={`w-3 h-3 rounded-full bg-${COLORS[index % COLORS.length].substring(1)} mr-2`} 
-                               style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                          <span className="text-sm">{user.name}</span>
-                        </div>
-                        <div className="text-sm">{user.value}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <dl className="grid grid-cols-[120px_1fr] gap-2 text-sm">
+                  <dt className="text-muted-foreground">Ricordi creati:</dt>
+                  <dd className="font-medium">{userStats.user2.memoriesCreated}</dd>
+                  
+                  <dt className="text-muted-foreground">Idee proposte:</dt>
+                  <dd className="font-medium">{userStats.user2.ideasCreated}</dd>
+                  
+                  <dt className="text-muted-foreground">Idee realizzate:</dt>
+                  <dd className="font-medium">{userStats.user2.ideasCompleted}</dd>
+                  
+                  <dt className="text-muted-foreground">Foto caricate:</dt>
+                  <dd className="font-medium">{userStats.user2.photosUploaded}</dd>
+                </dl>
               </CardContent>
             </Card>
           </div>
           
-          {/* Achievements */}
-          <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
+          {/* Winner card */}
+          <Card className="bg-primary text-primary-foreground">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="mr-2 h-5 w-5" />
-                Risultati e Traguardi
+              <CardTitle className="text-center">
+                {userStats.user1.memoriesCreated + userStats.user1.ideasCreated + 
+                 userStats.user1.ideasCompleted + userStats.user1.photosUploaded >
+                 userStats.user2.memoriesCreated + userStats.user2.ideasCreated + 
+                 userStats.user2.ideasCompleted + userStats.user2.photosUploaded
+                 ? userStats.user1.name : userStats.user2.name} vince!
               </CardTitle>
-              <CardDescription>
-                Traguardi raggiunti dai membri della coppia
-              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {stats.userStats.map(user => (
-                  <div key={user.userId} className="border rounded-lg p-4">
-                    <h3 className="text-lg font-bold mb-3">{user.name}</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Ricordi creati</span>
-                        <Badge>{user.memoriesCreated}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Idee proposte</span>
-                        <Badge>{user.ideasCreated}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Idee completate</span>
-                        <Badge>{user.ideasCompleted}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Foto caricate</span>
-                        <Badge>{user.imagesUploaded}</Badge>
-                      </div>
-                      <div className="mt-4">
-                        <Badge className="bg-primary/20 text-primary" variant="outline">
-                          {getAchievementTitle(user)}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="text-center">
+              <p>
+                {userStats.user1.memoriesCreated + userStats.user1.ideasCreated + 
+                 userStats.user1.ideasCompleted + userStats.user1.photosUploaded >
+                 userStats.user2.memoriesCreated + userStats.user2.ideasCreated + 
+                 userStats.user2.ideasCompleted + userStats.user2.photosUploaded
+                 ? userStats.user1.name : userStats.user2.name} contribuisce di più alla vostra storia d'amore!
+              </p>
+              <p className="mt-2 text-sm opacity-80">Ma ricorda, l'amore non è una competizione... o forse sì? 😉</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -890,20 +572,5 @@ const RecapPage: React.FC = () => {
     </div>
   );
 };
-
-// Helper function to get achievement title based on user stats
-function getAchievementTitle(user: UserStats): string {
-  if (user.imagesUploaded > user.memoriesCreated && user.imagesUploaded > user.ideasCreated) {
-    return "Fotografo Esperto";
-  } else if (user.memoriesCreated > user.imagesUploaded && user.memoriesCreated > user.ideasCreated) {
-    return "Custode dei Ricordi";
-  } else if (user.ideasCreated > user.memoriesCreated && user.ideasCreated > user.imagesUploaded) {
-    return "Fonte di Ispirazione";
-  } else if (user.ideasCompleted > user.ideasCreated) {
-    return "Completatore";
-  } else {
-    return "Collaboratore Equilibrato";
-  }
-}
 
 export default RecapPage;

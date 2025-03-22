@@ -1,479 +1,461 @@
 
 import React, { useState } from 'react';
-import { 
-  User, 
-  Settings, 
-  Users, 
-  Edit, 
-  UserPlus, 
-  Save,
-  Heart,
-  LogOut,
-  UserX
-} from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { useTheme } from '@/context/theme-context';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { useToast } from '@/components/ui/use-toast';
+import { 
+  User, 
+  Heart, 
+  Calendar, 
+  Mail, 
+  Image as ImageIcon,
+  Save,
+  Trash2,
+  Lock,
+  Users
+} from 'lucide-react';
 
 const ProfilePage: React.FC = () => {
-  const { user, couple, updateUser, updateCouple, createCouple, inviteToCouple, leaveCouple } = useAuth();
+  const { user, couple, updateUser, updateCouple } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [editingCouple, setEditingCouple] = useState(false);
-  const [showCreateCoupleDialog, setShowCreateCoupleDialog] = useState(false);
-  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('personal');
   
-  // Form values
-  const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  // User form states
+  const [userName, setUserName] = useState(user?.name || '');
+  const [userEmail, setUserEmail] = useState(user?.email || '');
+  const [userBio, setUserBio] = useState(user?.bio || '');
+  const [userAvatar, setUserAvatar] = useState(user?.avatar || '');
+  
+  // Couple form states
   const [coupleName, setCoupleName] = useState(couple?.name || '');
   const [coupleDescription, setCoupleDescription] = useState(couple?.description || '');
-  const [newCoupleName, setNewCoupleName] = useState('');
-  const [newCoupleDescription, setNewCoupleDescription] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
+  const [coupleAnniversary, setCoupleAnniversary] = useState(
+    couple?.anniversaryDate ? new Date(couple.anniversaryDate).toISOString().split('T')[0] : ''
+  );
   
-  // Handle user profile update
-  const handleUpdateProfile = async () => {
-    try {
-      await updateUser({ name, email });
-      setEditingProfile(false);
-      console.log('Profile updated:', { name, email });
-      toast.success('Profilo aggiornato con successo!');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Errore nell\'aggiornamento del profilo');
-    }
+  // Password form states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
+  const handleUpdateUser = () => {
+    if (!user) return;
+    
+    // Create updated user object
+    const updatedUser = {
+      ...user,
+      name: userName,
+      email: userEmail,
+      bio: userBio,
+      avatar: userAvatar
+    };
+    
+    // In a real app, this would call an API
+    updateUser(updatedUser);
+    console.log("User profile updated:", updatedUser);
+    
+    toast({
+      title: "Profilo aggiornato",
+      description: "Le tue informazioni personali sono state aggiornate con successo.",
+    });
   };
   
-  // Handle couple update
-  const handleUpdateCouple = async () => {
-    try {
-      await updateCouple({ name: coupleName, description: coupleDescription });
-      setEditingCouple(false);
-      console.log('Couple updated:', { name: coupleName, description: coupleDescription });
-    } catch (error) {
-      console.error('Error updating couple:', error);
-    }
+  const handleUpdateCouple = () => {
+    if (!couple) return;
+    
+    // Create updated couple object
+    const updatedCouple = {
+      ...couple,
+      name: coupleName,
+      description: coupleDescription,
+      anniversaryDate: coupleAnniversary ? new Date(coupleAnniversary) : undefined
+    };
+    
+    // In a real app, this would call an API
+    updateCouple(updatedCouple);
+    console.log("Couple profile updated:", updatedCouple);
+    
+    toast({
+      title: "Profilo coppia aggiornato",
+      description: "Le informazioni della coppia sono state aggiornate con successo.",
+    });
   };
   
-  // Handle create couple
-  const handleCreateCouple = async () => {
-    try {
-      await createCouple(newCoupleName, newCoupleDescription);
-      setShowCreateCoupleDialog(false);
-      console.log('Couple created:', { name: newCoupleName, description: newCoupleDescription });
-    } catch (error) {
-      console.error('Error creating couple:', error);
+  const handleChangePassword = () => {
+    if (!user) return;
+    
+    // Validate passwords
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le nuove password non corrispondono.",
+        variant: "destructive",
+      });
+      return;
     }
+    
+    if (newPassword.length < 8) {
+      toast({
+        title: "Errore",
+        description: "La nuova password deve contenere almeno 8 caratteri.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // In a real app, this would call an API
+    console.log("Password changed");
+    
+    // Reset fields
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    
+    toast({
+      title: "Password aggiornata",
+      description: "La tua password è stata modificata con successo.",
+    });
   };
   
-  // Handle invite
-  const handleInvite = async () => {
-    try {
-      await inviteToCouple(inviteEmail);
-      setShowInviteDialog(false);
-      setInviteEmail('');
-      console.log('Invitation sent to:', inviteEmail);
-    } catch (error) {
-      console.error('Error sending invitation:', error);
-    }
+  const handleDeleteAccount = () => {
+    // In a real app, this would call an API
+    console.log("Account deletion requested");
+    
+    toast({
+      title: "Richiesta inviata",
+      description: "La richiesta di eliminazione dell'account è stata inviata.",
+      variant: "destructive",
+    });
   };
   
-  // Handle leave couple
-  const handleLeaveCouple = async () => {
-    if (window.confirm('Sei sicuro di voler abbandonare la coppia?')) {
-      try {
-        await leaveCouple();
-        console.log('Left couple');
-      } catch (error) {
-        console.error('Error leaving couple:', error);
-      }
-    }
-  };
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p>Utente non autenticato. Effettua l'accesso per visualizzare il profilo.</p>
+      </div>
+    );
+  }
   
   return (
-    <div className="container mx-auto px-4 py-6 animate-fade-in">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Profilo</h1>
-        <p className="text-muted-foreground mt-1">
-          Gestisci le tue informazioni personali e quelle della coppia
-        </p>
-      </div>
+    <div className="container max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+      <h1 className="text-4xl font-bold mb-2">Profilo</h1>
+      <p className="text-muted-foreground mb-6">
+        Gestisci le tue informazioni personali e le impostazioni dell'account
+      </p>
       
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="w-full justify-start mb-6">
-          <TabsTrigger value="profile" className="flex items-center">
-            <User className="mr-2 h-4 w-4" />
-            Profilo
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="personal">
+            <User className="h-4 w-4 mr-2" />
+            Personale
           </TabsTrigger>
-          <TabsTrigger value="couple" className="flex items-center">
-            <Heart className="mr-2 h-4 w-4" />
+          <TabsTrigger value="couple">
+            <Heart className="h-4 w-4 mr-2" />
             Coppia
           </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            Impostazioni
+          <TabsTrigger value="settings">
+            <Lock className="h-4 w-4 mr-2" />
+            Sicurezza
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="profile" className="animate-in">
-          <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-            <CardHeader className="flex flex-row items-center">
-              <div className="flex-1">
-                <CardTitle className="text-2xl">Informazioni Personali</CardTitle>
+        <TabsContent value="personal" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Informazioni personali</CardTitle>
                 <CardDescription>
-                  Visualizza e modifica le tue informazioni personali
+                  Aggiorna le tue informazioni personali
                 </CardDescription>
-              </div>
-              <Button 
-                variant={editingProfile ? "default" : "outline"} 
-                size="sm"
-                onClick={() => setEditingProfile(!editingProfile)}
-              >
-                {editingProfile ? (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Salva
-                  </>
-                ) : (
-                  <>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Modifica
-                  </>
-                )}
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user?.avatar} />
-                  <AvatarFallback className="text-lg">{user?.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-xl font-semibold">{user?.name}</h3>
-                  <p className="text-muted-foreground">{user?.email}</p>
-                  {couple && (
-                    <Badge variant="outline" className="mt-2 flex items-center w-fit">
-                      <Heart className="mr-1 h-3 w-3 text-pink-500" />
-                      {couple.name}
-                    </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input
+                    id="name"
+                    placeholder="Il tuo nome"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="La tua email"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Racconta qualcosa di te..."
+                    value={userBio}
+                    onChange={(e) => setUserBio(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="avatar">URL Avatar (opzionale)</Label>
+                  <Input
+                    id="avatar"
+                    placeholder="https://example.com/avatar.jpg"
+                    value={userAvatar}
+                    onChange={(e) => setUserAvatar(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handleUpdateUser} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4 mr-2" />
+                  Salva modifiche
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Il tuo profilo</CardTitle>
+                <CardDescription>
+                  Riepilogo del tuo account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-center mb-4">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                    {user.avatar ? (
+                      <img 
+                        src={user.avatar} 
+                        alt={user.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-12 w-12 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm">{user.name}</span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm">{user.email}</span>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Heart className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm">{couple?.name || 'Nessuna coppia'}</span>
+                  </div>
+                  
+                  {couple?.members && couple.members.length > 0 && (
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm">
+                        {couple.members.filter(m => m.id !== user.id).map(m => m.name).join(', ')}
+                      </span>
+                    </div>
                   )}
-                </div>
-              </div>
-              
-              {editingProfile ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Nome</label>
-                    <Input 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)} 
-                      className="max-w-md"
-                    />
+                  
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm">
+                      Membro dal {user.createdAt instanceof Date ? 
+                        format(user.createdAt, 'dd/MM/yyyy') : 
+                        format(new Date(user.createdAt), 'dd/MM/yyyy')}
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Email</label>
-                    <Input 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      className="max-w-md"
-                    />
-                  </div>
-                  <Button onClick={handleUpdateProfile}>
-                    Aggiorna Profilo
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Nome</h4>
-                    <p>{user?.name}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Email</h4>
-                    <p>{user?.email}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Account creato il</h4>
-                    <p>{user?.createdAt.toLocaleDateString()}</p>
+                  
+                  <div className="flex items-center">
+                    <ImageIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm">
+                      {user.uploadCount || 0} immagini caricate
+                    </span>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
-        <TabsContent value="couple" className="animate-in">
-          {couple ? (
-            <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-              <CardHeader className="flex flex-row items-center">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl flex items-center">
-                    <Heart className="mr-2 h-5 w-5 text-pink-500" />
-                    {couple.name}
-                  </CardTitle>
-                  <CardDescription>
-                    Gestisci la tua coppia e i membri
-                  </CardDescription>
-                </div>
-                <div className="flex space-x-2">
-                  <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Invita
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Invita nella coppia</DialogTitle>
-                        <DialogDescription>
-                          Inserisci l'email della persona che vuoi invitare nella tua coppia.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <label className="text-sm font-medium mb-1 block">Email</label>
-                          <Input 
-                            value={inviteEmail} 
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                            placeholder="nome@esempio.com"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Annulla</Button>
-                        <Button onClick={handleInvite}>Invia Invito</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  
-                  <Button 
-                    variant={editingCouple ? "default" : "outline"} 
-                    size="sm"
-                    onClick={() => setEditingCouple(!editingCouple)}
-                  >
-                    {editingCouple ? (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Salva
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Modifica
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {editingCouple ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Nome della Coppia</label>
-                      <Input 
-                        value={coupleName} 
-                        onChange={(e) => setCoupleName(e.target.value)} 
-                        className="max-w-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Descrizione</label>
-                      <Textarea 
-                        value={coupleDescription} 
-                        onChange={(e) => setCoupleDescription(e.target.value)} 
-                        className="max-w-md"
-                        placeholder="Scrivi qualcosa sulla vostra storia..."
-                        rows={4}
-                      />
-                    </div>
-                    <Button onClick={handleUpdateCouple}>
-                      Aggiorna Informazioni Coppia
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-medium mb-1">Nome</h4>
-                      <p>{couple.name}</p>
-                    </div>
-                    {couple.description && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-1">Descrizione</h4>
-                        <p>{couple.description}</p>
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="text-sm font-medium mb-1">Creata il</h4>
-                      <p>{couple.createdAt.toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                )}
-                
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Membri della Coppia</h4>
-                  <div className="space-y-3">
+        <TabsContent value="couple" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informazioni della coppia</CardTitle>
+              <CardDescription>
+                Aggiorna le informazioni della tua relazione
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="coupleName">Nome della coppia</Label>
+                <Input
+                  id="coupleName"
+                  placeholder="Es. Mario & Laura"
+                  value={coupleName}
+                  onChange={(e) => setCoupleName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="coupleDescription">Descrizione</Label>
+                <Textarea
+                  id="coupleDescription"
+                  placeholder="Racconta la vostra storia..."
+                  value={coupleDescription}
+                  onChange={(e) => setCoupleDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="anniversary">Data anniversario (opzionale)</Label>
+                <Input
+                  id="anniversary"
+                  type="date"
+                  value={coupleAnniversary}
+                  onChange={(e) => setCoupleAnniversary(e.target.value)}
+                />
+              </div>
+              
+              {couple?.members && couple.members.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Membri della coppia</Label>
+                  <div className="border rounded-md p-4">
                     {couple.members.map((member) => (
-                      <div key={member.id} className="flex items-center space-x-3 p-3 rounded-md bg-background/50">
-                        <Avatar>
-                          <AvatarImage src={member.avatar} />
-                          <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="font-medium">{member.name}</p>
-                          <p className="text-sm text-muted-foreground">{member.email}</p>
+                      <div key={member.id} className="flex items-center space-x-3 py-2">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          {member.avatar ? (
+                            <img 
+                              src={member.avatar} 
+                              alt={member.name} 
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
                         </div>
-                        {member.id === user?.id && (
-                          <Badge>Tu</Badge>
-                        )}
+                        <div>
+                          <p className="text-sm font-medium">{member.name}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleUpdateCouple} className="w-full sm:w-auto">
+                <Save className="h-4 w-4 mr-2" />
+                Salva modifiche
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="settings" className="mt-6">
+          <div className="grid grid-cols-1 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cambia password</CardTitle>
+                <CardDescription>
+                  Aggiorna la password del tuo account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Password attuale</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nuova password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Conferma nuova password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
               </CardContent>
               <CardFooter>
                 <Button 
-                  variant="destructive" 
-                  onClick={handleLeaveCouple}
-                  className="flex items-center"
+                  onClick={handleChangePassword} 
+                  disabled={!currentPassword || !newPassword || !confirmPassword}
+                  className="w-full sm:w-auto"
                 >
-                  <UserX className="mr-2 h-4 w-4" />
-                  Abbandona Coppia
+                  <Save className="h-4 w-4 mr-2" />
+                  Aggiorna password
                 </Button>
               </CardFooter>
             </Card>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Heart className="h-16 w-16 text-muted-foreground mb-6" />
-              <h2 className="text-2xl font-bold mb-2">Non fai ancora parte di una coppia</h2>
-              <p className="text-muted-foreground max-w-md mb-6">
-                Crea una nuova coppia e invita il tuo partner per iniziare a condividere ricordi insieme.
-              </p>
-              
-              <Dialog open={showCreateCoupleDialog} onOpenChange={setShowCreateCoupleDialog}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Heart className="mr-2 h-4 w-4" />
-                    Crea una Coppia
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Crea una nuova Coppia</DialogTitle>
-                    <DialogDescription>
-                      Inserisci le informazioni per creare una nuova coppia.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Nome della Coppia</label>
-                      <Input 
-                        value={newCoupleName} 
-                        onChange={(e) => setNewCoupleName(e.target.value)}
-                        placeholder="es. Mario & Lucia"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Descrizione (opzionale)</label>
-                      <Textarea 
-                        value={newCoupleDescription} 
-                        onChange={(e) => setNewCoupleDescription(e.target.value)}
-                        placeholder="Raccontaci qualcosa sulla vostra storia..."
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowCreateCoupleDialog(false)}>Annulla</Button>
-                    <Button onClick={handleCreateCouple}>Crea Coppia</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="settings" className="animate-in">
-          <Card className="backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg">
-            <CardHeader>
-              <CardTitle>Impostazioni</CardTitle>
-              <CardDescription>
-                Gestisci le impostazioni del tuo account
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border-b pb-4">
-                <h3 className="font-medium mb-2">Preferenze di Privacy</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Gestisci chi può vedere le tue informazioni e attività.
+            
+            <Card className="border-destructive/20">
+              <CardHeader>
+                <CardTitle className="text-destructive">Zona pericolosa</CardTitle>
+                <CardDescription>
+                  Azioni irreversibili per il tuo account
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  L'eliminazione dell'account è un'operazione irreversibile. Tutti i tuoi dati personali, ricordi e foto saranno rimossi permanentemente.
                 </p>
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="font-medium">Visibilità Profilo</p>
-                    <p className="text-sm text-muted-foreground">Chi può vedere il tuo profilo</p>
-                  </div>
-                  <Button variant="outline" size="sm" disabled>
-                    Solo membri della coppia
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="border-b pb-4">
-                <h3 className="font-medium mb-2">Notifiche</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Gestisci come e quando ricevere notifiche.
-                </p>
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="font-medium">Notifiche Email</p>
-                    <p className="text-sm text-muted-foreground">Ricevi notifiche via email</p>
-                  </div>
-                  <Button variant="outline" size="sm" disabled>
-                    Attiva
-                  </Button>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="font-medium mb-2">Account</h3>
-                <div className="space-y-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start text-left"
-                    disabled
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Cambia password
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start text-left text-destructive hover:text-destructive"
-                    disabled
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Elimina account
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteAccount}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Elimina account
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

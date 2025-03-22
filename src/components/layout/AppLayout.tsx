@@ -4,7 +4,8 @@ import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { Sidebar } from './Sidebar';
 import { AuthForm } from '@/components/auth/AuthForm';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const AppLayout: React.FC = () => {
   const { user, loading } = useAuth();
@@ -53,14 +54,31 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      {/* Desktop Sidebar */}
+      <div className="md:block hidden">
+        <Sidebar open={true} setOpen={setSidebarOpen} />
+      </div>
+      
+      {/* Mobile Sidebar */}
+      <div className="md:hidden block">
+        <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      </div>
+      
+      {/* Mobile Hamburger Button - Fixed at bottom left */}
+      <Button
+        variant="primary"
+        size="icon"
+        className="md:hidden fixed bottom-6 left-6 z-50 rounded-full shadow-lg"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Toggle menu"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
       
       <main 
-        className={`flex-1 overflow-y-auto transform transition-all duration-300 w-full ${
-          sidebarOpen ? 'md:ml-64' : ''
-        }`}
+        className="flex-1 overflow-y-auto transform transition-all duration-300 w-full md:ml-64 pt-4"
       >
-        <div className="p-2 sm:p-4 md:p-6 h-full pt-14 md:pt-4">
+        <div className="p-2 sm:p-4 md:p-6 h-full">
           <Outlet />
         </div>
       </main>

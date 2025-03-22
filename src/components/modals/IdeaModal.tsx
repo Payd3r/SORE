@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Idea, IdeaType } from "@/types";
 import { useAuth } from '@/context/auth-context';
-import { Check, Trash, Pencil } from 'lucide-react';
+import { Check, Trash, Pencil, Lightbulb, Save } from 'lucide-react';
 
 interface IdeaModalProps {
   open: boolean;
@@ -45,7 +45,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
   useEffect(() => {
     if (idea && mode !== 'create') {
       setTitle(idea.title);
-      setDescription(idea.description);
+      setDescription(idea.description || '');
       setType(idea.type);
     } else {
       setTitle('');
@@ -61,7 +61,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
     
     const ideaData: Partial<Idea> = {
       title: title.trim(),
-      description: description.trim(),
+      description: description.trim() || undefined,
       type,
     };
     
@@ -73,6 +73,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
       ideaData.createdAt = new Date();
     }
     
+    console.log(`Idea ${mode === 'create' ? 'created' : 'updated'}:`, ideaData);
     onSave(ideaData);
     
     if (mode === 'view') {
@@ -87,15 +88,15 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
   };
 
   const handleComplete = (completed: boolean) => {
-    if (onComplete && user) {
+    if (onComplete && user && idea) {
       console.log(`Idea marked as ${completed ? 'completed' : 'incomplete'} by ${user.name}`);
       onComplete(completed);
     }
   };
 
   const handleDelete = () => {
-    if (onDelete) {
-      console.log('Idea deleted');
+    if (onDelete && idea) {
+      console.log('Idea deleted:', idea.id);
       onDelete();
       onOpenChange(false);
     }
@@ -103,10 +104,11 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] backdrop-blur-sm bg-white/60 dark:bg-gray-950/60 border-none shadow-lg">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Crea nuova idea' : mode === 'edit' ? 'Modifica idea' : 'Dettagli idea'}
+          <DialogTitle className="flex items-center">
+            <Lightbulb className="h-5 w-5 mr-2 text-primary" />
+            {mode === 'create' ? 'Nuova idea' : mode === 'edit' ? 'Modifica idea' : 'Dettagli idea'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create' 
@@ -119,7 +121,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
           {isEditing ? (
             <>
               <div className="space-y-2">
-                <Label htmlFor="title">Titolo</Label>
+                <Label htmlFor="title">Titolo*</Label>
                 <Input
                   id="title"
                   placeholder="Titolo dell'idea"
@@ -142,7 +144,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
               <div className="space-y-2">
                 <Label>Tipo di idea</Label>
                 <RadioGroup value={type} onValueChange={(value: IdeaType) => setType(value)}>
-                  <div className="flex flex-col space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="travel" id="travel" />
                       <Label htmlFor="travel">Viaggio</Label>
@@ -180,7 +182,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
                 )}
 
                 {idea && idea.completed && idea.completedByName && (
-                  <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded p-2 mt-2 text-sm flex items-center">
+                  <div className="bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded p-2 mt-2 text-sm flex items-center">
                     <Check className="h-4 w-4 mr-2" />
                     Completata da {idea.completedByName}
                     {idea.completedAt && ` il ${new Date(idea.completedAt).toLocaleDateString()}`}
@@ -252,7 +254,12 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
                   Annulla
                 </Button>
               )}
-              <Button onClick={handleSave} disabled={!title.trim()}>
+              <Button 
+                onClick={handleSave} 
+                disabled={!title.trim()}
+                className="flex items-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
                 Salva
               </Button>
             </div>
