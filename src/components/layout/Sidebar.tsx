@@ -23,7 +23,7 @@ type SidebarProps = {
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   
   // Define the navigation items
@@ -126,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={logout}
+            onClick={signOut}
           >
             <LogOut className="w-5 h-5 mr-2" />
             Logout

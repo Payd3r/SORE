@@ -10,6 +10,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
+  logout: () => Promise<void>; // Alias for signOut for backward compatibility
   updateUser: (user: Partial<User>) => Promise<void>;
   updateCouple: (couple: Partial<Couple>) => Promise<void>;
   createCouple: (name: string, description?: string) => Promise<void>;
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
+  logout: async () => {},
   updateUser: async () => {},
   updateCouple: async () => {},
   createCouple: async () => {},
@@ -45,6 +47,8 @@ const MOCK_USERS: User[] = [
     email: 'john@example.com',
     createdAt: new Date(),
     coupleId: 'couple1',
+    bio: 'Lorem ipsum dolor sit amet',
+    uploadCount: 15,
   },
   {
     id: '2',
@@ -52,12 +56,16 @@ const MOCK_USERS: User[] = [
     email: 'jane@example.com',
     createdAt: new Date(),
     coupleId: 'couple1',
+    bio: 'Consectetur adipiscing elit',
+    uploadCount: 12,
   },
   {
     id: '3',
     name: 'Alex Johnson',
     email: 'alex@example.com',
     createdAt: new Date(),
+    bio: 'Sed do eiusmod tempor incididunt',
+    uploadCount: 0,
   }
 ];
 
@@ -67,6 +75,9 @@ const MOCK_COUPLE: Couple = {
   name: 'John & Jane',
   description: 'Together since 2020',
   createdAt: new Date(),
+  startDate: new Date('2020-01-15'),
+  anniversaryDate: new Date('2020-06-20'),
+  avatar: '/placeholder.svg',
   members: [MOCK_USERS[0], MOCK_USERS[1]]
 };
 
@@ -184,6 +195,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  // Create an alias for signOut called logout for backward compatibility
+  const logout = signOut;
 
   // Update user function
   const updateUser = async (userData: Partial<User>) => {
@@ -369,6 +383,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
+    logout,
     updateUser,
     updateCouple,
     createCouple,

@@ -31,6 +31,8 @@ import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 import ImageModal from '@/components/modals/ImageModal';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Download } from "lucide-react";
 
 const generateMockImages = (): ImageType[] => {
   const images: ImageType[] = [];
@@ -833,3 +835,4 @@ const GalleryPage: React.FC = () => {
 };
 
 export default GalleryPage;
+
