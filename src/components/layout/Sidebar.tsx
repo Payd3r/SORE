@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ThemeToggle } from './ThemeToggle';
 import { 
   Home,
   BookMarked,
@@ -99,24 +100,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         
         {/* Footer */}
         <div className="p-4 border-t">
-          <NavLink
-            to="/profile"
-            className={({ isActive }) => `
-              flex items-center px-4 py-3 rounded-lg transition-colors mb-2
-              ${isActive 
-                ? 'bg-primary text-primary-foreground' 
-                : 'hover:bg-muted'
-              }
-            `}
-            onClick={() => {
-              if (window.innerWidth < 768) {
-                setOpen(false);
-              }
-            }}
-          >
-            <User className="w-5 h-5" />
-            <span className="ml-3">Profilo</span>
-          </NavLink>
+          <div className="flex items-center justify-between mb-4">
+            <NavLink
+              to="/profile"
+              className={({ isActive }) => `
+                flex items-center px-4 py-3 rounded-lg transition-colors flex-1
+                ${isActive 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-muted'
+                }
+              `}
+              onClick={() => {
+                if (window.innerWidth < 768) {
+                  setOpen(false);
+                }
+              }}
+            >
+              <User className="w-5 h-5" />
+              <span className="ml-3">Profilo</span>
+            </NavLink>
+            
+            <ThemeToggle />
+          </div>
           
           <Button 
             variant="outline" 
