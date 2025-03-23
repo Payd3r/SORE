@@ -3,220 +3,248 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { GeoLocation, Image } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import { MapPin, Image as ImageIcon, Info, Calendar } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/use-toast';
 
-interface MemoryMapProps {
-  locations: GeoLocation[];
+type MemoryMapProps = {
+  location: GeoLocation;
   images: Image[];
   title: string;
-}
+};
 
-export const MemoryMap: React.FC<MemoryMapProps> = ({ locations, images, title }) => {
+export const MemoryMap: React.FC<MemoryMapProps> = ({ location, images, title }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
-  const [token, setToken] = useState<string>(localStorage.getItem('mapbox_token') || '');
-  const [tokenInput, setTokenInput] = useState<string>('');
-  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Fallback token (note: this is a limited public token)
-  const fallbackToken = 'pk.eyJ1IjoibWFwYm94LWRlbW8iLCJhIjoiY2t4dWRma2pkNXQycDJucHQycnVrd2FpcSJ9.LrW_wCOLQmGe_iUbIx6LnA';
-  
+  const [mapBoxToken, setMapBoxToken] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+  const [customToken, setCustomToken] = useState<string>('');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(true);
+  const isMobile = useIsMobile();
+
+  // Filter only images with location data
+  const imagesWithLocation = images.filter(img => img.location);
+
   const initializeMap = () => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || !mapBoxToken || !location) return;
+
+    // Initialize map
+    mapboxgl.accessToken = mapBoxToken;
     
-    // Cleanup previous map instance
+    // Check if map already exists and remove it
     if (map.current) {
-      markers.current.forEach(marker => marker.remove());
-      markers.current = [];
       map.current.remove();
-      map.current = null;
     }
-    
-    // Use stored token or fallback
-    const accessToken = token || fallbackToken;
     
     try {
-      console.log("Initializing map with token:", accessToken);
-      mapboxgl.accessToken = accessToken;
-      
-      // Get map center and bounds
-      const locs = locations.length > 0 ? locations : images
-        .filter(img => img.location)
-        .map(img => img.location as GeoLocation);
-      
-      if (locs.length === 0) {
-        // Default to Italy if no locations
-        locs.push({ latitude: 41.9028, longitude: 12.4964 });
-      }
-      
-      const center = locs.length === 1 
-        ? [locs[0].longitude, locs[0].latitude]
-        : calculateCenterAndZoom(locs.map(l => [l.longitude, l.latitude])).center;
-      
-      map.current = new mapboxgl.Map({
+      const newMap = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: center,
-        zoom: locs.length === 1 ? 12 : 9,
-        attributionControl: false
+        center: [location.longitude, location.latitude],
+        zoom: 13,
       });
-      
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.current.addControl(new mapboxgl.AttributionControl({ compact: true }));
-      
-      // Add handlers
-      map.current.on('load', () => {
-        setMapLoaded(true);
-        setError(null);
+
+      // Add main location marker
+      const mainMarkerEl = document.createElement('div');
+      mainMarkerEl.className = 'w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-white';
+      mainMarkerEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+
+      new mapboxgl.Marker(mainMarkerEl)
+        .setLngLat([location.longitude, location.latitude])
+        .setPopup(new mapboxgl.Popup().setHTML(`<strong>${title}</strong><br>${location.name || ''}`))
+        .addTo(newMap);
+
+      // Add image markers if they have location data
+      imagesWithLocation.forEach((image) => {
+        if (!image.location) return;
+
+        const el = document.createElement('div');
+        el.className = 'w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md';
         
-        // Add markers
-        if (locs.length > 0) {
-          locs.forEach(loc => {
-            const relevantImages = images.filter(img => 
-              img.location && 
-              img.location.latitude === loc.latitude && 
-              img.location.longitude === loc.longitude
-            );
-            
-            if (relevantImages.length > 0) {
-              // Create custom element for marker
-              const el = document.createElement('div');
-              el.className = 'marker-image rounded-full border-2 border-white shadow-lg';
-              el.style.backgroundImage = `url(${relevantImages[0].thumbnailUrl})`;
-              el.style.width = '40px';
-              el.style.height = '40px';
-              el.style.backgroundSize = 'cover';
-              el.style.borderRadius = '50%';
-              
-              if (relevantImages.length > 1) {
-                const badge = document.createElement('div');
-                badge.className = 'absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md';
-                badge.textContent = `+${relevantImages.length - 1}`;
-                el.appendChild(badge);
-                el.style.position = 'relative';
-              }
-              
-              // Create popup
-              const popup = new mapboxgl.Popup({ offset: 25 })
-                .setHTML(`
-                  <div class="p-2">
-                    <h3 class="font-bold">${loc.name || title}</h3>
-                    <p class="text-sm">${relevantImages.length} immagini</p>
-                    <div class="grid grid-cols-${Math.min(relevantImages.length, 3)} gap-1 mt-2">
-                      ${relevantImages.slice(0, 6).map(img => `
-                        <img src="${img.thumbnailUrl}" alt="${img.name}" class="w-12 h-12 object-cover rounded" />
-                      `).join('')}
-                    </div>
-                  </div>
-                `);
-              
-              // Add marker to map
-              const marker = new mapboxgl.Marker(el)
-                .setLngLat([loc.longitude, loc.latitude])
-                .setPopup(popup)
-                .addTo(map.current!);
-              
-              markers.current.push(marker);
-            } else {
-              // Simple marker for locations without images
-              const marker = new mapboxgl.Marker()
-                .setLngLat([loc.longitude, loc.latitude])
-                .addTo(map.current!);
-              
-              markers.current.push(marker);
-            }
-          });
-        }
+        const img = document.createElement('img');
+        img.src = image.thumbnailUrl;
+        img.className = 'w-full h-full object-cover';
+        el.appendChild(img);
+
+        const date = format(image.date, 'dd/MM/yyyy HH:mm');
+        
+        new mapboxgl.Marker(el)
+          .setLngLat([image.location.longitude, image.location.latitude])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 25 }).setHTML(
+              `<div style="max-width: 220px;">
+                <img src="${image.thumbnailUrl}" style="width: 100%; height: auto; border-radius: 4px; margin-bottom: 8px;">
+                <strong>${image.name}</strong>
+                <div style="color: #6b7280; font-size: 12px;">${date}</div>
+              </div>`
+            )
+          )
+          .addTo(newMap);
+
+        // Add click event to marker
+        el.addEventListener('click', () => {
+          setSelectedImage(image);
+        });
       });
-      
-      map.current.on('error', (e) => {
+
+      // Add navigation controls
+      newMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      // Fit bounds to include all markers if there are images with location
+      if (imagesWithLocation.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([location.longitude, location.latitude]);
+        
+        imagesWithLocation.forEach(image => {
+          if (image.location) {
+            bounds.extend([image.location.longitude, image.location.latitude]);
+          }
+        });
+        
+        newMap.fitBounds(bounds, { padding: isMobile ? 30 : 70, maxZoom: 15 });
+      }
+
+      map.current = newMap;
+
+      // Add event listener to handle any errors with loading the map
+      newMap.on('error', (e) => {
         console.error('Mapbox error:', e);
-        setError('Errore nel caricamento della mappa. Verifica il token Mapbox.');
+        setShowTokenInput(true);
+        toast({
+          title: "Errore di caricamento mappa",
+          description: "C'è stato un problema con il caricamento della mappa. Per favore inserisci un token Mapbox valido.",
+          variant: "destructive"
+        });
       });
-      
-    } catch (err) {
-      console.error('Error initializing map:', err);
-      setError('Errore nell\'inizializzazione della mappa. Riprova più tardi.');
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setShowTokenInput(true);
     }
   };
-  
-  const calculateCenterAndZoom = (coordinates: [number, number][]) => {
-    // Calculate the bounds of all points
-    const bounds = coordinates.reduce(
-      (bounds, coord) => bounds.extend(coord),
-      new mapboxgl.LngLatBounds(coordinates[0], coordinates[0])
-    );
-    
-    return {
-      center: [
-        (bounds.getEast() + bounds.getWest()) / 2,
-        (bounds.getNorth() + bounds.getSouth()) / 2
-      ] as [number, number],
-      bounds
-    };
-  };
-  
-  const saveToken = () => {
-    if (tokenInput.trim()) {
-      localStorage.setItem('mapbox_token', tokenInput.trim());
-      setToken(tokenInput.trim());
-      setTokenInput('');
+
+  const handleTokenSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customToken) {
+      setMapBoxToken(customToken);
+      setShowTokenInput(false);
+      localStorage.setItem('mapbox_token', customToken);
+      toast({
+        title: "Token aggiornato",
+        description: "Il token Mapbox è stato aggiornato con successo."
+      });
     }
   };
-  
-  // Initialize or reinitialize map when token changes
+
   useEffect(() => {
-    initializeMap();
+    // Try to get token from localStorage first
+    const savedToken = localStorage.getItem('mapbox_token');
+    if (savedToken) {
+      setMapBoxToken(savedToken);
+      setShowTokenInput(false);
+    } else {
+      // Fallback to default token or show input
+      const token = 'pk.eyJ1IjoibG92YWJsZWRldjIiLCJhIjoiY2xobXR3N3FsMDR1YTNkbnlrdWdwbTlidiJ9.y2xmVFwFIKaOErM4_KGLAQ';
+      setMapBoxToken(token);
+      setShowTokenInput(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mapBoxToken) {
+      initializeMap();
+    }
     
-    // Cleanup function
     return () => {
       if (map.current) {
-        markers.current.forEach(marker => marker.remove());
-        markers.current = [];
-        try {
-          map.current.remove();
-        } catch (e) {
-          console.error('Error removing map:', e);
-        }
-        map.current = null;
+        map.current.remove();
       }
     };
-  }, [token, locations]);
-  
+  }, [location, images, mapBoxToken, title, imagesWithLocation, isMobile]);
+
+  if (!location) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
+        <div className="text-center text-muted-foreground">
+          <MapPin className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2" />
+          <p>Nessuna posizione disponibile per questo ricordo</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
-      {error && (
-        <div className="absolute inset-0 bg-muted/90 flex flex-col items-center justify-center z-10 p-4">
-          <p className="text-destructive mb-4">{error}</p>
-          <div className="flex flex-col w-full max-w-md gap-2">
-            <p className="text-sm">Inserisci il tuo token Mapbox:</p>
-            <div className="flex gap-2">
-              <Input 
-                value={tokenInput} 
-                onChange={(e) => setTokenInput(e.target.value)} 
-                placeholder="pk.eyJ1..." 
-                className="flex-1"
-              />
-              <Button onClick={saveToken}>Salva</Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Ottieni un token su <a href="https://www.mapbox.com/" target="_blank" rel="noopener noreferrer" className="underline">mapbox.com</a>
-            </p>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary" />
+          <h2 className="text-xl sm:text-2xl font-bold">Posizione</h2>
+        </div>
+        
+        {imagesWithLocation.length > 0 && (
+          <div className="text-xs sm:text-sm text-muted-foreground flex items-center">
+            <Info className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Clicca sui marker per visualizzare le immagini</span>
+            <span className="sm:hidden">Tocca i marker</span>
           </div>
+        )}
+      </div>
+      
+      {showTokenInput && (
+        <div className="mb-4 p-4 border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-900/30 rounded-lg">
+          <h3 className="text-sm font-medium mb-2">Token Mapbox necessario</h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Per visualizzare la mappa è necessario un token Mapbox valido. Puoi ottenerlo registrandoti su mapbox.com.
+          </p>
+          <form onSubmit={handleTokenSubmit} className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Inserisci il token Mapbox"
+              value={customToken}
+              onChange={(e) => setCustomToken(e.target.value)}
+              className="text-xs h-8"
+            />
+            <Button type="submit" size="sm" className="h-8">Applica</Button>
+          </form>
         </div>
       )}
       
-      {!mapLoaded && !error && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
-      
-      <div ref={mapContainer} className="w-full h-full" />
+      <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-lg overflow-hidden shadow-md">
+        <div ref={mapContainer} className="absolute inset-0" />
+      </div>
+
+      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl p-2 sm:p-6">
+          {selectedImage && (
+            <div className="space-y-4">
+              <div className="relative aspect-video rounded-md overflow-hidden">
+                <img 
+                  src={selectedImage.url} 
+                  alt={selectedImage.name} 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-base sm:text-lg font-semibold">{selectedImage.name}</h3>
+                <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span>{format(selectedImage.date, 'dd/MM/yyyy HH:mm')}</span>
+                </div>
+                {selectedImage.location?.name && (
+                  <div className="flex items-center text-muted-foreground text-xs sm:text-sm">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span>{selectedImage.location.name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

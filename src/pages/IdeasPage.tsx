@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -11,8 +12,7 @@ import {
   Plane,
   UtensilsCrossed,
   Sparkles,
-  Trophy,
-  UserCheck
+  Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,11 +28,9 @@ import {
 import { toast } from 'sonner';
 import { Idea, IdeaType } from '@/types';
 import { format } from 'date-fns';
-import { useAuth } from '@/context/auth-context';
-import IdeaModal from '@/components/modals/IdeaModal';
 
-// Mock data for demonstration - will be replaced with local storage
-let mockIdeas: Idea[] = [
+// Mock data for demonstration
+const mockIdeas: Idea[] = [
   {
     id: '1',
     type: 'travel',
@@ -40,9 +38,7 @@ let mockIdeas: Idea[] = [
     description: 'Passare un weekend romantico a Venezia, visitando i canali e gustando la cucina locale.',
     createdAt: new Date('2023-05-15'),
     completed: false,
-    userId: '1',
-    creatorName: 'John Doe',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '2',
@@ -52,11 +48,7 @@ let mockIdeas: Idea[] = [
     createdAt: new Date('2023-06-20'),
     completed: true,
     completedAt: new Date('2023-07-15'),
-    completedById: '2',
-    completedByName: 'Jane Smith',
-    userId: '2',
-    creatorName: 'Jane Smith',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '3',
@@ -65,9 +57,7 @@ let mockIdeas: Idea[] = [
     description: 'Iscriverci a un corso di fotografia per imparare a catturare meglio i nostri momenti.',
     createdAt: new Date('2023-04-10'),
     completed: false,
-    userId: '1',
-    creatorName: 'John Doe',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '4',
@@ -76,9 +66,7 @@ let mockIdeas: Idea[] = [
     description: 'Provare una nuova ricetta ogni giorno per un mese, alternandoci in cucina.',
     createdAt: new Date('2023-03-05'),
     completed: false,
-    userId: '2',
-    creatorName: 'Jane Smith',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '5',
@@ -87,9 +75,7 @@ let mockIdeas: Idea[] = [
     description: 'Pianificare un viaggio in Giappone durante la stagione dei ciliegi in fiore.',
     createdAt: new Date('2023-02-18'),
     completed: false,
-    userId: '1',
-    creatorName: 'John Doe',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '6',
@@ -99,11 +85,7 @@ let mockIdeas: Idea[] = [
     createdAt: new Date('2023-01-25'),
     completed: true,
     completedAt: new Date('2023-02-10'),
-    completedById: '1',
-    completedByName: 'John Doe',
-    userId: '2',
-    creatorName: 'Jane Smith',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '7',
@@ -112,9 +94,7 @@ let mockIdeas: Idea[] = [
     description: 'Guardare insieme 10 film classici che non abbiamo mai visto.',
     createdAt: new Date('2023-07-03'),
     completed: false,
-    userId: '1',
-    creatorName: 'John Doe',
-    coupleId: 'couple1'
+    userId: '1'
   },
   {
     id: '8',
@@ -124,58 +104,17 @@ let mockIdeas: Idea[] = [
     createdAt: new Date('2023-08-12'),
     completed: true,
     completedAt: new Date('2023-08-20'),
-    completedById: '2',
-    completedByName: 'Jane Smith',
-    userId: '1',
-    creatorName: 'John Doe',
-    coupleId: 'couple1'
+    userId: '1'
   }
 ];
 
-// Initialize localStorage with mock data if not exists
-const initializeIdeas = () => {
-  const storedIdeas = localStorage.getItem('ideas');
-  if (!storedIdeas) {
-    localStorage.setItem('ideas', JSON.stringify(mockIdeas));
-  } else {
-    mockIdeas = JSON.parse(storedIdeas);
-  }
-};
-
 const IdeasPage: React.FC = () => {
-  const { user, couple } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'completed' | 'pending'>('all');
   const [selectedType, setSelectedType] = useState<IdeaType | 'all'>('all');
-  const [selectedCreator, setSelectedCreator] = useState<string | 'all'>('all');
-  const [localIdeas, setLocalIdeas] = useState<Idea[]>([]);
-  const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'view' | 'edit'>('create');
-  
-  // Initialize local storage and load ideas
-  useEffect(() => {
-    initializeIdeas();
-    loadIdeas();
-  }, []);
-  
-  // Load ideas from localStorage
-  const loadIdeas = () => {
-    const storedIdeas = localStorage.getItem('ideas');
-    if (storedIdeas) {
-      setLocalIdeas(JSON.parse(storedIdeas));
-    } else {
-      setLocalIdeas(mockIdeas);
-    }
-  };
-  
-  // Save ideas to localStorage
-  const saveIdeas = (ideas: Idea[]) => {
-    localStorage.setItem('ideas', JSON.stringify(ideas));
-    setLocalIdeas(ideas);
-  };
+  const [localIdeas, setLocalIdeas] = useState<Idea[]>(mockIdeas);
 
-  // Filter ideas based on search, status, type and creator
+  // Filter ideas based on search, status and type
   const filteredIdeas = localIdeas.filter(idea => {
     const matchesSearch = idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          idea.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -186,130 +125,44 @@ const IdeasPage: React.FC = () => {
     
     const matchesType = selectedType === 'all' || idea.type === selectedType;
     
-    const matchesCreator = selectedCreator === 'all' || idea.userId === selectedCreator;
-    
-    return matchesSearch && matchesStatus && matchesType && matchesCreator;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
-  // Open create modal
-  const openCreateModal = () => {
-    setSelectedIdea(null);
-    setModalMode('create');
-    setModalOpen(true);
-  };
-  
-  // Open view modal
-  const openViewModal = (idea: Idea) => {
-    setSelectedIdea(idea);
-    setModalMode('view');
-    setModalOpen(true);
-  };
-  
-  // Create or update idea
-  const handleSaveIdea = (ideaData: Partial<Idea>) => {
-    if (modalMode === 'create') {
-      const newIdea: Idea = {
-        id: Math.random().toString(36).substring(2, 9),
-        title: ideaData.title || '',
-        description: ideaData.description || '',
-        type: ideaData.type || 'general',
-        completed: false,
-        createdAt: new Date(),
-        userId: user?.id || '',
-        creatorName: user?.name || '',
-        coupleId: couple?.id || '',
-      };
-      
-      const updatedIdeas = [...localIdeas, newIdea];
-      saveIdeas(updatedIdeas);
-      console.log('Idea created:', newIdea);
-      toast.success('Idea creata con successo!');
-    } else if (modalMode === 'edit' && selectedIdea) {
-      const updatedIdeas = localIdeas.map(idea => {
-        if (idea.id === selectedIdea.id) {
-          const updatedIdea = { ...idea, ...ideaData };
-          console.log('Idea updated:', updatedIdea);
-          return updatedIdea;
+  // Toggle idea completion status
+  const toggleIdeaCompletion = (id: string, completed: boolean) => {
+    setLocalIdeas(prevIdeas => prevIdeas.map(idea => {
+      if (idea.id === id) {
+        const updatedIdea = {
+          ...idea,
+          completed,
+          completedAt: completed ? new Date() : undefined
+        };
+        
+        if (completed) {
+          toast.success('Idea completata!');
+        } else {
+          toast.info('Idea riaperta.');
         }
-        return idea;
-      });
-      
-      saveIdeas(updatedIdeas);
-      toast.success('Idea aggiornata con successo!');
-    }
-    
-    setModalOpen(false);
-  };
-  
-  // Delete idea
-  const handleDeleteIdea = () => {
-    if (selectedIdea) {
-      const updatedIdeas = localIdeas.filter(idea => idea.id !== selectedIdea.id);
-      saveIdeas(updatedIdeas);
-      console.log('Idea deleted:', selectedIdea);
-      toast.success('Idea eliminata con successo!');
-      setModalOpen(false);
-    }
-  };
-  
-  // Toggle idea completion
-  const handleToggleComplete = (completed: boolean) => {
-    if (selectedIdea && user) {
-      const updatedIdeas = localIdeas.map(idea => {
-        if (idea.id === selectedIdea.id) {
-          const updatedIdea = { 
-            ...idea, 
-            completed, 
-            completedAt: completed ? new Date() : undefined,
-            completedById: completed ? user.id : undefined,
-            completedByName: completed ? user.name : undefined
-          };
-          return updatedIdea;
-        }
-        return idea;
-      });
-      
-      saveIdeas(updatedIdeas);
-      console.log('Idea completion toggled:', selectedIdea.id, completed);
-      toast.success(completed ? 'Idea completata!' : 'Completamento rimosso.');
-    }
+        
+        return updatedIdea;
+      }
+      return idea;
+    }));
   };
 
   // Handle quick completion toggle
   const handleQuickToggle = (e: React.MouseEvent, id: string, currentStatus: boolean) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    const ideaToUpdate = localIdeas.find(idea => idea.id === id);
-    if (!ideaToUpdate) return;
-    
-    const updatedIdeas = localIdeas.map(idea => {
-      if (idea.id === id) {
-        const updatedIdea = { 
-          ...idea, 
-          completed: !currentStatus,
-          completedAt: !currentStatus ? new Date() : undefined,
-          completedById: !currentStatus ? user?.id : undefined,
-          completedByName: !currentStatus ? user?.name : undefined
-        };
-        return updatedIdea;
-      }
-      return idea;
-    });
-    
-    saveIdeas(updatedIdeas);
-    console.log('Idea quick completion toggled:', id, !currentStatus);
-    toast.success(!currentStatus ? 'Idea completata!' : 'Completamento rimosso.');
+    toggleIdeaCompletion(id, !currentStatus);
   };
 
-  // Handle quick delete
-  const handleQuickDelete = (e: React.MouseEvent, id: string) => {
+  // Delete idea
+  const deleteIdea = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const updatedIdeas = localIdeas.filter(idea => idea.id !== id);
-    saveIdeas(updatedIdeas);
-    console.log('Idea quick deleted:', id);
+    setLocalIdeas(prevIdeas => prevIdeas.filter(idea => idea.id !== id));
     toast.success('Idea eliminata.');
   };
 
@@ -337,14 +190,6 @@ const IdeasPage: React.FC = () => {
     }
   };
 
-  // Get unique creators for filtering
-  const creators = localIdeas.reduce((acc: { id: string, name: string }[], idea) => {
-    if (!acc.some(creator => creator.id === idea.userId)) {
-      acc.push({ id: idea.userId, name: idea.creatorName });
-    }
-    return acc;
-  }, []);
-
   return (
     <div className="container mx-auto px-4 py-6 animate-fade-in">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
@@ -354,9 +199,11 @@ const IdeasPage: React.FC = () => {
             Pianificate nuove avventure insieme
           </p>
         </div>
-        <Button onClick={openCreateModal} className="flex items-center">
-          <Plus className="mr-2 h-4 w-4" />
-          Nuova Idea
+        <Button asChild>
+          <Link to="/ideas/new" className="flex items-center">
+            <Plus className="mr-2 h-4 w-4" />
+            Nuova Idea
+          </Link>
         </Button>
       </div>
 
@@ -393,33 +240,35 @@ const IdeasPage: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {creators.length > 1 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center">
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Creatore
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSelectedCreator('all')}>
-                    Tutti
-                  </DropdownMenuItem>
-                  {creators.map(creator => (
-                    <DropdownMenuItem 
-                      key={creator.id} 
-                      onClick={() => setSelectedCreator(creator.id)}
-                    >
-                      {creator.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Tipo
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setSelectedType('all')}>
+                  Tutti i tipi
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedType('travel')}>
+                  Viaggi
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedType('restaurant')}>
+                  Ristoranti
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedType('general')}>
+                  Generiche
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedType('challenge')}>
+                  Sfide
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
-        {(selectedType !== 'all' || selectedStatus !== 'all' || selectedCreator !== 'all') && (
+        {(selectedType !== 'all' || selectedStatus !== 'all') && (
           <div className="flex items-center flex-wrap gap-2">
             <span className="text-sm text-muted-foreground">Filtri attivi:</span>
             {selectedType !== 'all' && (
@@ -442,17 +291,6 @@ const IdeasPage: React.FC = () => {
                 onClick={() => setSelectedStatus('all')}
               >
                 {selectedStatus === 'completed' ? 'Completate' : 'Da completare'}
-                <span className="ml-1">×</span>
-              </Badge>
-            )}
-            
-            {selectedCreator !== 'all' && (
-              <Badge 
-                variant="secondary" 
-                className="cursor-pointer"
-                onClick={() => setSelectedCreator('all')}
-              >
-                {creators.find(c => c.id === selectedCreator)?.name || 'Creatore'}
                 <span className="ml-1">×</span>
               </Badge>
             )}
@@ -489,16 +327,6 @@ const IdeasPage: React.FC = () => {
           {renderIdeasGrid(filteredIdeas)}
         </TabsContent>
       </Tabs>
-      
-      <IdeaModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        onSave={handleSaveIdea}
-        onDelete={handleDeleteIdea}
-        onComplete={handleToggleComplete}
-        idea={selectedIdea || undefined}
-        mode={modalMode}
-      />
     </div>
   );
 
@@ -509,13 +337,15 @@ const IdeasPage: React.FC = () => {
           <Lightbulb className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-xl font-medium mb-2">Nessuna idea trovata</h3>
           <p className="text-muted-foreground mb-6">
-            {searchTerm || selectedType !== 'all' || selectedStatus !== 'all' || selectedCreator !== 'all'
+            {searchTerm || selectedType !== 'all' || selectedStatus !== 'all'
               ? 'Prova a modificare i filtri o a cercare altro.' 
               : 'Inizia ad aggiungere idee per attività da fare insieme.'}
           </p>
-          <Button onClick={openCreateModal}>
-            <Plus className="mr-2 h-4 w-4" />
-            Aggiungi la tua prima idea
+          <Button asChild>
+            <Link to="/ideas/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Aggiungi la tua prima idea
+            </Link>
           </Button>
         </div>
       );
@@ -524,9 +354,9 @@ const IdeasPage: React.FC = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 staggered-animate">
         {ideas.map((idea) => (
-          <div key={idea.id} className="transition-all" onClick={() => openViewModal(idea)}>
+          <Link to={`/ideas/${idea.id}`} key={idea.id} className="transition-all">
             <Card 
-              className={`h-full card-hover idea-card-${idea.type} backdrop-blur-sm bg-white/40 dark:bg-black/40 border-none shadow-lg ${idea.completed ? 'bg-muted/30' : ''}`}
+              className={`h-full card-hover idea-card-${idea.type} ${idea.completed ? 'bg-muted/30' : ''}`}
             >
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
@@ -546,7 +376,7 @@ const IdeasPage: React.FC = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => handleQuickDelete(e, idea.id)}
+                      onClick={(e) => deleteIdea(e, idea.id)}
                     >
                       <X className="h-4 w-4" />
                       <span className="sr-only">Elimina</span>
@@ -576,11 +406,7 @@ const IdeasPage: React.FC = () => {
                 
                 <CardDescription className="flex items-center pt-1">
                   <Calendar className="h-4 w-4 mr-1" />
-                  Creata il {format(new Date(idea.createdAt), 'dd/MM/yyyy')}
-                </CardDescription>
-                
-                <CardDescription className="flex items-center pt-1">
-                  Creata da: {idea.creatorName}
+                  Creata il {format(idea.createdAt, 'dd/MM/yyyy')}
                 </CardDescription>
               </CardHeader>
               
@@ -594,7 +420,7 @@ const IdeasPage: React.FC = () => {
                 {idea.completed ? (
                   <Badge variant="outline" className="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
                     <Check className="h-3 w-3 mr-1" />
-                    Completata da {idea.completedByName} {idea.completedAt && `il ${format(new Date(idea.completedAt), 'dd/MM/yyyy')}`}
+                    Completata {idea.completedAt && `il ${format(idea.completedAt, 'dd/MM/yyyy')}`}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400">
@@ -603,7 +429,7 @@ const IdeasPage: React.FC = () => {
                 )}
               </CardFooter>
             </Card>
-          </div>
+          </Link>
         ))}
       </div>
     );

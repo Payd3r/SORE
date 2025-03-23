@@ -15,7 +15,6 @@ import GalleryPage from './pages/GalleryPage';
 import IdeasPage from './pages/IdeasPage';
 import MapPage from './pages/MapPage';
 import RecapPage from './pages/RecapPage';
-import ProfilePage from './pages/ProfilePage';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -38,7 +37,6 @@ const App = () => (
                 <Route path="ideas" element={<IdeasPage />} />
                 <Route path="map" element={<MapPage />} />
                 <Route path="recap" element={<RecapPage />} />
-                <Route path="profile" element={<ProfilePage />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

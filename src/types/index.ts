@@ -4,7 +4,6 @@
 export type MemoryType = 'travel' | 'event' | 'simple';
 export type EventTag = 'birthday' | 'gift' | 'anniversary' | 'holiday' | 'other';
 export type IdeaType = 'travel' | 'restaurant' | 'general' | 'challenge';
-export type ImageType = 'landscape' | 'singlePerson' | 'couple';
 
 export interface User {
   id: string;
@@ -12,15 +11,6 @@ export interface User {
   email: string;
   avatar?: string;
   createdAt: Date;
-  coupleId?: string;
-}
-
-export interface Couple {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: Date;
-  members: User[];
 }
 
 export interface Memory {
@@ -34,8 +24,6 @@ export interface Memory {
   eventTag?: EventTag;
   images: Image[];
   userId: string;
-  creatorName: string;
-  coupleId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,12 +34,9 @@ export interface Image {
   url: string;
   thumbnailUrl: string;
   date: Date;
-  type: ImageType;
   location?: GeoLocation;
   memoryId?: string;
   userId: string;
-  uploaderName: string;
-  coupleId: string;
   createdAt: Date;
 }
 
@@ -63,11 +48,7 @@ export interface Idea {
   createdAt: Date;
   completed: boolean;
   completedAt?: Date;
-  completedById?: string;
-  completedByName?: string;
   userId: string;
-  creatorName: string;
-  coupleId: string;
 }
 
 export interface GeoLocation {
@@ -76,28 +57,12 @@ export interface GeoLocation {
   name?: string;
 }
 
-export interface UserStats {
-  userId: string;
-  name: string;
-  memoriesCreated: number;
-  ideasCreated: number;
-  ideasCompleted: number;
-  imagesUploaded: number;
-  locationsVisited: number;
-}
-
 export interface Stats {
   totalMemories: number;
   memoriesByType: Record<MemoryType, number>;
-  memoriesByUser: Record<string, number>;
   totalImages: number;
-  imagesByType: Record<ImageType, number>;
-  imagesByUser: Record<string, number>;
   totalIdeas: number;
   completedIdeas: number;
   ideasByType: Record<IdeaType, number>;
-  ideasCreatedByUser: Record<string, number>;
-  ideasCompletedByUser: Record<string, number>;
   locationsVisited: number;
-  userStats: UserStats[];
 }

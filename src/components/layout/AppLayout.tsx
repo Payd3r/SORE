@@ -4,28 +4,36 @@ import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { Sidebar } from './Sidebar';
 import { AuthForm } from '@/components/auth/AuthForm';
-import { Loader2, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  
-  // Handle Escape key to close sidebar on mobile
+  const isMobile = window.innerWidth < 768;
+
+  // Close sidebar when clicking outside on mobile
   useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && sidebarOpen) {
-        setSidebarOpen(false);
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (sidebarOpen && isMobile) {
+        const sidebar = document.querySelector('[data-sidebar="true"]');
+        const hamburgerButton = document.querySelector('[data-hamburger="true"]');
+        
+        if (sidebar && 
+            hamburgerButton && 
+            !sidebar.contains(event.target as Node) && 
+            !hamburgerButton.contains(event.target as Node)) {
+          setSidebarOpen(false);
+        }
       }
     };
-    
-    window.addEventListener('keydown', handleEscKey);
+
+    document.addEventListener('mousedown', handleOutsideClick);
     return () => {
-      window.removeEventListener('keydown', handleEscKey);
+      document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [sidebarOpen]);
-  
+  }, [sidebarOpen, isMobile]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -39,7 +47,7 @@ export const AppLayout: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-pattern">
         <div className="w-full max-w-md px-4">
           <AuthForm />
         </div>
@@ -54,31 +62,10 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Desktop Sidebar */}
-      <div className="md:block hidden">
-        <Sidebar open={true} setOpen={setSidebarOpen} />
-      </div>
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
-      {/* Mobile Sidebar */}
-      <div className="md:hidden block">
-        <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      </div>
-      
-      {/* Mobile Hamburger Button - Fixed at bottom left */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="md:hidden fixed bottom-6 left-6 z-50 rounded-full shadow-lg"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label="Toggle menu"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-      
-      <main 
-        className="flex-1 overflow-y-auto transform transition-all duration-300 w-full md:ml-64 pt-4"
-      >
-        <div className="p-2 sm:p-4 md:p-6 h-full">
+      <main className="flex-1 overflow-y-auto transform transition-all duration-300 w-full">
+        <div className="p-2 sm:p-4 md:p-6 h-full pt-14 md:pt-4">
           <Outlet />
         </div>
       </main>
