@@ -8,7 +8,7 @@ async function initializeDatabase() {
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASS || 'password',
+      password: process.env.DB_PASS || '',
     });
 
     console.log('Connected to MySQL server');
