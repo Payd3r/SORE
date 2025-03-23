@@ -2,221 +2,191 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { GeoLocation, Image } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { GeoLocation } from '@/types';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface MemoryMapProps {
-  locations: GeoLocation[];
-  images: Image[];
-  title: string;
+  locations?: GeoLocation[];
+  interactive?: boolean;
+  height?: string;
+  singleMarker?: boolean;
 }
 
-export const MemoryMap: React.FC<MemoryMapProps> = ({ locations, images, title }) => {
+const defaultToken = 'pk.eyJ1IjoiZGVtby11c2VyIiwiYSI6ImNscHFremoyZzAyZnUya3BnZDRmdjk4aTYifQ.iyznFn33gWGrr5YyLAGxQg';
+
+export const MemoryMap: React.FC<MemoryMapProps> = ({ 
+  locations = [], 
+  interactive = true,
+  height = '400px',
+  singleMarker = false
+}) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
-  const [token, setToken] = useState<string>(localStorage.getItem('mapbox_token') || '');
-  const [tokenInput, setTokenInput] = useState<string>('');
-  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Fallback token (note: this is a limited public token)
-  const fallbackToken = 'pk.eyJ1IjoibWFwYm94LWRlbW8iLCJhIjoiY2t4dWRma2pkNXQycDJucHQycnVrd2FpcSJ9.LrW_wCOLQmGe_iUbIx6LnA';
-  
-  const initializeMap = () => {
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [tokenModalOpen, setTokenModalOpen] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState(() => {
+    return localStorage.getItem('mapbox_token') || defaultToken;
+  });
+  const [customToken, setCustomToken] = useState('');
+
+  // Initialize map
+  useEffect(() => {
     if (!mapContainer.current) return;
     
-    // Cleanup previous map instance
-    if (map.current) {
-      markers.current.forEach(marker => marker.remove());
-      markers.current = [];
-      map.current.remove();
-      map.current = null;
-    }
-    
-    // Use stored token or fallback
-    const accessToken = token || fallbackToken;
-    
     try {
-      console.log("Initializing map with token:", accessToken);
-      mapboxgl.accessToken = accessToken;
+      // Set the token
+      mapboxgl.accessToken = mapboxToken;
       
-      // Get map center and bounds
-      const locs = locations.length > 0 ? locations : images
-        .filter(img => img.location)
-        .map(img => img.location as GeoLocation);
+      // Calculate map center and bounds
+      let center: [number, number] = [9.1900, 45.4642]; // Default: Milan
+      let zoom = 12;
       
-      if (locs.length === 0) {
-        // Default to Italy if no locations
-        locs.push({ latitude: 41.9028, longitude: 12.4964 });
+      if (locations.length > 0) {
+        if (locations.length === 1 || singleMarker) {
+          // Single location or singleMarker mode: center on the first location
+          center = [locations[0].longitude, locations[0].latitude];
+          zoom = 13;
+        } else {
+          // Multiple locations: calculate center from all locations
+          const lngs = locations.map(loc => loc.longitude);
+          const lats = locations.map(loc => loc.latitude);
+          
+          const avgLng = lngs.reduce((sum, lng) => sum + lng, 0) / lngs.length;
+          const avgLat = lats.reduce((sum, lat) => sum + lat, 0) / lats.length;
+          
+          center = [avgLng, avgLat];
+          zoom = 10;
+        }
       }
       
-      const center = locs.length === 1 
-        ? [locs[0].longitude, locs[0].latitude]
-        : calculateCenterAndZoom(locs.map(l => [l.longitude, l.latitude])).center;
-      
-      map.current = new mapboxgl.Map({
+      // Create a new map instance
+      const map = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: center,
-        zoom: locs.length === 1 ? 12 : 9,
-        attributionControl: false
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center,
+        zoom,
+        interactive
       });
       
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.current.addControl(new mapboxgl.AttributionControl({ compact: true }));
+      // Store the map instance
+      mapRef.current = map;
       
-      // Add handlers
-      map.current.on('load', () => {
-        setMapLoaded(true);
-        setError(null);
-        
-        // Add markers
-        if (locs.length > 0) {
-          locs.forEach(loc => {
-            const relevantImages = images.filter(img => 
-              img.location && 
-              img.location.latitude === loc.latitude && 
-              img.location.longitude === loc.longitude
-            );
-            
-            if (relevantImages.length > 0) {
-              // Create custom element for marker
-              const el = document.createElement('div');
-              el.className = 'marker-image rounded-full border-2 border-white shadow-lg';
-              el.style.backgroundImage = `url(${relevantImages[0].thumbnailUrl})`;
-              el.style.width = '40px';
-              el.style.height = '40px';
-              el.style.backgroundSize = 'cover';
-              el.style.borderRadius = '50%';
-              
-              if (relevantImages.length > 1) {
-                const badge = document.createElement('div');
-                badge.className = 'absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-md';
-                badge.textContent = `+${relevantImages.length - 1}`;
-                el.appendChild(badge);
-                el.style.position = 'relative';
-              }
-              
-              // Create popup
-              const popup = new mapboxgl.Popup({ offset: 25 })
-                .setHTML(`
-                  <div class="p-2">
-                    <h3 class="font-bold">${loc.name || title}</h3>
-                    <p class="text-sm">${relevantImages.length} immagini</p>
-                    <div class="grid grid-cols-${Math.min(relevantImages.length, 3)} gap-1 mt-2">
-                      ${relevantImages.slice(0, 6).map(img => `
-                        <img src="${img.thumbnailUrl}" alt="${img.name}" class="w-12 h-12 object-cover rounded" />
-                      `).join('')}
-                    </div>
-                  </div>
-                `);
-              
-              // Add marker to map
-              const marker = new mapboxgl.Marker(el)
-                .setLngLat([loc.longitude, loc.latitude])
-                .setPopup(popup)
-                .addTo(map.current!);
-              
-              markers.current.push(marker);
-            } else {
-              // Simple marker for locations without images
-              const marker = new mapboxgl.Marker()
-                .setLngLat([loc.longitude, loc.latitude])
-                .addTo(map.current!);
-              
-              markers.current.push(marker);
-            }
-          });
-        }
-      });
-      
-      map.current.on('error', (e) => {
-        console.error('Mapbox error:', e);
-        setError('Errore nel caricamento della mappa. Verifica il token Mapbox.');
-      });
-      
-    } catch (err) {
-      console.error('Error initializing map:', err);
-      setError('Errore nell\'inizializzazione della mappa. Riprova più tardi.');
-    }
-  };
-  
-  const calculateCenterAndZoom = (coordinates: [number, number][]) => {
-    // Calculate the bounds of all points
-    const bounds = coordinates.reduce(
-      (bounds, coord) => bounds.extend(coord),
-      new mapboxgl.LngLatBounds(coordinates[0], coordinates[0])
-    );
-    
-    return {
-      center: [
-        (bounds.getEast() + bounds.getWest()) / 2,
-        (bounds.getNorth() + bounds.getSouth()) / 2
-      ] as [number, number],
-      bounds
-    };
-  };
-  
-  const saveToken = () => {
-    if (tokenInput.trim()) {
-      localStorage.setItem('mapbox_token', tokenInput.trim());
-      setToken(tokenInput.trim());
-      setTokenInput('');
-    }
-  };
-  
-  // Initialize or reinitialize map when token changes
-  useEffect(() => {
-    initializeMap();
-    
-    // Cleanup function
-    return () => {
-      if (map.current) {
-        markers.current.forEach(marker => marker.remove());
-        markers.current = [];
-        try {
-          map.current.remove();
-        } catch (e) {
-          console.error('Error removing map:', e);
-        }
-        map.current = null;
+      // Add markers
+      if (locations.length > 0) {
+        locations.forEach(location => {
+          const marker = new mapboxgl.Marker()
+            .setLngLat([location.longitude, location.latitude])
+            .addTo(map);
+          
+          markersRef.current.push(marker);
+        });
       }
-    };
-  }, [token, locations]);
-  
+      
+      // Add navigation controls if interactive
+      if (interactive) {
+        map.addControl(new mapboxgl.NavigationControl());
+      }
+      
+      // Set error state to null since map loaded successfully
+      setMapError(null);
+      
+      // Cleanup
+      return () => {
+        // Remove all markers
+        markersRef.current.forEach(marker => {
+          marker.remove();
+        });
+        markersRef.current = [];
+        
+        // Only call remove() if the map is valid
+        if (map && !map._removed) {
+          map.remove();
+        }
+        mapRef.current = null;
+      };
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setMapError('Errore nel caricamento della mappa. Potrebbe essere necessario un token Mapbox valido.');
+      setTokenModalOpen(true);
+      return undefined;
+    }
+  }, [locations, interactive, singleMarker, mapboxToken]);
+
+  const handleSaveToken = () => {
+    if (customToken.trim()) {
+      localStorage.setItem('mapbox_token', customToken.trim());
+      setMapboxToken(customToken.trim());
+      setTokenModalOpen(false);
+      toast.success('Token Mapbox salvato. La mappa verrà ricaricata.');
+    }
+  };
+
   return (
-    <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
-      {error && (
-        <div className="absolute inset-0 bg-muted/90 flex flex-col items-center justify-center z-10 p-4">
-          <p className="text-destructive mb-4">{error}</p>
-          <div className="flex flex-col w-full max-w-md gap-2">
-            <p className="text-sm">Inserisci il tuo token Mapbox:</p>
-            <div className="flex gap-2">
-              <Input 
-                value={tokenInput} 
-                onChange={(e) => setTokenInput(e.target.value)} 
-                placeholder="pk.eyJ1..." 
-                className="flex-1"
-              />
-              <Button onClick={saveToken}>Salva</Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Ottieni un token su <a href="https://www.mapbox.com/" target="_blank" rel="noopener noreferrer" className="underline">mapbox.com</a>
-            </p>
+    <div className="relative">
+      {mapError ? (
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4 flex items-start">
+          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3" />
+          <div>
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-300">Errore mappa</h3>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">{mapError}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2" 
+              onClick={() => setTokenModalOpen(true)}
+            >
+              Configura token Mapbox
+            </Button>
           </div>
         </div>
+      ) : (
+        <div 
+          ref={mapContainer} 
+          className="w-full rounded-md overflow-hidden"
+          style={{ height }}
+        />
       )}
       
-      {!mapLoaded && !error && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
-      
-      <div ref={mapContainer} className="w-full h-full" />
+      <Dialog open={tokenModalOpen} onOpenChange={setTokenModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configura Mapbox Token</DialogTitle>
+            <DialogDescription>
+              Per visualizzare correttamente le mappe, inserisci un token Mapbox valido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Token Mapbox</label>
+              <Input 
+                value={customToken} 
+                onChange={(e) => setCustomToken(e.target.value)}
+                placeholder="Inserisci il tuo token Mapbox"
+              />
+              <p className="text-xs text-muted-foreground">
+                Puoi ottenere un token gratuito registrandoti su{' '}
+                <a 
+                  href="https://account.mapbox.com/auth/signup/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  mapbox.com
+                </a>
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTokenModalOpen(false)}>Annulla</Button>
+            <Button onClick={handleSaveToken}>Salva Token</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
