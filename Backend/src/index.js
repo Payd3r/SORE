@@ -15,8 +15,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Create media directories if they don't exist
+const mediaPath = path.join(__dirname, '..', process.env.MEDIA_PATH || 'media');
+const thumbsPath = path.join(mediaPath, 'thumbs');
+
+const fs = require('fs');
+if (!fs.existsSync(mediaPath)) {
+  fs.mkdirSync(mediaPath, { recursive: true });
+  console.log(`Created media directory: ${mediaPath}`);
+}
+if (!fs.existsSync(thumbsPath)) {
+  fs.mkdirSync(thumbsPath, { recursive: true });
+  console.log(`Created thumbs directory: ${thumbsPath}`);
+}
+
 // Serve static files from media folder
-app.use('/media', express.static(path.join(__dirname, '..', process.env.MEDIA_PATH || '../media')));
+app.use('/media', express.static(mediaPath));
+app.use('/media/thumbs', express.static(thumbsPath));
 
 // API routes
 app.use('/api', routes);

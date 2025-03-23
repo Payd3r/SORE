@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { imagesApi } from '@/services/api';
-import { Image as ImageType } from '@/types';
+import { imagesApi, memoriesApi } from '@/services/api';
+import { Image as ImageType, Memory as MemoryType } from '@/types';
 import { useAuth } from '@/context/auth-context';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,13 +14,17 @@ import { it } from 'date-fns/locale';
 import { Card, CardContent } from "@/components/ui/card"
 import ImageGrid from '@/components/gallery/ImageGrid';
 import ImageUploadModal from '@/components/modals/ImageUploadModal';
+import FiltersModal from '@/components/modals/FiltersModal';
 import { useToast } from "@/components/ui/use-toast";
 
 const GalleryPage: React.FC = () => {
   const { couple } = useAuth();
   const [images, setImages] = useState<ImageType[]>([]);
+  const [memories, setMemories] = useState<MemoryType[]>([]);
   const [filter, setFilter] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
+  const [selectedFavorite, setSelectedFavorite] = useState<'all' | 'favorites' | 'regular'>('all');
+  const [selectedMemory, setSelectedMemory] = useState<string>('all');
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -28,20 +32,54 @@ const GalleryPage: React.FC = () => {
   useEffect(() => {
     if (couple) {
       fetchImages(couple.id);
+      fetchMemories(couple.id);
     }
-  }, [couple, filter, date]);
+  }, [couple]);
+  
+  useEffect(() => {
+    if (couple) {
+      fetchImages(couple.id);
+    }
+  }, [couple, filter, date, selectedFavorite, selectedMemory]);
+  
+  const fetchMemories = async (coupleId: string) => {
+    try {
+      const fetchedMemories = await memoriesApi.getMemories(coupleId);
+      setMemories(fetchedMemories);
+    } catch (error: any) {
+      console.error('Failed to fetch memories:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i ricordi",
+        variant: "destructive",
+      });
+    }
+  };
   
   const fetchImages = async (coupleId: string) => {
     try {
       setLoading(true);
       const filters: { type?: string; startDate?: Date; endDate?: Date } = {};
-      if (filter) filters.type = filter;
+      if (filter && filter !== 'all') filters.type = filter;
       if (date) {
         filters.startDate = date;
         filters.endDate = date;
       }
       
-      const fetchedImages = await imagesApi.getImages(coupleId, filters);
+      let fetchedImages = await imagesApi.getImages(coupleId, filters);
+      
+      // Apply favorite filter
+      if (selectedFavorite === 'favorites') {
+        fetchedImages = fetchedImages.filter(img => img.isFavorite);
+      } else if (selectedFavorite === 'regular') {
+        fetchedImages = fetchedImages.filter(img => !img.isFavorite);
+      }
+      
+      // Apply memory filter
+      if (selectedMemory && selectedMemory !== 'all') {
+        fetchedImages = fetchedImages.filter(img => img.memoryId === selectedMemory);
+      }
+      
       setImages(fetchedImages);
     } catch (error: any) {
       console.error('Failed to fetch images:', error);
@@ -97,7 +135,15 @@ const GalleryPage: React.FC = () => {
   const clearFilter = () => {
     setFilter('');
     setDate(undefined);
+    setSelectedFavorite('all');
+    setSelectedMemory('all');
   };
+  
+  const typeOptions = [
+    { value: 'landscape', label: 'Paesaggio' },
+    { value: 'singlePerson', label: 'Persona singola' },
+    { value: 'couple', label: 'Coppia' }
+  ];
   
   return (
     <div className="container mx-auto py-10">
@@ -115,12 +161,24 @@ const GalleryPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Cerca per tipo (landscape, singlePerson, couple)"
+              placeholder="Cerca per nome immagine"
               className="pl-10"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          <FiltersModal
+            selectedType={filter}
+            onTypeChange={setFilter}
+            selectedFavorite={selectedFavorite}
+            onFavoriteChange={setSelectedFavorite}
+            selectedMemory={selectedMemory}
+            onMemoryChange={setSelectedMemory}
+            onResetFilters={clearFilter}
+            typeOptions={typeOptions}
+            memories={memories}
+          />
           
           <Popover>
             <PopoverTrigger asChild>
@@ -149,7 +207,7 @@ const GalleryPage: React.FC = () => {
             </PopoverContent>
           </Popover>
           
-          {(filter || date) && (
+          {(filter !== '' || date || selectedFavorite !== 'all' || selectedMemory !== 'all') && (
             <Button variant="ghost" size="sm" onClick={clearFilter} className="mt-2 md:mt-0">
               Cancella filtri
             </Button>
@@ -167,7 +225,7 @@ const GalleryPage: React.FC = () => {
       ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground text-lg">Nessuna immagine trovata</p>
-          {(filter || date) && (
+          {(filter !== '' || date || selectedFavorite !== 'all' || selectedMemory !== 'all') && (
             <p className="text-sm text-muted-foreground mt-1">Prova a modificare i filtri di ricerca</p>
           )}
           <Button 
@@ -185,6 +243,7 @@ const GalleryPage: React.FC = () => {
         open={isImageUploadModalOpen}
         onOpenChange={setIsImageUploadModalOpen}
         onUpload={handleImageUpload}
+        memories={memories}
       />
     </div>
   );

@@ -1,11 +1,9 @@
-
 const { Image, User, Memory, Couple, GeoLocation } = require('../models');
 const fs = require('fs');
 const path = require('path');
-const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
-const heicConvert = require('heic-convert');
 const { Sequelize } = require('sequelize');
+const ImageProcessor = require('../utils/imageProcessor');
 
 // Utility function to convert HEIC to JPEG buffer
 async function convertHeicToJpeg(buffer) {
@@ -125,50 +123,34 @@ exports.uploadImage = async (req, res) => {
     // Process each file
     for (const file of req.files) {
       const imageId = uuidv4();
-      let processedBuffer = file.buffer;
       
-      // Check if file is HEIC and convert it
-      const isHeic = file.originalname.toLowerCase().endsWith('.heic');
-      if (isHeic) {
-        try {
-          console.log('Converting HEIC image...');
-          processedBuffer = await convertHeicToJpeg(file.buffer);
-          // Update file extension to jpg for storage
-          file.originalname = file.originalname.replace(/\.heic$/i, '.jpg');
-        } catch (conversionError) {
-          console.error('HEIC conversion error:', conversionError);
-          return res.status(500).json({ 
-            message: 'Error converting HEIC image', 
-            error: conversionError.message 
-          });
-        }
-      }
+      // Process image (convert HEIC to JPEG if needed)
+      const { buffer: processedBuffer, extension } = await ImageProcessor.processImageBuffer(
+        file.buffer,
+        file.originalname
+      );
       
-      const filename = `image_${imageId}_${Date.now()}${path.extname(file.originalname)}`;
+      // Create filename with proper extension
+      const filename = `image_${imageId}_${Date.now()}${extension}`;
       const filepath = path.join(mediaFolder, filename);
       const thumbpath = path.join(thumbsFolder, filename);
 
-      // Write original file
-      fs.writeFileSync(filepath, processedBuffer);
+      // Save original file
+      await ImageProcessor.saveImageToFile(processedBuffer, filepath);
 
       // Generate thumbnail
       try {
-        await sharp(processedBuffer)
-          .resize(400, 400, {
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .toFile(thumbpath);
-      } catch (sharpError) {
-        console.error('Error generating thumbnail:', sharpError);
-        // Continue without thumbnail if it fails
+        await ImageProcessor.generateThumbnail(processedBuffer, thumbpath);
+      } catch (thumbnailError) {
+        console.error('Error generating thumbnail:', thumbnailError);
+        // Continue without thumbnail if it fails, copy original file
         fs.copyFileSync(filepath, thumbpath);
       }
 
       // Create image record
       const image = await Image.create({
         id: imageId,
-        name: name || file.originalname,
+        name: name || file.originalname.replace(/\.[^/.]+$/, ""), // Remove extension from name
         url: `/media/${filename}`,
         thumbnailUrl: `/media/thumbs/${filename}`,
         type: type || 'landscape',

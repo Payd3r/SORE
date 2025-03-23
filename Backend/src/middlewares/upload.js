@@ -1,9 +1,6 @@
-
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 
-// Configure storage
+// Configure storage to keep files in memory for processing
 const storage = multer.memoryStorage();
 
 // Configure file filter

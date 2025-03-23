@@ -28,6 +28,11 @@ interface Creator {
   name: string;
 }
 
+interface Memory {
+  id: string;
+  title: string;
+}
+
 interface FiltersModalProps {
   title?: string;
   description?: string;
@@ -49,6 +54,7 @@ interface FiltersModalProps {
   onFavoriteChange?: (value: 'all' | 'favorites' | 'regular') => void;
   selectedMemory?: string;
   onMemoryChange?: (value: string) => void;
+  memories?: Memory[];
   
   // Reset filters
   onResetFilters?: () => void;
@@ -73,6 +79,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
   onFavoriteChange,
   selectedMemory,
   onMemoryChange,
+  memories,
   onResetFilters,
   typeOptions,
 }) => {
@@ -198,7 +205,7 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
           )}
           
           {/* Memory filter for gallery */}
-          {onMemoryChange && (
+          {onMemoryChange && memories && (
             <div className="space-y-3">
               <Label className="text-sm font-medium">Ricordo</Label>
               <Select value={selectedMemory} onValueChange={onMemoryChange}>
@@ -207,7 +214,11 @@ const FiltersModal: React.FC<FiltersModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti i ricordi</SelectItem>
-                  {/* Memory items would go here */}
+                  {memories.map(memory => (
+                    <SelectItem key={memory.id} value={memory.id}>
+                      {memory.title}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
