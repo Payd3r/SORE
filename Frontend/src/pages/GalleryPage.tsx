@@ -1,252 +1,150 @@
-// Import the necessary Dialog components
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Download } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Calendar } from '@/components/ui/calendar';
+import { imagesApi } from '@/services/api';
+import { Image as ImageType } from '@/types';
+import { useAuth } from '@/context/auth-context';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, ImagePlus, Search } from 'lucide-react';
 import { format } from 'date-fns';
-import { DateRange } from 'react-day-picker';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ImageIcon, X } from 'lucide-react';
-import { Image as ImageType, Image } from '@/types';
-import { mockImages } from './MemoriesPage';
-import { AspectRatio } from "@/components/ui/aspect-ratio"
+import { it } from 'date-fns/locale';
+import { Card, CardContent } from "@/components/ui/card"
+import ImageGrid from '@/components/gallery/ImageGrid';
+import ImageUploadModal from '@/components/modals/ImageUploadModal';
+import { useToast } from "@/components/ui/use-toast";
 
 const GalleryPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterDate, setFilterDate] = useState<DateRange | undefined>({
-    from: new Date(2020, 0, 1),
-    to: new Date(),
-  });
-  const [filterLocation, setFilterLocation] = useState('');
-  const [images, setImages] = useState<Image[]>([]);
-  const [selectedImage, setSelectedImage] = useState<Image | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { couple } = useAuth();
+  const [images, setImages] = useState<ImageType[]>([]);
+  const [filter, setFilter] = useState('');
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
+  const { toast } = useToast();
   
   useEffect(() => {
-    // Apply filters to mockImages
-    let filteredImages = mockImages;
-    
-    if (searchTerm) {
-      filteredImages = filteredImages.filter(img =>
-        img.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (couple) {
+      fetchImages(couple.id);
     }
-    
-    if (filterType !== 'all') {
-      filteredImages = filteredImages.filter(img => img.type === filterType);
-    }
-    
-    if (filterDate?.from && filterDate?.to) {
-      filteredImages = filteredImages.filter(img => {
-        const imageDate = new Date(img.date);
-        return imageDate >= filterDate.from! && imageDate <= filterDate.to!;
-      });
-    }
-    
-    if (filterLocation) {
-      filteredImages = filteredImages.filter(img =>
-        img.location?.name?.toLowerCase().includes(filterLocation.toLowerCase())
-      );
-    }
-    
-    setImages(filteredImages);
-  }, [searchTerm, filterType, filterDate, filterLocation]);
+  }, [couple, filter, date]);
   
-  const handleImageClick = (image: Image) => {
-    setSelectedImage(image);
-    setIsDialogOpen(true);
+  const fetchImages = async (coupleId: string) => {
+    try {
+      const filters: { type?: string; startDate?: Date; endDate?: Date } = {};
+      if (filter) filters.type = filter;
+      if (date) {
+        filters.startDate = date;
+        filters.endDate = date;
+      }
+      
+      const fetchedImages = await imagesApi.getImages(coupleId, filters);
+      setImages(fetchedImages);
+    } catch (error: any) {
+      console.error('Failed to fetch images:', error);
+      toast({
+        title: "Errore",
+        description: "Failed to fetch images",
+        variant: "destructive",
+      })
+    }
   };
   
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setSelectedImage(null);
-  };
-
-  // Fix the type issue by casting the setter function
-  const handleFilterTypeChange = (value: string) => {
-    setFilterType(value as 'all' | ImageType);
+  const handleImageUpload = async (files: File[], imageData: Partial<ImageType>) => {
+    if (!couple) return;
+    
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file));
+      
+      // Append text data as strings
+      formData.append('name', imageData.name || '');
+      formData.append('type', imageData.type || 'landscape');
+      formData.append('coupleId', couple.id);
+      formData.append('date', imageData.date?.toISOString() || new Date().toISOString());
+      
+      if (imageData.memoryId) {
+        formData.append('memoryId', imageData.memoryId);
+      }
+      
+      if (imageData.location?.name) {
+        formData.append('locationName', imageData.location.name);
+        formData.append('latitude', imageData.location.latitude?.toString() || '');
+        formData.append('longitude', imageData.location.longitude?.toString() || '');
+      }
+      
+      await imagesApi.uploadImage(formData);
+      fetchImages(couple.id); // Refresh images
+      toast.success('Images uploaded successfully!');
+    } catch (error: any) {
+      console.error('Image upload failed:', error);
+      toast({
+        title: "Errore",
+        description: "Failed to upload images",
+        variant: "destructive",
+      })
+    }
   };
   
   return (
-    <div className="container mx-auto px-4 py-6 animate-fade-in">
-      <div className="mb-6">
-        <h1 className="text-4xl font-bold">Galleria</h1>
-        <p className="text-muted-foreground mt-1">
-          Esplora tutti i tuoi ricordi visivi
-        </p>
+    <div className="container mx-auto py-10">
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Galleria</h1>
+        <Button onClick={() => setIsImageUploadModalOpen(true)}>
+          <ImagePlus className="mr-2 h-4 w-4" />
+          Aggiungi Immagini
+        </Button>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Filters Section */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Filtri</CardTitle>
-              <CardDescription>
-                Applica filtri per trovare le immagini che stai cercando
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="search">Cerca</Label>
-                <Input
-                  type="text"
-                  id="search"
-                  placeholder="Cerca per nome"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="type">Tipo</Label>
-                <Select onValueChange={handleFilterTypeChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Tutti" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tutti</SelectItem>
-                    <SelectItem value="landscape">Paesaggio</SelectItem>
-                    <SelectItem value="singlePerson">Persona Singola</SelectItem>
-                    <SelectItem value="couple">Coppia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label>Data</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !filterDate?.from ? "text-muted-foreground" : ""
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filterDate?.from ? (
-                        filterDate.to ? (
-                          `${format(filterDate.from, "dd/MM/yyyy")} - ${format(filterDate.to, "dd/MM/yyyy")}`
-                        ) : (
-                          format(filterDate.from, "dd/MM/yyyy")
-                        )
-                      ) : (
-                        <span>Scegli una data</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="range"
-                      defaultMonth={filterDate?.from}
-                      selected={filterDate}
-                      onSelect={setFilterDate}
-                      disabled={{ before: new Date(2019, 0, 1) }}
-                      numberOfMonths={2}
-                      pagedNavigation
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div>
-                <Label htmlFor="location">Luogo</Label>
-                <Input
-                  type="text"
-                  id="location"
-                  placeholder="Cerca per luogo"
-                  value={filterLocation}
-                  onChange={(e) => setFilterLocation(e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Gallery Section */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Immagini</CardTitle>
-              <CardDescription>
-                {images.length} immagini trovate
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {images.map((image) => (
-                <div 
-                  key={image.id} 
-                  className="relative cursor-pointer"
-                  onClick={() => handleImageClick(image)}
-                >
-                  <AspectRatio ratio={1 / 1}>
-                    <img
-                      src={image.thumbnailUrl}
-                      alt={image.name}
-                      className="object-cover rounded-md aspect-video hover:opacity-75 transition-opacity duration-200"
-                    />
-                  </AspectRatio>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      
-      {/* Image Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[70%] lg:max-w-[50%] xl:max-w-[40%]">
-          <div className="absolute top-2 right-2 z-10 rounded-sm outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 data-[state=open]:bg-secondary">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCloseDialog}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+      <Card className="mb-6">
+        <CardContent className="p-4 flex items-center space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Cerca per tipo (landscape, singlePerson, couple)"
+              className="pl-10"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
           </div>
           
-          {selectedImage && (
-            <div className="flex flex-col">
-              <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 lg:text-4xl">
-                {selectedImage.name}
-              </h2>
-              
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <ImageIcon className="h-4 w-4" />
-                {selectedImage.type}
-              </p>
-              
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <CalendarIcon className="h-4 w-4" />
-                {format(new Date(selectedImage.date), 'dd/MM/yyyy')}
-              </p>
-              
-              <AspectRatio ratio={16 / 9}>
-                <img
-                  src={selectedImage.url}
-                  alt={selectedImage.name}
-                  className="object-cover rounded-md aspect-video mt-4"
-                />
-              </AspectRatio>
-              
-              <Button variant="link" className="mt-4 justify-start">
-                <Download className="h-4 w-4 mr-2" />
-                Download
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={
+                  "justify-start text-left font-normal w-[280px] pl-2" +
+                  (date ? " text-foreground" : " text-muted-foreground")
+                }
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? (
+                  format(date, "dd MMMM yyyy", { locale: it })
+                ) : (
+                  <span>Scegli una data</span>
+                )}
               </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </CardContent>
+      </Card>
+      
+      <ImageGrid images={images} />
+      
+      <ImageUploadModal
+        open={isImageUploadModalOpen}
+        onOpenChange={setIsImageUploadModalOpen}
+        onUpload={handleImageUpload}
+      />
     </div>
   );
 };

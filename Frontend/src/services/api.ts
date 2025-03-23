@@ -3,7 +3,7 @@ import axios from 'axios';
 import { User, Couple, Memory, Image, Idea, GeoLocation } from '@/types';
 
 // Base API URL - replace with your actual API URL
-const API_URL = 'http://your-api-url.com/api';
+const API_URL = 'http://localhost:5000/api';
 
 // Create an axios instance
 const api = axios.create({
@@ -45,13 +45,7 @@ export const authApi = {
   
   getCurrentUser: async () => {
     return (await api.get('/auth/user')).data;
-  },
-  
-  updateProfile: async (userId: string, data: Partial<User>) => {
-    return (await api.put(`/users/${userId}`, data)).data;
-  },
-  
-  // Social auth would be handled differently, likely through OAuth redirects
+  }
 };
 
 // Users API
@@ -60,14 +54,18 @@ export const usersApi = {
     return (await api.get(`/users/${userId}`)).data;
   },
   
-  updateUser: async (userId: string, data: Partial<User>) => {
-    return (await api.put(`/users/${userId}`, data)).data;
+  updateUser: async (userId: string, data: FormData) => {
+    return (await api.put(`/users/${userId}`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })).data;
   }
 };
 
 // Couples API
 export const couplesApi = {
-  createCouple: async (data: Omit<Couple, 'id' | 'createdAt'>) => {
+  createCouple: async (data: { name: string, description?: string, startDate: Date, anniversaryDate?: Date }) => {
     return (await api.post('/couples', data)).data;
   },
   
@@ -75,16 +73,20 @@ export const couplesApi = {
     return (await api.get(`/couples/${coupleId}`)).data;
   },
   
-  updateCouple: async (coupleId: string, data: Partial<Couple>) => {
-    return (await api.put(`/couples/${coupleId}`, data)).data;
+  updateCouple: async (coupleId: string, data: FormData) => {
+    return (await api.put(`/couples/${coupleId}`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })).data;
   },
   
-  joinCouple: async (coupleId: string, userId: string) => {
-    return (await api.post(`/couples/${coupleId}/members`, { userId })).data;
+  joinCouple: async (coupleId: string) => {
+    return (await api.post(`/couples/${coupleId}/members`)).data;
   },
   
-  leaveCouple: async (coupleId: string, userId: string) => {
-    return (await api.delete(`/couples/${coupleId}/members/${userId}`)).data;
+  leaveCouple: async (coupleId: string) => {
+    return (await api.delete(`/couples/${coupleId}/members`)).data;
   }
 };
 
@@ -98,11 +100,21 @@ export const memoriesApi = {
     return (await api.get(`/memories/${memoryId}`)).data;
   },
   
-  createMemory: async (data: Omit<Memory, 'id' | 'createdAt' | 'updatedAt'>) => {
+  createMemory: async (data: Omit<Memory, 'id' | 'createdAt' | 'updatedAt' | 'images'> & {
+    imageIds?: string[];
+    locationName?: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     return (await api.post('/memories', data)).data;
   },
   
-  updateMemory: async (memoryId: string, data: Partial<Memory>) => {
+  updateMemory: async (memoryId: string, data: Partial<Memory> & {
+    imageIds?: string[];
+    locationName?: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     return (await api.put(`/memories/${memoryId}`, data)).data;
   },
   
@@ -129,7 +141,11 @@ export const imagesApi = {
     })).data;
   },
   
-  updateImage: async (imageId: string, data: Partial<Image>) => {
+  updateImage: async (imageId: string, data: Partial<Image> & {
+    locationName?: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     return (await api.put(`/images/${imageId}`, data)).data;
   },
   
@@ -152,11 +168,19 @@ export const ideasApi = {
     return (await api.get(`/ideas/${ideaId}`)).data;
   },
   
-  createIdea: async (data: Omit<Idea, 'id' | 'createdAt'>) => {
+  createIdea: async (data: Omit<Idea, 'id' | 'createdAt' | 'completed' | 'completedAt' | 'completedById' | 'completedByName'> & {
+    locationName?: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     return (await api.post('/ideas', data)).data;
   },
   
-  updateIdea: async (ideaId: string, data: Partial<Idea>) => {
+  updateIdea: async (ideaId: string, data: Partial<Idea> & {
+    locationName?: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     return (await api.put(`/ideas/${ideaId}`, data)).data;
   },
   
@@ -164,8 +188,8 @@ export const ideasApi = {
     return (await api.delete(`/ideas/${ideaId}`)).data;
   },
   
-  completeIdea: async (ideaId: string, userId: string) => {
-    return (await api.put(`/ideas/${ideaId}/complete`, { userId })).data;
+  completeIdea: async (ideaId: string) => {
+    return (await api.put(`/ideas/${ideaId}/complete`)).data;
   }
 };
 
@@ -176,17 +200,6 @@ export const statsApi = {
   }
 };
 
-// Locations API
-export const locationsApi = {
-  getLocations: async (coupleId: string) => {
-    return (await api.get(`/couples/${coupleId}/locations`)).data;
-  },
-  
-  addLocation: async (data: GeoLocation & { coupleId: string }) => {
-    return (await api.post('/locations', data)).data;
-  }
-};
-
 export default {
   auth: authApi,
   users: usersApi,
@@ -194,6 +207,5 @@ export default {
   memories: memoriesApi,
   images: imagesApi,
   ideas: ideasApi,
-  stats: statsApi,
-  locations: locationsApi
+  stats: statsApi
 };
