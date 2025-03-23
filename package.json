@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Full-stack application for Couple Memories",
   "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd Backend && npm run dev",
+    "dev:frontend": "cd Frontend && npm run dev",
+    "install:all": "npm install && concurrently \"cd Backend && npm install\" \"cd Frontend && npm install\"",
+    "build:dev": "cd Frontend && npm run build -- --mode development",
     "install": "npm run install:backend && npm run install:frontend",
     "install:backend": "cd Backend && npm install",
     "install:frontend": "cd Frontend && npm install",
@@ -17,6 +22,7 @@
     "test:frontend": "cd Frontend && npm test"
   },
   "dependencies": {
+    "cross-env": "^7.0.3",
     "heic-convert": "^1.2.4",
     "sharp": "^0.33.2"
   },
