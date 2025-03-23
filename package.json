@@ -1,6 +1,26 @@
 {
+  "name": "memory-grove-cherisher",
+  "version": "1.0.0",
+  "description": "Full-stack application for Couple Memories",
+  "scripts": {
+    "install": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd Backend && npm install",
+    "install:frontend": "cd Frontend && npm install",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd Backend && npm run start",
+    "start:dev:backend": "cd Backend && npm run dev",
+    "start:frontend": "cd Frontend && npm start",
+    "init-db": "cd Backend && npm run init-db",
+    "build": "cd Frontend && npm run build",
+    "test": "concurrently \"cd Backend && npm test\" \"cd Frontend && npm test\"",
+    "test:backend": "cd Backend && npm test",
+    "test:frontend": "cd Frontend && npm test"
+  },
   "dependencies": {
     "heic-convert": "^1.2.4",
     "sharp": "^0.33.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
