@@ -20,20 +20,9 @@ export const AppLayout: React.FC = () => {
       }
     };
     
-    // Handle clicking outside the sidebar to close it
-    const handleClickOutside = (event: MouseEvent) => {
-      const sidebar = document.querySelector('[data-sidebar="true"]');
-      if (sidebar && !sidebar.contains(event.target as Node) && sidebarOpen && window.innerWidth < 768) {
-        setSidebarOpen(false);
-      }
-    };
-    
     window.addEventListener('keydown', handleEscKey);
-    document.addEventListener('mousedown', handleClickOutside);
-    
     return () => {
       window.removeEventListener('keydown', handleEscKey);
-      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [sidebarOpen]);
   
@@ -75,18 +64,16 @@ export const AppLayout: React.FC = () => {
         <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       </div>
       
-      {/* Mobile Hamburger Button - Fixed at bottom left - Hide when sidebar is open */}
-      {!sidebarOpen && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="md:hidden fixed bottom-6 left-6 z-50 rounded-full shadow-lg"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Toggle menu"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      )}
+      {/* Mobile Hamburger Button - Fixed at bottom left */}
+      <Button
+        variant="outline"
+        size="icon"
+        className="md:hidden fixed bottom-6 left-6 z-50 rounded-full shadow-lg"
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label="Toggle menu"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
       
       <main 
         className="flex-1 overflow-y-auto transform transition-all duration-300 w-full md:ml-64 pt-4"

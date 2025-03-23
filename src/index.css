@@ -179,53 +179,6 @@
   background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%);
 }
 
-/* Responsive gallery grids */
-.gallery-small {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
-}
-
-.gallery-medium {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-}
-
-.gallery-large {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-@media (min-width: 640px) {
-  .gallery-small {
-    grid-template-columns: repeat(6, 1fr);
-  }
-  
-  .gallery-medium {
-    grid-template-columns: repeat(4, 1fr);
-  }
-  
-  .gallery-large {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .gallery-small {
-    grid-template-columns: repeat(8, 1fr);
-  }
-  
-  .gallery-medium {
-    grid-template-columns: repeat(6, 1fr);
-  }
-  
-  .gallery-large {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
 .memory-gallery {
   columns: 3 200px;
   column-gap: 1rem;
@@ -233,60 +186,4 @@
 
 .memory-gallery-item {
   @apply mb-4 break-inside-avoid rounded-lg overflow-hidden inline-block w-full;
-}
-
-.memory-card-image {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0.5rem;
-}
-
-.memory-card-badges {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.memory-card-additional-images {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 10;
-  display: flex;
-  flex-direction: row-reverse;
-}
-
-.memory-card-additional-image {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  overflow: hidden;
-  margin-left: -8px;
-  transition: transform 0.2s;
-}
-
-.memory-card-additional-image:hover {
-  transform: scale(1.2);
-  z-index: 20;
-}
-
-.memory-card-image-count {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid white;
-  background-color: rgba(0,0,0,0.5);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: bold;
-  margin-left: -8px;
 }

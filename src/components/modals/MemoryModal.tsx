@@ -26,10 +26,8 @@ import {
   Tag, 
   Image as ImageIcon,
   Trash,
-  Pencil,
-  Save
+  Pencil
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface MemoryModalProps {
   open: boolean;
@@ -62,7 +60,6 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
   useEffect(() => {
     if (memory && mode !== 'create') {
       setTitle(memory.title);
-      setDescription(memory.description || '');
       setType(memory.type);
       setStartDate(new Date(memory.startDate));
       setEndDate(memory.endDate ? new Date(memory.endDate) : undefined);
@@ -71,7 +68,6 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
       setEventTag(memory.eventTag);
     } else {
       setTitle('');
-      setDescription('');
       setType('simple');
       setStartDate(new Date());
       setEndDate(undefined);
@@ -88,7 +84,6 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
     
     const memoryData: Partial<Memory> = {
       title: title.trim(),
-      description: description.trim() || undefined,
       type,
       startDate,
       endDate,
@@ -112,6 +107,7 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
       memoryData.creatorName = user.name;
       memoryData.coupleId = couple.id;
       memoryData.createdAt = new Date();
+      memoryData.updatedAt = new Date();
       memoryData.images = [];
     }
     
@@ -136,51 +132,11 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
     }
   };
 
-  const getTypeLabel = (memoryType: MemoryType) => {
-    switch(memoryType) {
-      case 'travel': return 'Viaggio';
-      case 'event': return 'Evento';
-      default: return 'Ricordo';
-    }
-  };
-
-  const getTypeBadgeColor = (memoryType: MemoryType) => {
-    switch(memoryType) {
-      case 'travel': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'event': return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300';
-      default: return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-    }
-  };
-
-  const getEventTagLabel = (tag?: EventTag) => {
-    if (!tag) return '';
-    
-    switch(tag) {
-      case 'birthday': return 'Compleanno';
-      case 'anniversary': return 'Anniversario';
-      case 'gift': return 'Regalo';
-      case 'holiday': return 'Festività';
-      default: return 'Altro';
-    }
-  };
-
-  const getEventTagBadgeColor = (tag?: EventTag) => {
-    if (!tag) return '';
-    
-    switch(tag) {
-      case 'birthday': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      case 'anniversary': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      case 'gift': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'holiday': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] backdrop-blur-sm bg-white/60 dark:bg-gray-950/60 border-none shadow-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl">
+          <DialogTitle>
             {mode === 'create' ? 'Crea nuovo ricordo' : mode === 'edit' ? 'Modifica ricordo' : 'Dettagli ricordo'}
           </DialogTitle>
           <DialogDescription>
@@ -190,55 +146,42 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
           {isEditing ? (
             <>
-              <div className="space-y-3">
-                <Label htmlFor="title" className="text-base">Titolo</Label>
+              <div className="space-y-2">
+                <Label htmlFor="title">Titolo</Label>
                 <Input
                   id="title"
                   placeholder="Titolo del ricordo"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="text-base"
                 />
               </div>
               
-              <div className="space-y-3">
-                <Label htmlFor="description" className="text-base">Descrizione</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Descrivi questo ricordo..."
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="text-base resize-none"
-                />
-              </div>
-              
-              <div className="space-y-3">
-                <Label className="text-base">Tipo di ricordo</Label>
+              <div className="space-y-2">
+                <Label>Tipo di ricordo</Label>
                 <RadioGroup value={type} onValueChange={(value: MemoryType) => setType(value)}>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center space-x-2">
                       <RadioGroupItem value="simple" id="simple" />
-                      <Label htmlFor="simple" className="cursor-pointer">Ricordo</Label>
+                      <Label htmlFor="simple">Ricordo semplice</Label>
                     </div>
-                    <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                    <div className="flex items-center space-x-2">
                       <RadioGroupItem value="event" id="event" />
-                      <Label htmlFor="event" className="cursor-pointer">Evento</Label>
+                      <Label htmlFor="event">Evento</Label>
                     </div>
-                    <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                    <div className="flex items-center space-x-2">
                       <RadioGroupItem value="travel" id="travel" />
-                      <Label htmlFor="travel" className="cursor-pointer">Viaggio</Label>
+                      <Label htmlFor="travel">Viaggio</Label>
                     </div>
                   </div>
                 </RadioGroup>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <Label className="text-base">Data inizio</Label>
+                <div className="space-y-2">
+                  <Label>Data inizio</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -264,8 +207,8 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
                 </div>
                 
                 {(type === 'travel' || type === 'event') && (
-                  <div className="space-y-3">
-                    <Label className="text-base">Data fine {type === 'travel' ? '(opzionale)' : ''}</Label>
+                  <div className="space-y-2">
+                    <Label>Data fine {type === 'travel' ? '(opzionale)' : ''}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -294,57 +237,57 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
               </div>
               
               {type === 'event' && (
-                <div className="space-y-3">
-                  <Label className="text-base">Tipo di evento</Label>
+                <div className="space-y-2">
+                  <Label>Tipo di evento</Label>
                   <RadioGroup value={eventTag || ''} onValueChange={(value: EventTag) => setEventTag(value)}>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="birthday" id="birthday" />
-                        <Label htmlFor="birthday" className="cursor-pointer">Compleanno</Label>
+                        <Label htmlFor="birthday">Compleanno</Label>
                       </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="anniversary" id="anniversary" />
-                        <Label htmlFor="anniversary" className="cursor-pointer">Anniversario</Label>
+                        <Label htmlFor="anniversary">Anniversario</Label>
                       </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="gift" id="gift" />
-                        <Label htmlFor="gift" className="cursor-pointer">Regalo</Label>
+                        <Label htmlFor="gift">Regalo</Label>
                       </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="holiday" id="holiday" />
-                        <Label htmlFor="holiday" className="cursor-pointer">Festività</Label>
+                        <Label htmlFor="holiday">Festività</Label>
                       </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-md hover:bg-muted/50 border">
+                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="other" id="other" />
-                        <Label htmlFor="other" className="cursor-pointer">Altro</Label>
+                        <Label htmlFor="other">Altro</Label>
                       </div>
                     </div>
                   </RadioGroup>
                 </div>
               )}
               
-              <div className="space-y-3">
-                <Label htmlFor="location" className="text-base">Luogo</Label>
+              <div className="space-y-2">
+                <Label htmlFor="location">Luogo</Label>
                 <div className="flex items-center relative">
                   <MapPin className="h-4 w-4 absolute left-3 text-muted-foreground" />
                   <Input
                     id="location"
                     placeholder="Dove è successo?"
-                    className="pl-10 text-base"
+                    className="pl-10"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                   />
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <Label htmlFor="song" className="text-base">Canzone (opzionale)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="song">Canzone (opzionale)</Label>
                 <div className="flex items-center relative">
                   <Music className="h-4 w-4 absolute left-3 text-muted-foreground" />
                   <Input
                     id="song"
                     placeholder="Canzone che vi ricorda questo momento"
-                    className="pl-10 text-base"
+                    className="pl-10"
                     value={song}
                     onChange={(e) => setSong(e.target.value)}
                   />
@@ -354,53 +297,47 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
           ) : (
             <>
               <div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <Badge className={`${getTypeBadgeColor(type)}`}>
-                    {getTypeLabel(type)}
-                  </Badge>
+                <h3 className="text-xl font-semibold">{title}</h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full flex items-center">
+                    {type === 'simple' ? 'Ricordo semplice' : type === 'event' ? 'Evento' : 'Viaggio'}
+                  </span>
                   
                   {eventTag && (
-                    <Badge className={`${getEventTagBadgeColor(eventTag)}`}>
+                    <span className="text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-1 rounded-full flex items-center">
                       <Tag className="h-3 w-3 mr-1" />
-                      {getEventTagLabel(eventTag)}
-                    </Badge>
+                      {eventTag === 'birthday' ? 'Compleanno' :
+                       eventTag === 'anniversary' ? 'Anniversario' :
+                       eventTag === 'gift' ? 'Regalo' :
+                       eventTag === 'holiday' ? 'Festività' : 'Altro'}
+                    </span>
                   )}
                 </div>
                 
-                <h3 className="text-2xl font-semibold">{title}</h3>
-                
                 {memory?.creatorName && (
-                  <div className="text-sm text-muted-foreground mt-1">
+                  <div className="text-sm text-muted-foreground mt-2">
                     Creato da: {memory.creatorName}
                   </div>
                 )}
-                
-                <div className="mt-4 rounded-lg bg-muted/30 p-4">
-                  <p className="whitespace-pre-wrap">{description || "Nessuna descrizione disponibile."}</p>
-                </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20">
-                  <div className="min-w-9 min-h-9 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300">
-                    <CalendarIcon className="h-5 w-5" />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">Data {type === 'travel' ? 'inizio' : ''}</p>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm font-medium">Data {type === 'travel' ? 'inizio' : ''}</p>
+                    <p className="text-sm text-muted-foreground">
                       {startDate ? format(startDate, 'dd MMMM yyyy', { locale: it }) : 'Non specificata'}
                     </p>
                   </div>
                 </div>
                 
                 {endDate && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20">
-                    <div className="min-w-9 min-h-9 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300">
-                      <CalendarIcon className="h-5 w-5" />
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">Data fine</p>
-                      <p className="text-muted-foreground">
+                      <p className="text-sm font-medium">Data fine</p>
+                      <p className="text-sm text-muted-foreground">
                         {format(endDate, 'dd MMMM yyyy', { locale: it })}
                       </p>
                     </div>
@@ -409,13 +346,11 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
               </div>
               
               {(location || memory?.location?.name) && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20">
-                  <div className="min-w-9 min-h-9 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600 dark:text-green-300">
-                    <MapPin className="h-5 w-5" />
-                  </div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">Luogo</p>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm font-medium">Luogo</p>
+                    <p className="text-sm text-muted-foreground">
                       {location || memory?.location?.name}
                     </p>
                   </div>
@@ -423,13 +358,11 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
               )}
               
               {(song || memory?.song) && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/20">
-                  <div className="min-w-9 min-h-9 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-300">
-                    <Music className="h-5 w-5" />
-                  </div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Music className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">Canzone</p>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm font-medium">Canzone</p>
+                    <p className="text-sm text-muted-foreground">
                       {song || memory?.song}
                     </p>
                   </div>
@@ -438,23 +371,23 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
               
               {memory?.images && memory.images.length > 0 && (
                 <div className="mt-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ImageIcon className="h-5 w-5 text-primary" />
-                    <h4 className="font-medium">Immagini ({memory.images.length})</h4>
-                  </div>
+                  <h4 className="text-sm font-medium mb-2 flex items-center">
+                    <ImageIcon className="h-4 w-4 mr-1" />
+                    Immagini ({memory.images.length})
+                  </h4>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {memory.images.slice(0, 8).map((image: Image) => (
-                      <div key={image.id} className="aspect-square rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div key={image.id} className="aspect-square rounded-md overflow-hidden">
                         <img 
                           src={image.thumbnailUrl} 
                           alt={image.name} 
-                          className="w-full h-full object-cover hover:scale-105 transition-transform"
+                          className="w-full h-full object-cover"
                         />
                       </div>
                     ))}
                     {memory.images.length > 8 && (
-                      <div className="aspect-square rounded-md bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors">
-                        <span className="text-base font-medium">+{memory.images.length - 8}</span>
+                      <div className="aspect-square rounded-md bg-muted flex items-center justify-center">
+                        <span className="text-sm font-medium">+{memory.images.length - 8}</span>
                       </div>
                     )}
                   </div>
@@ -509,12 +442,7 @@ const MemoryModal: React.FC<MemoryModalProps> = ({
                   Annulla
                 </Button>
               )}
-              <Button
-                onClick={handleSave}
-                disabled={!title.trim()}
-                className="flex items-center"
-              >
-                <Save className="h-4 w-4 mr-2" />
+              <Button onClick={handleSave} disabled={!title.trim()}>
                 Salva
               </Button>
             </div>

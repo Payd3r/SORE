@@ -4,7 +4,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ThemeToggle } from './ThemeToggle';
 import { 
   Home,
   BookMarked,
@@ -23,7 +22,7 @@ type SidebarProps = {
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   
   // Define the navigation items
@@ -47,7 +46,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
 
   return (
     <aside 
-      data-sidebar="true"
       className={`fixed inset-y-0 left-0 z-30 w-64 bg-background border-r transition-transform duration-300 ease-in-out 
         ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
     >
@@ -62,20 +60,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         </button>
         
         {/* Header */}
-        <div className="p-6 border-b">
-          <div className="flex items-center space-x-3 mt-3 md:mt-0">
-            <Avatar className="h-12 w-12 border">
+        <div className="p-4">
+          <div className="flex items-center space-x-3 mt-8 md:mt-0">
+            <Avatar className="h-12 w-12">
               <AvatarImage src={user?.avatar} alt={user?.name} />
-              <AvatarFallback className="bg-primary/10 text-primary font-medium">{user?.name ? getInitials(user.name) : 'U'}</AvatarFallback>
+              <AvatarFallback>{user?.name ? getInitials(user.name) : 'U'}</AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="font-semibold text-lg">{user?.name}</h2>
+              <h2 className="font-medium text-lg">{user?.name}</h2>
             </div>
           </div>
         </div>
         
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -94,40 +92,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
               }}
             >
               {item.icon}
-              <span className="ml-3 font-medium">{item.name}</span>
+              <span className="ml-3">{item.name}</span>
             </NavLink>
           ))}
         </nav>
         
         {/* Footer */}
         <div className="p-4 border-t">
-          <div className="flex items-center justify-between mb-4">
-            <NavLink
-              to="/profile"
-              className={({ isActive }) => `
-                flex items-center px-4 py-3 rounded-lg transition-colors flex-1
-                ${isActive 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'hover:bg-muted'
-                }
-              `}
-              onClick={() => {
-                if (window.innerWidth < 768) {
-                  setOpen(false);
-                }
-              }}
-            >
-              <User className="w-5 h-5" />
-              <span className="ml-3 font-medium">Profilo</span>
-            </NavLink>
-            
-            <ThemeToggle />
-          </div>
+          <NavLink
+            to="/profile"
+            className={({ isActive }) => `
+              flex items-center px-4 py-3 rounded-lg transition-colors mb-2
+              ${isActive 
+                ? 'bg-primary text-primary-foreground' 
+                : 'hover:bg-muted'
+              }
+            `}
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setOpen(false);
+              }
+            }}
+          >
+            <User className="w-5 h-5" />
+            <span className="ml-3">Profilo</span>
+          </NavLink>
           
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={() => signOut('', '')}
+            onClick={logout}
           >
             <LogOut className="w-5 h-5 mr-2" />
             Logout

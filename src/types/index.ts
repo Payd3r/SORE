@@ -11,8 +11,6 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
-  bio?: string;
-  uploadCount?: number;
   createdAt: Date;
   coupleId?: string;
 }
@@ -21,9 +19,6 @@ export interface Couple {
   id: string;
   name: string;
   description?: string;
-  startDate: Date;
-  anniversaryDate?: Date;
-  avatar?: string;
   createdAt: Date;
   members: User[];
 }
@@ -32,7 +27,6 @@ export interface Memory {
   id: string;
   type: MemoryType;
   title: string;
-  description?: string;
   startDate: Date;
   endDate?: Date;
   song?: string;
@@ -59,7 +53,6 @@ export interface Image {
   uploaderName: string;
   coupleId: string;
   createdAt: Date;
-  isFavorite?: boolean;
 }
 
 export interface Idea {
