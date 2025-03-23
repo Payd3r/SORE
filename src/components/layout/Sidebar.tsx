@@ -1,170 +1,138 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  Menu, X, Home, BookMarked, Image, Lightbulb, 
-  MapPin, BarChart3, LogOut, User, Settings
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/auth-context';
-import { useTheme } from '@/context/theme-context';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from './ThemeToggle';
+import { 
+  Home,
+  BookMarked,
+  ImageIcon,
+  Lightbulb,
+  Map,
+  PieChart,
+  LogOut,
+  User,
+  X
+} from 'lucide-react';
 
-interface SidebarProps {
+type SidebarProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
-}
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
+  const { user, logout } = useAuth();
   const location = useLocation();
-  const isMobile = useIsMobile();
-  const { user, signOut } = useAuth();
-  const { theme } = useTheme();
   
-  // Close sidebar on route change on mobile
-  useEffect(() => {
-    if (isMobile && open) {
-      setOpen(false);
-    }
-  }, [location.pathname, isMobile, open, setOpen]);
-
-  if (!user) return null;
-
+  // Define the navigation items
   const navItems = [
-    { to: '/home', icon: <Home size={20} />, label: 'Home' },
-    { to: '/memories', icon: <BookMarked size={20} />, label: 'Ricordi' },
-    { to: '/gallery', icon: <Image size={20} />, label: 'Galleria' },
-    { to: '/ideas', icon: <Lightbulb size={20} />, label: 'Idee' },
-    { to: '/map', icon: <MapPin size={20} />, label: 'Mappa' },
-    { to: '/recap', icon: <BarChart3 size={20} />, label: 'Recap' },
+    { name: 'Home', path: '/home', icon: <Home className="w-5 h-5" /> },
+    { name: 'Ricordi', path: '/memories', icon: <BookMarked className="w-5 h-5" /> },
+    { name: 'Galleria', path: '/gallery', icon: <ImageIcon className="w-5 h-5" /> },
+    { name: 'Idee', path: '/ideas', icon: <Lightbulb className="w-5 h-5" /> },
+    { name: 'Mappa', path: '/map', icon: <Map className="w-5 h-5" /> },
+    { name: 'Recap', path: '/recap', icon: <PieChart className="w-5 h-5" /> },
   ];
 
-  // Ensure that z-index values are properly set
-  const sidebarClass = `
-    fixed inset-y-0 left-0 z-50 w-64 bg-sidebar transition-transform duration-300 ease-in-out 
-    border-r border-sidebar-border flex flex-col h-full
-    ${open ? 'translate-x-0' : '-translate-x-full'}
-    ${isMobile ? 'shadow-xl' : ''}
-  `;
-
-  const overlayClass = `
-    fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300
-    ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-  `;
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  const toggleSidebar = () => {
-    setOpen(!open);
+  // Extract initials from user name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
-    <>
-      {/* Mobile Hamburger Button with improved positioning and z-index */}
-      {isMobile && (
+    <aside 
+      className={`fixed inset-y-0 left-0 z-30 w-64 bg-background border-r transition-transform duration-300 ease-in-out 
+        ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+    >
+      <div className="flex flex-col h-full">
+        {/* Close button - only visible on mobile */}
         <button 
-          className="fixed top-4 left-4 z-50 p-2 rounded-md bg-primary text-primary-foreground shadow-md"
-          onClick={toggleSidebar}
-          aria-label={open ? "Chiudi menu" : "Apri menu"}
-          type="button"
+          className="md:hidden absolute top-4 right-4 p-1 rounded-full hover:bg-muted"
+          onClick={() => setOpen(false)}
+          aria-label="Close sidebar"
         >
-          {open ? <X size={24} /> : <Menu size={24} />}
+          <X className="w-5 h-5" />
         </button>
-      )}
-      
-      {/* Sidebar Overlay (Mobile) - Make sure z-index is correct */}
-      <div 
-        className={overlayClass}
-        onClick={() => setOpen(false)}
-      />
-
-      {/* Sidebar */}
-      <div className={sidebarClass}>
-        <div className="flex items-center justify-center p-4 border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-sidebar-foreground">
-            Ricordi
-          </h1>
-        </div>
-
-        {/* User Profile */}
-        <div className="flex items-center space-x-3 p-4 border-b border-sidebar-border">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            {user.avatar ? (
-              <img 
-                src={user.avatar} 
-                alt={user.name} 
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <User size={20} />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {user.name}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user.email}
-            </p>
+        
+        {/* Header */}
+        <div className="p-4">
+          <div className="flex items-center space-x-3 mt-8 md:mt-0">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={user?.avatar} alt={user?.name} />
+              <AvatarFallback>{user?.name ? getInitials(user.name) : 'U'}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="font-medium text-lg">{user?.name}</h2>
+            </div>
           </div>
         </div>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) => `
-                    flex items-center px-4 py-3 text-sm font-medium rounded-md 
-                    transition-colors duration-200 group
-                    ${isActive 
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                    }
-                  `}
-                  onClick={() => isMobile && setOpen(false)}
-                >
-                  <span className="mr-3">{item.icon}</span>
-                  <span>{item.label}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Footer Actions */}
-        <div className="p-4 border-t border-sidebar-border space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <NavLink 
-              to="/settings" 
-              className="flex items-center px-4 py-2 text-sm font-medium rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
-              onClick={() => isMobile && setOpen(false)}
+        
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `
+                flex items-center px-4 py-3 rounded-lg transition-colors
+                ${isActive 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-muted'
+                }
+              `}
+              onClick={() => {
+                if (window.innerWidth < 768) {
+                  setOpen(false);
+                }
+              }}
             >
-              <Settings size={20} className="mr-3" />
-              <span>Impostazioni</span>
+              {item.icon}
+              <span className="ml-3">{item.name}</span>
             </NavLink>
+          ))}
+        </nav>
+        
+        {/* Footer */}
+        <div className="p-4 border-t">
+          <div className="flex items-center justify-between mb-4">
+            <NavLink
+              to="/profile"
+              className={({ isActive }) => `
+                flex items-center px-4 py-3 rounded-lg transition-colors flex-1
+                ${isActive 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-muted'
+                }
+              `}
+              onClick={() => {
+                if (window.innerWidth < 768) {
+                  setOpen(false);
+                }
+              }}
+            >
+              <User className="w-5 h-5" />
+              <span className="ml-3">Profilo</span>
+            </NavLink>
+            
             <ThemeToggle />
           </div>
           
           <Button 
             variant="outline" 
-            className="w-full flex items-center justify-center"
-            onClick={handleSignOut}
+            className="w-full justify-start"
+            onClick={logout}
           >
-            <LogOut size={16} className="mr-2" />
-            <span>Disconnetti</span>
+            <LogOut className="w-5 h-5 mr-2" />
+            Logout
           </Button>
         </div>
       </div>
-    </>
+    </aside>
   );
 };
