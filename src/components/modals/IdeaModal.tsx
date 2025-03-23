@@ -15,7 +15,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Idea, IdeaType } from "@/types";
 import { useAuth } from '@/context/auth-context';
-import { Check, Trash, Pencil } from 'lucide-react';
+import { Check, Trash, Pencil, Lightbulb, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface IdeaModalProps {
   open: boolean;
@@ -45,7 +46,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
   useEffect(() => {
     if (idea && mode !== 'create') {
       setTitle(idea.title);
-      setDescription(idea.description);
+      setDescription(idea.description || '');
       setType(idea.type);
     } else {
       setTitle('');
@@ -61,7 +62,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
     
     const ideaData: Partial<Idea> = {
       title: title.trim(),
-      description: description.trim(),
+      description: description.trim() || undefined,
       type,
     };
     
@@ -73,6 +74,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
       ideaData.createdAt = new Date();
     }
     
+    console.log(`Idea ${mode === 'create' ? 'created' : 'updated'}:`, ideaData);
     onSave(ideaData);
     
     if (mode === 'view') {
@@ -87,26 +89,45 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
   };
 
   const handleComplete = (completed: boolean) => {
-    if (onComplete && user) {
+    if (onComplete && user && idea) {
       console.log(`Idea marked as ${completed ? 'completed' : 'incomplete'} by ${user.name}`);
       onComplete(completed);
     }
   };
 
   const handleDelete = () => {
-    if (onDelete) {
-      console.log('Idea deleted');
+    if (onDelete && idea) {
+      console.log('Idea deleted:', idea.id);
       onDelete();
       onOpenChange(false);
     }
   };
 
+  const getTypeLabel = (ideaType: IdeaType) => {
+    switch(ideaType) {
+      case 'travel': return 'Viaggio';
+      case 'restaurant': return 'Ristorante';
+      case 'challenge': return 'Sfida';
+      default: return 'Generale';
+    }
+  };
+
+  const getTypeBadgeColor = (ideaType: IdeaType) => {
+    switch(ideaType) {
+      case 'travel': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'restaurant': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+      case 'challenge': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+      default: return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] backdrop-blur-sm bg-white/60 dark:bg-gray-950/60 border-none shadow-lg">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Crea nuova idea' : mode === 'edit' ? 'Modifica idea' : 'Dettagli idea'}
+          <DialogTitle className="flex items-center">
+            <Lightbulb className="h-5 w-5 mr-2 text-primary" />
+            {mode === 'create' ? 'Nuova idea' : mode === 'edit' ? 'Modifica idea' : 'Dettagli idea'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create' 
@@ -119,7 +140,7 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
           {isEditing ? (
             <>
               <div className="space-y-2">
-                <Label htmlFor="title">Titolo</Label>
+                <Label htmlFor="title">Titolo*</Label>
                 <Input
                   id="title"
                   placeholder="Titolo dell'idea"
@@ -142,22 +163,22 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
               <div className="space-y-2">
                 <Label>Tipo di idea</Label>
                 <RadioGroup value={type} onValueChange={(value: IdeaType) => setType(value)}>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center space-x-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
                       <RadioGroupItem value="travel" id="travel" />
-                      <Label htmlFor="travel">Viaggio</Label>
+                      <Label htmlFor="travel" className="cursor-pointer">Viaggio</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
                       <RadioGroupItem value="restaurant" id="restaurant" />
-                      <Label htmlFor="restaurant">Ristorante</Label>
+                      <Label htmlFor="restaurant" className="cursor-pointer">Ristorante</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
                       <RadioGroupItem value="general" id="general" />
-                      <Label htmlFor="general">Generica</Label>
+                      <Label htmlFor="general" className="cursor-pointer">Generica</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
                       <RadioGroupItem value="challenge" id="challenge" />
-                      <Label htmlFor="challenge">Sfida</Label>
+                      <Label htmlFor="challenge" className="cursor-pointer">Sfida</Label>
                     </div>
                   </div>
                 </RadioGroup>
@@ -165,31 +186,60 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
             </>
           ) : (
             <>
-              <div>
-                <h3 className="text-lg font-semibold">{title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">Tipo: {
-                  type === 'travel' ? 'Viaggio' :
-                  type === 'restaurant' ? 'Ristorante' :
-                  type === 'general' ? 'Generica' : 'Sfida'
-                }</p>
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className={`${getTypeBadgeColor(type)}`}>
+                    {getTypeLabel(type)}
+                  </Badge>
+                  
+                  {idea && idea.completed && (
+                    <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800">
+                      <Check className="h-3 w-3 mr-1" />
+                      Completata
+                    </Badge>
+                  )}
+                </div>
+                
+                <h3 className="text-2xl font-semibold mb-1">{title}</h3>
                 
                 {idea && (
-                  <div className="text-sm text-muted-foreground mt-1">
-                    Creata da: {idea.creatorName}
+                  <div className="text-sm text-muted-foreground flex items-center">
+                    <span>Creata da: {idea.creatorName}</span>
+                    {idea.createdAt && (
+                      <span className="ml-2 text-xs">
+                        {new Date(idea.createdAt).toLocaleDateString('it-IT', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    )}
                   </div>
                 )}
 
                 {idea && idea.completed && idea.completedByName && (
-                  <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded p-2 mt-2 text-sm flex items-center">
-                    <Check className="h-4 w-4 mr-2" />
-                    Completata da {idea.completedByName}
-                    {idea.completedAt && ` il ${new Date(idea.completedAt).toLocaleDateString()}`}
+                  <div className="mt-4 p-3 rounded-md bg-green-50 dark:bg-green-900/10 text-sm border border-green-100 dark:border-green-900/30">
+                    <div className="flex items-center text-green-800 dark:text-green-300 font-medium">
+                      <Check className="h-4 w-4 mr-2" />
+                      Completata da {idea.completedByName}
+                    </div>
+                    {idea.completedAt && (
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        {new Date(idea.completedAt).toLocaleDateString('it-IT', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
               
-              <div className="border-t pt-4 mt-4">
-                <p className="whitespace-pre-wrap">{description}</p>
+              <div className="rounded-md bg-muted/50 p-4">
+                <p className="whitespace-pre-wrap">{description || "Nessuna descrizione disponibile."}</p>
               </div>
             </>
           )}
@@ -252,7 +302,12 @@ const IdeaModal: React.FC<IdeaModalProps> = ({
                   Annulla
                 </Button>
               )}
-              <Button onClick={handleSave} disabled={!title.trim()}>
+              <Button 
+                onClick={handleSave} 
+                disabled={!title.trim()}
+                className="flex items-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
                 Salva
               </Button>
             </div>
