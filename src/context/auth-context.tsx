@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
   getAuth,
@@ -10,9 +11,9 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   OAuthProvider,
+  User as FirebaseUser
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { User as FirebaseUser } from 'firebase/auth';
 import { app } from '@/firebase';
 import { User, Couple } from '@/types';
 import { toast } from 'sonner';
@@ -23,7 +24,7 @@ interface AuthContextProps {
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: (email: string, password: string) => Promise<void>;
   updateUser: (name: string, avatar?: string, bio?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
@@ -222,38 +223,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const createCouple = (name: string, description?: string) => {
-    const coupleId = `couple-${Date.now()}`;
-    const newCouple: Couple = {
-      id: coupleId,
-      name,
-      description,
-      startDate: new Date(), // Add the required startDate
-      members: [user as User],
-      createdAt: new Date()
-    };
+  const createCouple = async (name: string, description?: string) => {
+    try {
+      const coupleId = `couple-${Date.now()}`;
+      const newCouple: Couple = {
+        id: coupleId,
+        name,
+        description,
+        startDate: new Date(),
+        members: [user as User],
+        createdAt: new Date()
+      };
 
-    setDoc(doc(db, 'couples', coupleId), newCouple)
-      .then(() => {
-        // Update the user document with the coupleId
-        if (user) {
-          const updatedUser: User = { ...user, coupleId: coupleId };
-          setDoc(doc(db, 'users', user.id), updatedUser)
-            .then(() => {
-              setUser(updatedUser);
-              setCouple(newCouple);
-              toast.success('Coppia creata con successo!');
-            })
-            .catch((error) => {
-              console.error("Error updating user with coupleId:", error);
-              toast.error(`Errore durante l'aggiornamento dell'utente con l'ID della coppia: ${error.message}`);
-            });
-        }
-      })
-      .catch((error) => {
-        console.error("Error creating couple:", error);
-        toast.error(`Errore durante la creazione della coppia: ${error.message}`);
-      });
+      await setDoc(doc(db, 'couples', coupleId), newCouple);
+      
+      // Update the user document with the coupleId
+      if (user) {
+        const updatedUser: User = { ...user, coupleId: coupleId };
+        await setDoc(doc(db, 'users', user.id), updatedUser);
+        setUser(updatedUser);
+        setCouple(newCouple);
+        toast.success('Coppia creata con successo!');
+      }
+    } catch (error: any) {
+      console.error("Error creating couple:", error);
+      toast.error(`Errore durante la creazione della coppia: ${error.message}`);
+    }
   };
 
   const joinCouple = async (coupleId: string) => {
@@ -293,7 +288,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const value = {
+  const value: AuthContextProps = {
     user,
     couple,
     loading,
