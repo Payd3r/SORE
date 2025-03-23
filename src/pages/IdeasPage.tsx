@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
@@ -30,8 +29,8 @@ import { Idea, IdeaType } from '@/types';
 import { format } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import IdeaModal from '@/components/modals/IdeaModal';
+import FiltersModal from '@/components/modals/FiltersModal';
 
-// Mock data for demonstration - will be replaced with local storage
 let mockIdeas: Idea[] = [
   {
     id: '1',
@@ -132,7 +131,6 @@ let mockIdeas: Idea[] = [
   }
 ];
 
-// Initialize localStorage with mock data if not exists
 const initializeIdeas = () => {
   const storedIdeas = localStorage.getItem('ideas');
   if (!storedIdeas) {
@@ -153,13 +151,11 @@ const IdeasPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'view' | 'edit'>('create');
   
-  // Initialize local storage and load ideas
   useEffect(() => {
     initializeIdeas();
     loadIdeas();
   }, []);
   
-  // Load ideas from localStorage
   const loadIdeas = () => {
     const storedIdeas = localStorage.getItem('ideas');
     if (storedIdeas) {
@@ -169,13 +165,11 @@ const IdeasPage: React.FC = () => {
     }
   };
   
-  // Save ideas to localStorage
   const saveIdeas = (ideas: Idea[]) => {
     localStorage.setItem('ideas', JSON.stringify(ideas));
     setLocalIdeas(ideas);
   };
 
-  // Filter ideas based on search, status, type and creator
   const filteredIdeas = localIdeas.filter(idea => {
     const matchesSearch = idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          idea.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -191,21 +185,18 @@ const IdeasPage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesType && matchesCreator;
   });
 
-  // Open create modal
   const openCreateModal = () => {
     setSelectedIdea(null);
     setModalMode('create');
     setModalOpen(true);
   };
   
-  // Open view modal
   const openViewModal = (idea: Idea) => {
     setSelectedIdea(idea);
     setModalMode('view');
     setModalOpen(true);
   };
   
-  // Create or update idea
   const handleSaveIdea = (ideaData: Partial<Idea>) => {
     if (modalMode === 'create') {
       const newIdea: Idea = {
@@ -241,7 +232,6 @@ const IdeasPage: React.FC = () => {
     setModalOpen(false);
   };
   
-  // Delete idea
   const handleDeleteIdea = () => {
     if (selectedIdea) {
       const updatedIdeas = localIdeas.filter(idea => idea.id !== selectedIdea.id);
@@ -252,7 +242,6 @@ const IdeasPage: React.FC = () => {
     }
   };
   
-  // Toggle idea completion
   const handleToggleComplete = (completed: boolean) => {
     if (selectedIdea && user) {
       const updatedIdeas = localIdeas.map(idea => {
@@ -275,7 +264,6 @@ const IdeasPage: React.FC = () => {
     }
   };
 
-  // Handle quick completion toggle
   const handleQuickToggle = (e: React.MouseEvent, id: string, currentStatus: boolean) => {
     e.preventDefault();
     e.stopPropagation();
@@ -302,7 +290,6 @@ const IdeasPage: React.FC = () => {
     toast.success(!currentStatus ? 'Idea completata!' : 'Completamento rimosso.');
   };
 
-  // Handle quick delete
   const handleQuickDelete = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -313,7 +300,6 @@ const IdeasPage: React.FC = () => {
     toast.success('Idea eliminata.');
   };
 
-  // Idea type styles and icons
   const typeStyles: Record<IdeaType, { color: string, bgColor: string, icon: React.ReactNode }> = {
     'travel': { 
       color: 'text-blue-600 dark:text-blue-400', 
@@ -337,13 +323,26 @@ const IdeasPage: React.FC = () => {
     }
   };
 
-  // Get unique creators for filtering
   const creators = localIdeas.reduce((acc: { id: string, name: string }[], idea) => {
     if (!acc.some(creator => creator.id === idea.userId)) {
       acc.push({ id: idea.userId, name: idea.creatorName });
     }
     return acc;
   }, []);
+
+  const typeOptions = [
+    { value: 'travel', label: 'Viaggi' },
+    { value: 'restaurant', label: 'Ristoranti' },
+    { value: 'general', label: 'Generiche' },
+    { value: 'challenge', label: 'Sfide' }
+  ];
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedStatus('all');
+    setSelectedType('all');
+    setSelectedCreator('all');
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 animate-fade-in">
@@ -373,49 +372,69 @@ const IdeasPage: React.FC = () => {
           </div>
           
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Stato
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setSelectedStatus('all')}>
-                  Tutte
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedStatus('pending')}>
-                  Da completare
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSelectedStatus('completed')}>
-                  Completate
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            {creators.length > 1 && (
+            <div className="hidden sm:flex gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center">
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Creatore
+                    <Filter className="mr-2 h-4 w-4" />
+                    Stato
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSelectedCreator('all')}>
-                    Tutti
+                  <DropdownMenuItem onClick={() => setSelectedStatus('all')}>
+                    Tutte
                   </DropdownMenuItem>
-                  {creators.map(creator => (
-                    <DropdownMenuItem 
-                      key={creator.id} 
-                      onClick={() => setSelectedCreator(creator.id)}
-                    >
-                      {creator.name}
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuItem onClick={() => setSelectedStatus('pending')}>
+                    Da completare
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedStatus('completed')}>
+                    Completate
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+              
+              {creators.length > 1 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center">
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Creatore
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSelectedCreator('all')}>
+                      Tutti
+                    </DropdownMenuItem>
+                    {creators.map(creator => (
+                      <DropdownMenuItem 
+                        key={creator.id} 
+                        onClick={() => setSelectedCreator(creator.id)}
+                      >
+                        {creator.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+            
+            <div className="block sm:hidden">
+              <FiltersModal 
+                title="Filtra Idee"
+                description="Seleziona i filtri per le tue idee"
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                selectedStatus={selectedStatus}
+                onStatusChange={setSelectedStatus}
+                selectedType={selectedType}
+                onTypeChange={(value) => setSelectedType(value as IdeaType | 'all')}
+                selectedCreator={selectedCreator}
+                onCreatorChange={setSelectedCreator}
+                creators={creators}
+                onResetFilters={resetFilters}
+                typeOptions={typeOptions}
+              />
+            </div>
           </div>
         </div>
         
@@ -461,7 +480,7 @@ const IdeasPage: React.FC = () => {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="w-full justify-start mb-6">
+        <TabsList className="w-full justify-start mb-6 overflow-x-auto flex-nowrap">
           <TabsTrigger value="all" onClick={() => setSelectedType('all')}>Tutte</TabsTrigger>
           <TabsTrigger value="travel" onClick={() => setSelectedType('travel')}>Viaggi</TabsTrigger>
           <TabsTrigger value="restaurant" onClick={() => setSelectedType('restaurant')}>Ristoranti</TabsTrigger>

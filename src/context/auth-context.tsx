@@ -1,400 +1,325 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile,
+  signInWithPopup,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  OAuthProvider,
+} from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { User as FirebaseUser } from 'firebase/auth';
+import { app } from '@/firebase';
 import { User, Couple } from '@/types';
 import { toast } from 'sonner';
 
-interface AuthContextType {
+interface AuthContextProps {
   user: User | null;
   couple: Couple | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  logout: () => Promise<void>; // Alias for signOut for backward compatibility
-  updateUser: (user: Partial<User>) => Promise<void>;
-  updateCouple: (couple: Partial<Couple>) => Promise<void>;
+  updateUser: (name: string, avatar?: string, bio?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithFacebook: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   createCouple: (name: string, description?: string) => Promise<void>;
-  inviteToCouple: (email: string) => Promise<void>;
-  acceptInvitation: (coupleId: string) => Promise<void>;
+  joinCouple: (coupleId: string) => Promise<void>;
   leaveCouple: () => Promise<void>;
 }
 
-// Create context with default values
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  couple: null,
-  loading: true,
-  signIn: async () => {},
-  signUp: async () => {},
-  signOut: async () => {},
-  logout: async () => {},
-  updateUser: async () => {},
-  updateCouple: async () => {},
-  createCouple: async () => {},
-  inviteToCouple: async () => {},
-  acceptInvitation: async () => {},
-  leaveCouple: async () => {},
-});
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// Custom hook to use auth context
-export const useAuth = () => useContext(AuthContext);
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-// Mock users for demonstration
-const MOCK_USERS: User[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    createdAt: new Date(),
-    coupleId: 'couple1',
-    bio: 'Lorem ipsum dolor sit amet',
-    uploadCount: 15,
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    createdAt: new Date(),
-    coupleId: 'couple1',
-    bio: 'Consectetur adipiscing elit',
-    uploadCount: 12,
-  },
-  {
-    id: '3',
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    createdAt: new Date(),
-    bio: 'Sed do eiusmod tempor incididunt',
-    uploadCount: 0,
-  }
-];
-
-// Mock couple
-const MOCK_COUPLE: Couple = {
-  id: 'couple1',
-  name: 'John & Jane',
-  description: 'Together since 2020',
-  createdAt: new Date(),
-  startDate: new Date('2020-01-15'),
-  anniversaryDate: new Date('2020-06-20'),
-  avatar: '/placeholder.svg',
-  members: [MOCK_USERS[0], MOCK_USERS[1]]
-};
-
-// Auth provider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [couple, setCouple] = useState<Couple | null>(null);
   const [loading, setLoading] = useState(true);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const googleProvider = new GoogleAuthProvider();
+  const facebookProvider = new FacebookAuthProvider();
+  const appleProvider = new OAuthProvider('apple.com');
 
-  // Check if user is authenticated on mount
   useEffect(() => {
-    const checkAuth = () => {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        
-        // Check if user is part of a couple
-        if (parsedUser.coupleId) {
-          const storedCouple = localStorage.getItem('couple');
-          if (storedCouple) {
-            setCouple(JSON.parse(storedCouple));
-          } else {
-            // For demo, if the user has coupleId but no couple in localStorage
-            if (parsedUser.coupleId === 'couple1') {
-              localStorage.setItem('couple', JSON.stringify(MOCK_COUPLE));
-              setCouple(MOCK_COUPLE);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          setUser(userData);
+
+          if (userData.coupleId) {
+            const coupleDoc = await getDoc(doc(db, 'couples', userData.coupleId));
+            if (coupleDoc.exists()) {
+              setCouple(coupleDoc.data() as Couple);
+            } else {
+              setCouple(null);
             }
+          } else {
+            setCouple(null);
           }
+        } else {
+          setUser(null);
+          setCouple(null);
         }
-      }
-      setLoading(false);
-    };
-
-    // Simulate a delay for loading state
-    const timer = setTimeout(() => {
-      checkAuth();
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Sign in function
-  const signIn = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      // Simulate authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const foundUser = MOCK_USERS.find(u => u.email === email);
-      
-      if (foundUser && password === 'password') {
-        setUser(foundUser);
-        localStorage.setItem('user', JSON.stringify(foundUser));
-        
-        // If user is part of a couple, set the couple
-        if (foundUser.coupleId === 'couple1') {
-          setCouple(MOCK_COUPLE);
-          localStorage.setItem('couple', JSON.stringify(MOCK_COUPLE));
-        }
-        
-        console.log('User signed in:', foundUser);
       } else {
-        throw new Error('Invalid credentials');
+        setUser(null);
+        setCouple(null);
       }
-    } catch (error) {
-      console.error('Sign in error:', error);
-      throw error;
-    } finally {
       setLoading(false);
-    }
-  };
+    });
 
-  // Sign up function
+    return () => unsubscribe();
+  }, [auth, db]);
+
   const signUp = async (email: string, password: string, name: string) => {
-    setLoading(true);
     try {
-      // Simulate registration
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+
+      await updateProfile(firebaseUser, { displayName: name });
+
       const newUser: User = {
-        id: Math.random().toString(36).substring(2, 9),
-        name,
-        email,
+        id: firebaseUser.uid,
+        name: name,
+        email: firebaseUser.email as string,
         createdAt: new Date(),
       };
-      
+
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      console.log('User signed up:', newUser);
-    } catch (error) {
-      console.error('Sign up error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+      toast.success('Registrazione avvenuta con successo!');
+    } catch (error: any) {
+      console.error("Error signing up:", error);
+      toast.error(`Errore durante la registrazione: ${error.message}`);
     }
   };
 
-  // Sign out function
+  const signIn = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success('Login effettuato con successo!');
+    } catch (error: any) {
+      console.error("Error signing in:", error);
+      toast.error(`Errore durante il login: ${error.message}`);
+    }
+  };
+
   const signOut = async () => {
-    setLoading(true);
     try {
-      // Simulate sign out
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setUser(null);
-      setCouple(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem('couple');
-      console.log('User signed out');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+      await firebaseSignOut(auth);
+      toast.success('Logout effettuato con successo!');
+    } catch (error: any) {
+      console.error("Error signing out:", error);
+      toast.error(`Errore durante il logout: ${error.message}`);
     }
   };
 
-  // Create an alias for signOut called logout for backward compatibility
-  const logout = signOut;
-
-  // Update user function
-  const updateUser = async (userData: Partial<User>) => {
-    setLoading(true);
+  const updateUser = async (name: string, avatar?: string, bio?: string) => {
     try {
-      // Simulate update
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (user) {
-        const updatedUser = { ...user, ...userData };
+      const firebaseUser = auth.currentUser;
+      if (firebaseUser) {
+        await updateProfile(firebaseUser, { displayName: name, photoURL: avatar });
+
+        const updatedUser: User = {
+          ...user as User,
+          name: name,
+          avatar: avatar,
+          bio: bio
+        };
+
+        await setDoc(doc(db, 'users', firebaseUser.uid), updatedUser);
         setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        console.log('User updated:', updatedUser);
+        toast.success('Profilo aggiornato con successo!');
       }
-    } catch (error) {
-      console.error('Update user error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      toast.error(`Errore durante l'aggiornamento del profilo: ${error.message}`);
     }
   };
 
-  // Create couple function
-  const createCouple = async (name: string, description?: string) => {
-    setLoading(true);
+  const signInWithGoogle = async () => {
     try {
-      // Simulate creating a couple
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (user) {
-        const newCouple: Couple = {
-          id: Math.random().toString(36).substring(2, 9),
-          name,
-          description,
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+
+      if (!userDoc.exists()) {
+        const newUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName as string,
+          email: firebaseUser.email as string,
+          avatar: firebaseUser.photoURL,
           createdAt: new Date(),
-          members: [user]
         };
-        
+        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+        setUser(newUser);
+      }
+      toast.success('Login con Google effettuato con successo!');
+    } catch (error: any) {
+      console.error("Error signing in with Google:", error);
+      toast.error(`Errore durante il login con Google: ${error.message}`);
+    }
+  };
+
+  const signInWithFacebook = async () => {
+    try {
+      const result = await signInWithPopup(auth, facebookProvider);
+      const firebaseUser = result.user;
+
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+
+      if (!userDoc.exists()) {
+        const newUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName as string,
+          email: firebaseUser.email as string,
+          avatar: firebaseUser.photoURL,
+          createdAt: new Date(),
+        };
+        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+        setUser(newUser);
+      }
+      toast.success('Login con Facebook effettuato con successo!');
+    } catch (error: any) {
+      console.error("Error signing in with Facebook:", error);
+      toast.error(`Errore durante il login con Facebook: ${error.message}`);
+    }
+  };
+
+  const signInWithApple = async () => {
+    try {
+      const result = await signInWithPopup(auth, appleProvider);
+      const firebaseUser = result.user;
+
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+
+      if (!userDoc.exists()) {
+        // Apple doesn't provide a photoURL
+        const newUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName as string,
+          email: firebaseUser.email as string,
+          createdAt: new Date(),
+        };
+        await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+        setUser(newUser);
+      }
+      toast.success('Login con Apple effettuato con successo!');
+    } catch (error: any) {
+      console.error("Error signing in with Apple:", error);
+      toast.error(`Errore durante il login con Apple: ${error.message}`);
+    }
+  };
+
+  const createCouple = (name: string, description?: string) => {
+    const coupleId = `couple-${Date.now()}`;
+    const newCouple: Couple = {
+      id: coupleId,
+      name,
+      description,
+      startDate: new Date(), // Add the required startDate
+      members: [user as User],
+      createdAt: new Date()
+    };
+
+    setDoc(doc(db, 'couples', coupleId), newCouple)
+      .then(() => {
+        // Update the user document with the coupleId
+        if (user) {
+          const updatedUser: User = { ...user, coupleId: coupleId };
+          setDoc(doc(db, 'users', user.id), updatedUser)
+            .then(() => {
+              setUser(updatedUser);
+              setCouple(newCouple);
+              toast.success('Coppia creata con successo!');
+            })
+            .catch((error) => {
+              console.error("Error updating user with coupleId:", error);
+              toast.error(`Errore durante l'aggiornamento dell'utente con l'ID della coppia: ${error.message}`);
+            });
+        }
+      })
+      .catch((error) => {
+        console.error("Error creating couple:", error);
+        toast.error(`Errore durante la creazione della coppia: ${error.message}`);
+      });
+  };
+
+  const joinCouple = async (coupleId: string) => {
+    try {
+      const coupleDoc = await getDoc(doc(db, 'couples', coupleId));
+      
+      if (coupleDoc.exists()) {
         // Update user with coupleId
-        const updatedUser = { ...user, coupleId: newCouple.id };
-        setUser(updatedUser);
-        setCouple(newCouple);
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        localStorage.setItem('couple', JSON.stringify(newCouple));
-        
-        console.log('Couple created:', newCouple);
-        toast.success('Coppia creata con successo!');
-      }
-    } catch (error) {
-      console.error('Create couple error:', error);
-      toast.error('Errore nella creazione della coppia');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update couple function
-  const updateCouple = async (coupleData: Partial<Couple>) => {
-    setLoading(true);
-    try {
-      // Simulate update
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (couple) {
-        const updatedCouple = { ...couple, ...coupleData };
-        setCouple(updatedCouple);
-        localStorage.setItem('couple', JSON.stringify(updatedCouple));
-        console.log('Couple updated:', updatedCouple);
-        toast.success('Informazioni della coppia aggiornate!');
-      }
-    } catch (error) {
-      console.error('Update couple error:', error);
-      toast.error('Errore nell\'aggiornamento delle informazioni');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Invite to couple function
-  const inviteToCouple = async (email: string) => {
-    setLoading(true);
-    try {
-      // Simulate invitation
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // In a real app, this would send an email with an invitation link
-      console.log(`Invitation sent to ${email}`);
-      toast.success(`Invito inviato a ${email}`);
-    } catch (error) {
-      console.error('Invite to couple error:', error);
-      toast.error('Errore nell\'invio dell\'invito');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Accept invitation function
-  const acceptInvitation = async (coupleId: string) => {
-    setLoading(true);
-    try {
-      // Simulate accepting invitation
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (user) {
-        // For demo purposes, use the MOCK_COUPLE
-        const targetCouple = { ...MOCK_COUPLE };
-        
-        // Update user
-        const updatedUser = { ...user, coupleId };
-        setUser(updatedUser);
-        
-        // Update couple by adding the user
-        if (!targetCouple.members.find(m => m.id === user.id)) {
-          targetCouple.members.push(updatedUser);
+        if (user) {
+          const updatedUser: User = { ...user, coupleId: coupleId };
+          await setDoc(doc(db, 'users', user.id), updatedUser);
+          setUser(updatedUser);
+          setCouple(coupleDoc.data() as Couple);
+          toast.success('Coppia aggiunta con successo!');
         }
-        setCouple(targetCouple);
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        localStorage.setItem('couple', JSON.stringify(targetCouple));
-        
-        console.log('Invitation accepted:', coupleId);
-        toast.success('Hai accettato l\'invito!');
+      } else {
+        toast.error('ID coppia non trovato.');
       }
-    } catch (error) {
-      console.error('Accept invitation error:', error);
-      toast.error('Errore nell\'accettare l\'invito');
-      throw error;
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error("Error joining couple:", error);
+      toast.error(`Errore durante l'aggiunta alla coppia: ${error.message}`);
     }
   };
 
-  // Leave couple function
   const leaveCouple = async () => {
-    setLoading(true);
     try {
-      // Simulate leaving couple
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (user && couple) {
-        // Update user
-        const updatedUser = { ...user };
-        delete updatedUser.coupleId;
+      if (user) {
+        const updatedUser: User = { ...user, coupleId: undefined };
+        await setDoc(doc(db, 'users', user.id), updatedUser);
         setUser(updatedUser);
-        
-        // Update couple by removing the user
-        const updatedCouple = {
-          ...couple,
-          members: couple.members.filter(m => m.id !== user.id)
-        };
-        
-        // If no members left, remove the couple, otherwise update it
-        if (updatedCouple.members.length === 0) {
-          localStorage.removeItem('couple');
-          setCouple(null);
-        } else {
-          localStorage.setItem('couple', JSON.stringify(updatedCouple));
-          setCouple(updatedCouple);
-        }
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        
-        console.log('Left couple');
-        toast.success('Hai abbandonato la coppia');
+        setCouple(null);
+        toast.success('Coppia lasciata con successo!');
       }
-    } catch (error) {
-      console.error('Leave couple error:', error);
-      toast.error('Errore nell\'abbandonare la coppia');
-      throw error;
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error("Error leaving couple:", error);
+      toast.error(`Errore durante l'uscita dalla coppia: ${error.message}`);
     }
   };
 
-  const contextValue: AuthContextType = {
+  const value = {
     user,
     couple,
     loading,
-    signIn,
     signUp,
+    signIn,
     signOut,
-    logout,
     updateUser,
-    updateCouple,
+    signInWithGoogle,
+    signInWithFacebook,
+    signInWithApple,
     createCouple,
-    inviteToCouple,
-    acceptInvitation,
+    joinCouple,
     leaveCouple,
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

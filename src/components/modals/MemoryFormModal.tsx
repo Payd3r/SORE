@@ -25,7 +25,8 @@ import {
   Music, 
   Tag, 
   ImageIcon,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 import {
   Select,
@@ -34,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from 'sonner';
 
 interface MemoryFormModalProps {
   open: boolean;
@@ -59,7 +61,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
   const [song, setSong] = useState('');
   const [location, setLocation] = useState('');
   const [eventTag, setEventTag] = useState<EventTag | undefined>(undefined);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   
@@ -73,7 +75,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
       setSong(memory.song || '');
       setLocation(memory.location?.name || '');
       setEventTag(memory.eventTag);
-      setSelectedImages(memory.images.map(img => img.id));
+      setSelectedImageIds(memory.images.map(img => img.id));
     } else {
       setTitle('');
       setDescription('');
@@ -83,7 +85,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
       setSong('');
       setLocation('');
       setEventTag(undefined);
-      setSelectedImages([]);
+      setSelectedImageIds([]);
     }
   }, [memory, mode, open]);
 
@@ -120,80 +122,81 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
       memoryData.images = [];
     }
     
-    if (selectedImages.length > 0) {
-      // In a real app, you would fetch these images from the database
-      // For now, we'll just pass the IDs
-      memoryData.images = selectedImages;
-    }
+    // Instead of directly assigning image IDs, we'll leave this for the backend
+    // to handle. For now, we just store the IDs.
+    memoryData.images = selectedImageIds.length > 0 ? [] as Image[] : [];
     
     onSave(memoryData);
     onOpenChange(false);
+    toast.success(mode === 'create' ? 'Ricordo creato con successo!' : 'Ricordo aggiornato con successo!');
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-background border-none shadow-lg rounded-xl">
+        <DialogHeader className="sticky top-0 z-10 bg-background p-4 border-b">
+          <DialogTitle className="text-xl font-semibold">
             {mode === 'create' ? 'Crea nuovo ricordo' : 'Modifica ricordo'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             {mode === 'create' 
               ? 'Aggiungi un nuovo ricordo da conservare insieme'
               : 'Modifica i dettagli del ricordo'}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto">
-          <div className="grid gap-3">
-            <Label htmlFor="title">Titolo *</Label>
+        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sm font-medium">Titolo *</Label>
             <Input
               id="title"
               placeholder="Titolo del ricordo"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="w-full"
             />
           </div>
           
-          <div className="grid gap-3">
-            <Label htmlFor="description">Descrizione</Label>
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-sm font-medium">Descrizione</Label>
             <Textarea
               id="description"
               placeholder="Descrivi questo ricordo..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              className="w-full resize-none"
             />
           </div>
           
-          <div className="grid gap-3">
-            <Label>Tipo di ricordo *</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Tipo di ricordo *</Label>
             <RadioGroup value={type} onValueChange={(value: MemoryType) => setType(value)} className="flex flex-wrap gap-4">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="simple" id="simple" />
-                <Label htmlFor="simple">Ricordo semplice</Label>
+                <RadioGroupItem value="simple" id="simple" className="text-primary" />
+                <Label htmlFor="simple" className="font-normal cursor-pointer">Ricordo semplice</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="event" id="event" />
-                <Label htmlFor="event">Evento</Label>
+                <RadioGroupItem value="event" id="event" className="text-primary" />
+                <Label htmlFor="event" className="font-normal cursor-pointer">Evento</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="travel" id="travel" />
-                <Label htmlFor="travel">Viaggio</Label>
+                <RadioGroupItem value="travel" id="travel" className="text-primary" />
+                <Label htmlFor="travel" className="font-normal cursor-pointer">Viaggio</Label>
               </div>
             </RadioGroup>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="grid gap-3">
-              <Label>Data inizio *</Label>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Data inizio *</Label>
               <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="justify-start text-left font-normal"
+                    className="justify-start text-left font-normal w-full"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
                     {startDate ? (
                       format(startDate, 'dd MMMM yyyy', { locale: it })
                     ) : (
@@ -201,7 +204,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <CalendarComponent
                     mode="single"
                     selected={startDate}
@@ -211,21 +214,22 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
                         setStartDateOpen(false);
                       }
                     }}
+                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
             </div>
             
             {(type === 'travel' || type === 'event') && (
-              <div className="grid gap-3">
-                <Label>Data fine {type === 'travel' ? '(opzionale)' : ''}</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Data fine {type === 'travel' ? '(opzionale)' : ''}</Label>
                 <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="justify-start text-left font-normal"
+                      className="justify-start text-left font-normal w-full"
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
                       {endDate ? (
                         format(endDate, 'dd MMMM yyyy', { locale: it })
                       ) : (
@@ -233,7 +237,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
                       selected={endDate}
@@ -242,6 +246,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
                         setEndDateOpen(false);
                       }}
                       disabled={(date) => date < startDate}
+                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
@@ -250,13 +255,13 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
           </div>
           
           {type === 'event' && (
-            <div className="grid gap-3">
-              <Label>Tipo di evento</Label>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Tipo di evento</Label>
               <Select 
                 value={eventTag || ''} 
                 onValueChange={(value) => setEventTag(value as EventTag)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Seleziona il tipo di evento" />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,10 +275,10 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
             </div>
           )}
           
-          <div className="grid gap-3">
-            <Label htmlFor="location">Luogo</Label>
-            <div className="flex items-center relative">
-              <MapPin className="h-4 w-4 absolute left-3 text-muted-foreground" />
+          <div className="space-y-2">
+            <Label htmlFor="location" className="text-sm font-medium">Luogo</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="location"
                 placeholder="Dove è successo?"
@@ -284,10 +289,10 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
             </div>
           </div>
           
-          <div className="grid gap-3">
-            <Label htmlFor="song">Canzone (opzionale)</Label>
-            <div className="flex items-center relative">
-              <Music className="h-4 w-4 absolute left-3 text-muted-foreground" />
+          <div className="space-y-2">
+            <Label htmlFor="song" className="text-sm font-medium">Canzone (opzionale)</Label>
+            <div className="relative">
+              <Music className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="song"
                 placeholder="Canzone che vi ricorda questo momento"
@@ -298,25 +303,35 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
             </div>
           </div>
           
-          <div className="grid gap-3">
-            <Label className="flex justify-between items-center">
-              <span>Immagini</span>
-              <Button variant="outline" size="sm" className="h-8">
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Carica immagini
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label className="text-sm font-medium">Immagini</Label>
+              <Button variant="outline" size="sm" className="h-8 gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                <span>Carica immagini</span>
               </Button>
-            </Label>
-            <div className="border rounded-md p-4">
-              {selectedImages.length === 0 ? (
+            </div>
+            <div className="border rounded-lg p-4 bg-muted/20">
+              {selectedImageIds.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                  <ImageIcon className="h-12 w-12 mb-2" />
-                  <p className="text-sm">Nessuna immagine selezionata</p>
-                  <p className="text-xs">Aggiungi delle immagini al tuo ricordo</p>
+                  <ImageIcon className="h-12 w-12 mb-2 opacity-40" />
+                  <p className="text-sm font-medium">Nessuna immagine selezionata</p>
+                  <p className="text-xs mt-1">Aggiungi delle immagini al tuo ricordo</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
-                  {Array(8).fill(null).map((_, idx) => (
-                    <div key={idx} className="aspect-square bg-muted rounded-md"></div>
+                  {selectedImageIds.map((id, idx) => (
+                    <div key={id} className="relative group">
+                      <div className="aspect-square bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                      </div>
+                      <button 
+                        className="absolute -top-1 -right-1 bg-background border rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setSelectedImageIds(prev => prev.filter(i => i !== id))}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -324,7 +339,7 @@ const MemoryFormModal: React.FC<MemoryFormModalProps> = ({
           </div>
         </div>
         
-        <DialogFooter className="flex flex-wrap items-center justify-between sm:justify-between gap-2">
+        <DialogFooter className="sticky bottom-0 z-10 bg-background px-6 py-4 border-t flex flex-wrap items-center justify-between sm:justify-between gap-2">
           <div className="text-sm text-muted-foreground">
             * Campo obbligatorio
           </div>
