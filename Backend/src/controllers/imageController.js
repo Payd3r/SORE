@@ -4,6 +4,23 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
+const heicConvert = require('heic-convert');
+const { Sequelize } = require('sequelize');
+
+// Utility function to convert HEIC to JPEG buffer
+async function convertHeicToJpeg(buffer) {
+  try {
+    const jpegBuffer = await heicConvert({
+      buffer: buffer,
+      format: 'JPEG',
+      quality: 0.9
+    });
+    return jpegBuffer;
+  } catch (error) {
+    console.error('Error converting HEIC to JPEG:', error);
+    throw new Error('Failed to convert HEIC image');
+  }
+}
 
 // Get all images for a couple
 exports.getImages = async (req, res) => {
@@ -92,7 +109,7 @@ exports.uploadImage = async (req, res) => {
       return res.status(400).json({ message: 'User must be in a couple to upload images' });
     }
 
-    const mediaFolder = process.env.MEDIA_PATH || '../media';
+    const mediaFolder = path.resolve(process.env.MEDIA_PATH || './media');
     const thumbsFolder = path.join(mediaFolder, 'thumbs');
     
     // Create folders if they don't exist
@@ -108,20 +125,45 @@ exports.uploadImage = async (req, res) => {
     // Process each file
     for (const file of req.files) {
       const imageId = uuidv4();
+      let processedBuffer = file.buffer;
+      
+      // Check if file is HEIC and convert it
+      const isHeic = file.originalname.toLowerCase().endsWith('.heic');
+      if (isHeic) {
+        try {
+          console.log('Converting HEIC image...');
+          processedBuffer = await convertHeicToJpeg(file.buffer);
+          // Update file extension to jpg for storage
+          file.originalname = file.originalname.replace(/\.heic$/i, '.jpg');
+        } catch (conversionError) {
+          console.error('HEIC conversion error:', conversionError);
+          return res.status(500).json({ 
+            message: 'Error converting HEIC image', 
+            error: conversionError.message 
+          });
+        }
+      }
+      
       const filename = `image_${imageId}_${Date.now()}${path.extname(file.originalname)}`;
       const filepath = path.join(mediaFolder, filename);
       const thumbpath = path.join(thumbsFolder, filename);
 
       // Write original file
-      fs.writeFileSync(filepath, file.buffer);
+      fs.writeFileSync(filepath, processedBuffer);
 
       // Generate thumbnail
-      await sharp(file.buffer)
-        .resize(400, 400, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .toFile(thumbpath);
+      try {
+        await sharp(processedBuffer)
+          .resize(400, 400, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .toFile(thumbpath);
+      } catch (sharpError) {
+        console.error('Error generating thumbnail:', sharpError);
+        // Continue without thumbnail if it fails
+        fs.copyFileSync(filepath, thumbpath);
+      }
 
       // Create image record
       const image = await Image.create({
@@ -271,11 +313,16 @@ exports.deleteImage = async (req, res) => {
     const originalPath = path.join(process.cwd(), image.url);
     const thumbPath = path.join(process.cwd(), image.thumbnailUrl);
     
-    if (fs.existsSync(originalPath)) {
-      fs.unlinkSync(originalPath);
-    }
-    if (fs.existsSync(thumbPath)) {
-      fs.unlinkSync(thumbPath);
+    try {
+      if (fs.existsSync(originalPath)) {
+        fs.unlinkSync(originalPath);
+      }
+      if (fs.existsSync(thumbPath)) {
+        fs.unlinkSync(thumbPath);
+      }
+    } catch (fileError) {
+      console.error('Error deleting files:', fileError);
+      // Continue with db deletion even if file deletion fails
     }
 
     // Delete location if exists

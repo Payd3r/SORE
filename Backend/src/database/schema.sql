@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS Images (
   date DATETIME NOT NULL,
   type ENUM('landscape', 'singlePerson', 'couple') DEFAULT 'landscape',
   isFavorite BOOLEAN DEFAULT FALSE,
+  originalFormat VARCHAR(10), -- Added field to track original format (jpg, png, heic, etc)
   memoryId VARCHAR(36),
   userId VARCHAR(36) NOT NULL,
   uploaderName VARCHAR(255) NOT NULL,

@@ -3,7 +3,9 @@ import axios from 'axios';
 import { User, Couple, Memory, Image, Idea, GeoLocation } from '@/types';
 
 // Base API URL - replace with your actual API URL
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000/api'
+  : '/api';
 
 // Create an axios instance
 const api = axios.create({
@@ -11,6 +13,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // Increased timeout for image uploads (30 seconds)
 });
 
 // Add authorization header to requests if a token exists
@@ -21,6 +24,31 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      // Server responded with an error status
+      console.error('API Error:', error.response.status, error.response.data);
+      
+      // Handle 401 unauthorized - token expired or invalid
+      if (error.response.status === 401 && localStorage.getItem('token')) {
+        localStorage.removeItem('token');
+        // Redirect to login page if needed
+        window.location.href = '/';
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('Network Error:', error.request);
+    } else {
+      // Error in setting up the request
+      console.error('Request Error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth API
 export const authApi = {
@@ -126,19 +154,35 @@ export const memoriesApi = {
 // Images API
 export const imagesApi = {
   getImages: async (coupleId: string, filters?: { type?: string; startDate?: Date; endDate?: Date }) => {
-    return (await api.get(`/couples/${coupleId}/images`, { params: filters })).data;
+    try {
+      return (await api.get(`/couples/${coupleId}/images`, { params: filters })).data;
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      throw error;
+    }
   },
   
   getImage: async (imageId: string) => {
-    return (await api.get(`/images/${imageId}`)).data;
+    try {
+      return (await api.get(`/images/${imageId}`)).data;
+    } catch (error) {
+      console.error('Error fetching image:', error);
+      throw error;
+    }
   },
   
   uploadImage: async (formData: FormData) => {
-    return (await api.post('/images/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })).data;
+    try {
+      return (await api.post('/images/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 60000 // 60 seconds timeout for large uploads
+      })).data;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
   },
   
   updateImage: async (imageId: string, data: Partial<Image> & {
@@ -146,15 +190,30 @@ export const imagesApi = {
     latitude?: number;
     longitude?: number;
   }) => {
-    return (await api.put(`/images/${imageId}`, data)).data;
+    try {
+      return (await api.put(`/images/${imageId}`, data)).data;
+    } catch (error) {
+      console.error('Error updating image:', error);
+      throw error;
+    }
   },
   
   deleteImage: async (imageId: string) => {
-    return (await api.delete(`/images/${imageId}`)).data;
+    try {
+      return (await api.delete(`/images/${imageId}`)).data;
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      throw error;
+    }
   },
   
   toggleFavorite: async (imageId: string, isFavorite: boolean) => {
-    return (await api.put(`/images/${imageId}/favorite`, { isFavorite })).data;
+    try {
+      return (await api.put(`/images/${imageId}/favorite`, { isFavorite })).data;
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      throw error;
+    }
   }
 };
 

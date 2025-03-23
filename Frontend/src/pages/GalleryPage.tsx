@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { imagesApi } from '@/services/api';
 import { Image as ImageType } from '@/types';
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, ImagePlus, Search } from 'lucide-react';
+import { CalendarIcon, ImagePlus, Search, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Card, CardContent } from "@/components/ui/card"
@@ -21,6 +22,7 @@ const GalleryPage: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -31,6 +33,7 @@ const GalleryPage: React.FC = () => {
   
   const fetchImages = async (coupleId: string) => {
     try {
+      setLoading(true);
       const filters: { type?: string; startDate?: Date; endDate?: Date } = {};
       if (filter) filters.type = filter;
       if (date) {
@@ -44,9 +47,11 @@ const GalleryPage: React.FC = () => {
       console.error('Failed to fetch images:', error);
       toast({
         title: "Errore",
-        description: "Failed to fetch images",
+        description: "Impossibile caricare le immagini",
         variant: "destructive",
-      })
+      });
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -74,16 +79,24 @@ const GalleryPage: React.FC = () => {
       }
       
       await imagesApi.uploadImage(formData);
+      toast({
+        title: "Successo",
+        description: `${files.length} immagini caricate con successo`,
+      });
       fetchImages(couple.id); // Refresh images
-      toast.success('Images uploaded successfully!');
     } catch (error: any) {
       console.error('Image upload failed:', error);
       toast({
         title: "Errore",
-        description: "Failed to upload images",
+        description: "Impossibile caricare le immagini. " + (error.response?.data?.message || error.message),
         variant: "destructive",
-      })
+      });
     }
+  };
+  
+  const clearFilter = () => {
+    setFilter('');
+    setDate(undefined);
   };
   
   return (
@@ -97,8 +110,8 @@ const GalleryPage: React.FC = () => {
       </div>
       
       <Card className="mb-6">
-        <CardContent className="p-4 flex items-center space-x-4">
-          <div className="relative flex-1">
+        <CardContent className="p-4 flex flex-col md:flex-row items-center gap-4">
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -114,7 +127,7 @@ const GalleryPage: React.FC = () => {
               <Button
                 variant={"outline"}
                 className={
-                  "justify-start text-left font-normal w-[280px] pl-2" +
+                  "justify-start text-left font-normal w-full md:w-[280px] pl-2" +
                   (date ? " text-foreground" : " text-muted-foreground")
                 }
               >
@@ -135,10 +148,38 @@ const GalleryPage: React.FC = () => {
               />
             </PopoverContent>
           </Popover>
+          
+          {(filter || date) && (
+            <Button variant="ghost" size="sm" onClick={clearFilter} className="mt-2 md:mt-0">
+              Cancella filtri
+            </Button>
+          )}
         </CardContent>
       </Card>
       
-      <ImageGrid images={images} />
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Caricamento immagini...</span>
+        </div>
+      ) : images.length > 0 ? (
+        <ImageGrid images={images} />
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground text-lg">Nessuna immagine trovata</p>
+          {(filter || date) && (
+            <p className="text-sm text-muted-foreground mt-1">Prova a modificare i filtri di ricerca</p>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={() => setIsImageUploadModalOpen(true)}
+            className="mt-4"
+          >
+            <ImagePlus className="mr-2 h-4 w-4" />
+            Carica la tua prima immagine
+          </Button>
+        </div>
+      )}
       
       <ImageUploadModal
         open={isImageUploadModalOpen}

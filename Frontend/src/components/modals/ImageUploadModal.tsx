@@ -14,12 +14,14 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Image as ImageType, ImageType as ImageCategory, Memory } from "@/types";
 import { useAuth } from '@/context/auth-context';
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Image as ImageIcon,
   MapPin,
   Upload,
   Link2,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 interface ImageUploadModalProps {
@@ -36,12 +38,14 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   memories = []
 }) => {
   const { user, couple } = useAuth();
+  const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [type, setType] = useState<ImageCategory>('landscape');
   const [location, setLocation] = useState('');
   const [memoryId, setMemoryId] = useState<string | undefined>(undefined);
+  const [uploading, setUploading] = useState(false);
   
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -52,6 +56,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       setType('landscape');
       setLocation('');
       setMemoryId(undefined);
+      setUploading(false);
     }
   }, [open]);
   
@@ -71,11 +76,30 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      setFiles(prevFiles => [...prevFiles, ...selectedFiles]);
+      
+      // Validate files
+      const validFiles = selectedFiles.filter(file => {
+        const fileType = file.type.toLowerCase();
+        const extension = file.name.toLowerCase().split('.').pop();
+        
+        // Accept standard image formats and HEIC
+        if (fileType.startsWith('image/') || extension === 'heic') {
+          return true;
+        }
+        
+        toast({
+          title: "Tipo di file non supportato",
+          description: `Il file ${file.name} non è un'immagine supportata`,
+          variant: "destructive",
+        });
+        return false;
+      });
+      
+      setFiles(prevFiles => [...prevFiles, ...validFiles]);
       
       // If this is the first file and no name is set, use the file name as default
-      if (files.length === 0 && !name && selectedFiles[0]) {
-        setName(selectedFiles[0].name.split('.')[0]);
+      if (files.length === 0 && !name && validFiles[0]) {
+        setName(validFiles[0].name.split('.')[0]);
       }
     }
   };
@@ -86,8 +110,10 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
     setPreviewUrls(prevUrls => prevUrls.filter((_, i) => i !== index));
   };
   
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) return;
+    
+    setUploading(true);
     
     const imageData: Partial<ImageType> = {
       name: name || files[0].name.split('.')[0],
@@ -107,9 +133,24 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       };
     }
     
-    console.log('Uploading images:', imageData);
-    onUpload(files, imageData);
-    onOpenChange(false);
+    try {
+      console.log('Uploading images:', imageData);
+      await onUpload(files, imageData);
+      toast({
+        title: "Immagini caricate",
+        description: `${files.length} immagini caricate con successo`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante il caricamento delle immagini",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
   
   return (
@@ -133,7 +174,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                 <input
                   id="file-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.HEIC"
                   multiple
                   onChange={handleFileChange}
                   className="hidden"
@@ -143,6 +184,9 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                 {files.length > 0 
                   ? `${files.length} ${files.length === 1 ? 'file selezionato' : 'file selezionati'}` 
                   : 'Trascina qui i file o clicca per selezionarli'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Formati supportati: JPG, PNG, GIF, HEIC
               </p>
             </div>
             
@@ -240,16 +284,25 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
             Annulla
           </Button>
           <Button 
             onClick={handleUpload} 
-            disabled={files.length === 0}
+            disabled={files.length === 0 || uploading}
             className="flex items-center"
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Carica {files.length > 0 ? `(${files.length})` : ''}
+            {uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Caricamento...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Carica {files.length > 0 ? `(${files.length})` : ''}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
