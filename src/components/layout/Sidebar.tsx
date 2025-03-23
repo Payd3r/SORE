@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           <Button 
             variant="outline" 
             className="w-full justify-start"
-            onClick={signOut}
+            onClick={() => signOut('', '')}
           >
             <LogOut className="w-5 h-5 mr-2" />
             Logout
