@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -10,17 +11,15 @@ import {
   Divider,
   Avatar,
   Typography,
-  IconButton,
   Button,
+  Paper,
+  useTheme,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import BookIcon from '@mui/icons-material/Book';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
-import MapIcon from '@mui/icons-material/Map';
 import HistoryIcon from '@mui/icons-material/History';
-import PersonIcon from '@mui/icons-material/Person';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import TimelineIcon from '@mui/icons-material/Timeline';
@@ -30,6 +29,7 @@ import { useThemeMode } from '../../contexts/ThemeContext';
 interface SidebarProps {
   onClose?: () => void;
 }
+
 const menuItems = [
   { text: 'Home', icon: <HomeIcon />, path: '/' },
   { text: 'Ricordi', icon: <AutoStoriesIcon />, path: '/ricordi' },
@@ -42,10 +42,14 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { mode, toggleTheme } = useThemeMode();
+  const { mode } = useThemeMode();
+  const theme = useTheme();
 
   const handleNavigation = (path: string) => {
     navigate(path);
+    if (onClose && window.innerWidth < 600) {
+      onClose();
+    }
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -55,113 +59,177 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       sx={{
         width: 280,
         height: '100vh',
-        bgcolor: 'background.paper',
         display: 'flex',
         flexDirection: 'column',
-        borderRight: '1px solid',
-        borderColor: 'divider',
-        position: 'fixed',
-        left: 0,
-        top: 0,
+        overflow: 'hidden',
       }}
     >
       <Box 
         sx={{ 
-          p: 2, 
+          p: 3, 
           display: 'flex', 
+          flexDirection: 'column',
           alignItems: 'center', 
           gap: 2,
-          cursor: 'pointer',
-          '&:hover': {
-            bgcolor: 'action.hover',
-          },
         }}
-        onClick={() => handleNavigation('/profilo')}
       >
         <Avatar
+          src={user?.profilePictureUrl}
           sx={{
-            width: 40,
-            height: 40,
-            bgcolor: 'primary.main',
-            fontSize: '1.2rem',
+            width: 80,
+            height: 80,
+            bgcolor: theme.palette.primary.main,
+            fontSize: '2rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            border: '4px solid',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.8)',
+            mb: 1,
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            '&:hover': {
+              transform: 'scale(1.05)',
+              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+            }
           }}
+          onClick={() => handleNavigation('/profilo')}
         >
           {user?.name?.[0]}
         </Avatar>
-        <Typography variant="subtitle1" fontWeight={500}>
-          {user?.name}
-        </Typography>
-      </Box>
-
-      <List sx={{ flex: 1, px: 2, py: 1 }}>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-            <ListItemButton
-              onClick={() => handleNavigation(item.path)}
-              selected={isActive(item.path)}
-              sx={{
-                borderRadius: 2,
-                '&.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                  },
-                },
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 40,
-                  color: isActive(item.path) ? 'inherit' : 'text.secondary',
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
-                primaryTypographyProps={{
-                  fontWeight: isActive(item.path) ? 600 : 400,
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-
-      <Box sx={{ p: 2 }}>
-        <ListItem disablePadding sx={{ mb: 1 }}>
-          <ListItemButton
-            onClick={toggleTheme}
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography 
+            variant="h6" 
+            fontWeight={600}
             sx={{
-              borderRadius: 2,
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
+              background: theme.palette.mode === 'dark' 
+                ? 'linear-gradient(90deg, #9b87f5 0%, #7E69AB 100%)' 
+                : 'linear-gradient(90deg, #7E69AB 0%, #6E59A5 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <DarkModeIcon />
-            </ListItemIcon>
-            <ListItemText primary={mode === 'dark' ? 'Tema Chiaro' : 'Tema Scuro'} />
-          </ListItemButton>
-        </ListItem>
+            {user?.name}
+          </Typography>
+          {user?.email && (
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ fontSize: '0.8rem', opacity: 0.8 }}
+            >
+              {user.email}
+            </Typography>
+          )}
+        </Box>
+      </Box>
 
+      <Divider sx={{ my: 1, opacity: 0.6 }} />
+
+      <Box 
+        sx={{ 
+          flex: 1, 
+          overflow: 'auto',
+          px: 2,
+          py: 1,
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '10px',
+          },
+        }}
+        className="custom-scrollbar"
+      >
+        <List sx={{ px: 1 }}>
+          {menuItems.map((item) => (
+            <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
+              <ListItemButton
+                onClick={() => handleNavigation(item.path)}
+                selected={isActive(item.path)}
+                sx={{
+                  borderRadius: 3,
+                  transition: 'all 0.2s',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  '&::before': isActive(item.path) ? {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
+                    opacity: 0.9,
+                    zIndex: -1,
+                  } : {},
+                  '&.Mui-selected': {
+                    color: '#fff',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                    },
+                  },
+                  '&:hover': {
+                    backgroundColor: isActive(item.path) ? 'transparent' : theme.palette.action.hover,
+                    transform: 'translateX(5px)',
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 40,
+                    color: isActive(item.path) ? '#fff' : 'text.secondary',
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.text}
+                  primaryTypographyProps={{
+                    fontWeight: isActive(item.path) ? 600 : 400,
+                  }}
+                />
+                {isActive(item.path) && (
+                  <Box
+                    sx={{
+                      width: 4,
+                      height: 20,
+                      borderRadius: 1,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : '#fff',
+                      position: 'absolute',
+                      right: 12,
+                    }}
+                  />
+                )}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+
+      <Box sx={{ p: 2, mt: 'auto' }}>
+        <Divider sx={{ mb: 2, opacity: 0.6 }} />
         <Button
           variant="outlined"
           fullWidth
           startIcon={<LogoutIcon />}
           onClick={logout}
           sx={{
-            borderRadius: 2,
+            borderRadius: 3,
+            py: 1.2,
             textTransform: 'none',
             justifyContent: 'flex-start',
             pl: 2,
-            color: 'text.primary',
-            borderColor: 'divider',
+            color: theme.palette.error.main,
+            borderColor: theme.palette.error.main,
+            '&:hover': {
+              borderColor: theme.palette.error.dark,
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(244, 67, 54, 0.08)'
+                : 'rgba(244, 67, 54, 0.04)',
+            },
+            fontWeight: 500,
           }}
         >
           Logout

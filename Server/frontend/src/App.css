@@ -1,3 +1,4 @@
+
 .App {
   text-align: center;
 }
@@ -35,4 +36,92 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Enhanced UI styles */
+
+/* Card transitions */
+.card-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+.card-transition:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Modern button styles */
+.modern-button {
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.modern-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Animated elements */
+.animated-element {
+  transition: all 0.3s ease;
+}
+
+.animated-element:hover {
+  transform: scale(1.02);
+}
+
+/* Custom scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient backgrounds */
+.gradient-purple {
+  background: linear-gradient(135deg, #9b87f5 0%, #6E59A5 100%);
+  color: white;
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #90caf9 0%, #648dae 100%);
+  color: white;
+}
+
+.gradient-pink {
+  background: linear-gradient(135deg, #ce93d8 0%, #906697 100%);
+  color: white;
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #FFA726 0%, #FF7043 100%);
+  color: white;
+}
+
+/* Glass morphism effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass-effect {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
