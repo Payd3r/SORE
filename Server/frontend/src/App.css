@@ -125,3 +125,89 @@
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Modern card design */
+.modern-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
+}
+
+/* Avatar styles */
+.avatar-circle {
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid white;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.avatar-circle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Pill badges */
+.badge-pill {
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Button with icon animation */
+.icon-button-slide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.icon-button-slide .icon {
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.icon-button-slide:hover .icon {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Image overlay with information */
+.image-overlay {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.image-overlay img {
+  transition: transform 0.5s ease;
+}
+
+.image-overlay:hover img {
+  transform: scale(1.1);
+}
+
+.image-overlay .overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  color: white;
+  padding: 20px;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.image-overlay:hover .overlay {
+  transform: translateY(0);
+}

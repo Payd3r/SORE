@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -14,6 +13,7 @@ import {
   Button,
   Paper,
   useTheme,
+  Chip,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
@@ -23,6 +23,8 @@ import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import TimelineIcon from '@mui/icons-material/Timeline';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
 
@@ -31,11 +33,12 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { text: 'Home', icon: <HomeIcon />, path: '/' },
+  { text: 'Home', icon: <HomeIcon />, path: '/home' },
   { text: 'Ricordi', icon: <AutoStoriesIcon />, path: '/ricordi' },
   { text: 'Galleria', icon: <PhotoLibraryIcon />, path: '/galleria' },
   { text: 'Idee', icon: <LightbulbIcon />, path: '/idee' },
   { text: 'Recap', icon: <TimelineIcon />, path: '/recap' },
+  { text: 'Profilo', icon: <AccountCircleIcon />, path: '/profilo' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
@@ -74,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         }}
       >
         <Avatar
-          src={user?.profilePictureUrl}
+          src={user?.profilePicture}
           sx={{
             width: 80,
             height: 80,
@@ -109,11 +112,25 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           >
             {user?.name}
           </Typography>
+          {user?.coupleId && (
+            <Chip 
+              icon={<FavoriteBorderIcon sx={{ fontSize: '0.8rem' }} />}
+              label="In una relazione" 
+              size="small"
+              sx={{ 
+                mt: 1, 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(155, 135, 245, 0.2)' : 'rgba(155, 135, 245, 0.1)',
+                color: theme.palette.primary.main,
+                fontWeight: 500,
+                fontSize: '0.7rem'
+              }}
+            />
+          )}
           {user?.email && (
             <Typography 
               variant="body2" 
               color="text.secondary"
-              sx={{ fontSize: '0.8rem', opacity: 0.8 }}
+              sx={{ fontSize: '0.8rem', opacity: 0.8, mt: 1 }}
             >
               {user.email}
             </Typography>
@@ -207,6 +224,47 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           ))}
         </List>
       </Box>
+
+      {user?.coupleId && (
+        <Box sx={{ p: 2 }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              background: theme.palette.mode === 'dark' 
+                ? 'linear-gradient(135deg, rgba(155, 135, 245, 0.15) 0%, rgba(110, 89, 165, 0.15) 100%)'
+                : 'linear-gradient(135deg, rgba(155, 135, 245, 0.1) 0%, rgba(110, 89, 165, 0.1) 100%)',
+              border: '1px solid',
+              borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(155, 135, 245, 0.2)',
+            }}
+          >
+            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+              ID Coppia
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {user.coupleId}
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              fullWidth
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '0.75rem',
+                borderColor: theme.palette.primary.main,
+                color: theme.palette.primary.main,
+              }}
+              onClick={() => {
+                navigator.clipboard.writeText(user.coupleId.toString());
+              }}
+            >
+              Copia
+            </Button>
+          </Paper>
+        </Box>
+      )}
 
       <Box sx={{ p: 2, mt: 'auto' }}>
         <Divider sx={{ mb: 2, opacity: 0.6 }} />

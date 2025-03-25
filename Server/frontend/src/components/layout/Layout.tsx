@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { styled } from '@mui/material/styles';
 import {
@@ -12,6 +11,7 @@ import {
   useMediaQuery,
   Avatar,
   Tooltip,
+  Badge,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -101,7 +101,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title="Notifiche">
               <IconButton color="inherit">
-                <NotificationsIcon />
+                <Badge badgeContent={3} color="primary">
+                  <NotificationsIcon />
+                </Badge>
               </IconButton>
             </Tooltip>
             <Tooltip title={mode === 'dark' ? 'Tema Chiaro' : 'Tema Scuro'}>
@@ -112,6 +114,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {user && (
               <Tooltip title={user.name || 'Profilo'}>
                 <Avatar 
+                  src={user.profilePicture}
                   sx={{ 
                     width: 40, 
                     height: 40, 
@@ -161,7 +164,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </Drawer>
       )}
 
-      <Main open={open && !isMobile} sx={{ bgcolor: 'background.default' }}>
+      <Main open={open && !isMobile} sx={{ 
+        bgcolor: 'background.default',
+        px: { xs: 2, md: 4 },
+        py: { xs: 3, md: 4 }
+      }}>
         <Toolbar /> {/* Spacer for AppBar */}
         {children}
       </Main>
