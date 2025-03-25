@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -21,6 +22,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Paper,
+  Chip,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import GridViewIcon from '@mui/icons-material/GridView';
@@ -29,9 +32,12 @@ import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import { useAuth } from '../contexts/AuthContext';
 import * as api from '../services/api';
 import { Image, ImageType } from '../types/api';
+import { useTheme } from '@mui/material/styles';
+import { alpha } from '@mui/system';
 
 const Gallery: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'grid' | 'month'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -230,7 +236,7 @@ const Gallery: React.FC = () => {
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ mb: 1 }}>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: "bold" }}>
           La tua Galleria
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
@@ -243,116 +249,182 @@ const Gallery: React.FC = () => {
         )}
       </Box>
 
-      <Box
+      <Paper
+        elevation={0}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
+          p: 2,
           mb: 4,
-          flexWrap: 'wrap',
+          borderRadius: 3,
+          backgroundImage: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.primary.main, 0.1)} 100%)`,
+          border: '1px solid',
+          borderColor: alpha(theme.palette.primary.main, 0.1),
         }}
       >
-        <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-          <Button
-            variant="outlined"
-            startIcon={<FilterListIcon />}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              borderColor: 'divider',
-              color: 'text.primary',
-            }}
-            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-          >
-            Filtri
-          </Button>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'flex-start', md: 'center' },
+            justifyContent: 'space-between',
+            gap: 2,
+          }}
+        >
+          <Box sx={{ flex: 1, width: { xs: '100%', md: 'auto' } }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Cerca immagini..."
+              InputProps={{
+                sx: {
+                  backgroundColor: theme.palette.background.paper,
+                  borderRadius: 3,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'transparent',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.primary.main,
+                  },
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                }
+              }}
+            />
+          </Box>
 
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(_, value) => value && setViewMode(value)}
-            sx={{
-              bgcolor: 'background.paper',
-              borderRadius: 2,
-              '& .MuiToggleButton-root': {
-                border: 'none',
+          <Box sx={{ display: 'flex', gap: 1, ml: { xs: 0, md: 'auto' } }}>
+            <Button
+              variant="outlined"
+              startIcon={<FilterListIcon />}
+              sx={{
                 borderRadius: 2,
-                '&.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
+                textTransform: 'none',
+                borderColor: 'divider',
+                color: 'text.primary',
+              }}
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            >
+              Filtri
+            </Button>
+
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_, value) => value && setViewMode(value)}
+              sx={{
+                bgcolor: 'background.paper',
+                borderRadius: 2,
+                '& .MuiToggleButton-root': {
+                  border: 'none',
+                  borderRadius: 2,
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                    },
                   },
                 },
-              },
-            }}
-          >
-            <ToggleButton value="grid">
-              <GridViewIcon />
-            </ToggleButton>
-            <ToggleButton value="month">
-              <ViewAgendaIcon />
-            </ToggleButton>
-          </ToggleButtonGroup>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddPhotoAlternateIcon />}
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            Upload Images
-          </Button>
+              }}
+            >
+              <ToggleButton value="grid">
+                <GridViewIcon />
+              </ToggleButton>
+              <ToggleButton value="month">
+                <ViewAgendaIcon />
+              </ToggleButton>
+            </ToggleButtonGroup>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddPhotoAlternateIcon />}
+              onClick={() => setUploadDialogOpen(true)}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              }}
+            >
+              Upload Images
+            </Button>
+          </Box>
         </Box>
-      </Box>
+      </Paper>
 
       {isFiltersOpen && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-          <FormControl fullWidth>
-            <InputLabel>Creatori</InputLabel>
-            <Select
-              multiple
-              value={selectedCreators}
-              onChange={(e) => setSelectedCreators(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
-            >
-              {creators.map(creator => (
-                <MenuItem key={creator} value={creator}>
-                  {creator}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 4,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: alpha(theme.palette.divider, 0.8),
+          }}
+        >
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Creatori</InputLabel>
+              <Select
+                multiple
+                value={selectedCreators}
+                onChange={(e) => setSelectedCreators(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+                sx={{ borderRadius: 2 }}
+              >
+                {creators.map(creator => (
+                  <MenuItem key={creator} value={creator}>
+                    {creator}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <FormControl fullWidth>
-            <InputLabel>Tipo</InputLabel>
-            <Select
-              multiple
-              value={selectedTypes}
-              onChange={(e) => setSelectedTypes(typeof e.target.value === 'string' ? e.target.value.split(',') as ImageType[] : e.target.value as ImageType[])}
-            >
-              {types.map(type => (
-                <MenuItem key={type} value={type}>
-                  {type === ImageType.LANDSCAPE ? 'Paesaggio' :
-                    type === ImageType.SINGLE ? 'Singolo' : 'Coppia'}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Tipo</InputLabel>
+              <Select
+                multiple
+                value={selectedTypes}
+                onChange={(e) => setSelectedTypes(typeof e.target.value === 'string' ? e.target.value.split(',') as ImageType[] : e.target.value as ImageType[])}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value === ImageType.LANDSCAPE ? 'Paesaggio' : value === ImageType.SINGLE ? 'Singolo' : 'Coppia'} size="small" />
+                    ))}
+                  </Box>
+                )}
+                sx={{ borderRadius: 2 }}
+              >
+                {types.map(type => (
+                  <MenuItem key={type} value={type}>
+                    {type === ImageType.LANDSCAPE ? 'Paesaggio' :
+                      type === ImageType.SINGLE ? 'Singolo' : 'Coppia'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <FormControl fullWidth>
-            <InputLabel>Ordine</InputLabel>
-            <Select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-            >
-              <MenuItem value="desc">Più recenti</MenuItem>
-              <MenuItem value="asc">Più vecchie</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+            <FormControl fullWidth>
+              <InputLabel>Ordine</InputLabel>
+              <Select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="desc">Più recenti</MenuItem>
+                <MenuItem value="asc">Più vecchie</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Paper>
       )}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-        <Typography variant="body1">Dimensione griglia:</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <Typography variant="body1" fontWeight="medium">Dimensione griglia:</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {[3, 5, 7].map(size => (
             <Button
@@ -360,6 +432,13 @@ const Gallery: React.FC = () => {
               variant={gridSize === size ? "contained" : "outlined"}
               size="small"
               onClick={() => setGridSize(size as 3 | 5 | 7)}
+              sx={{ 
+                minWidth: 40, 
+                borderRadius: 2,
+                background: gridSize === size ? 
+                  `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)` : 
+                  'transparent'
+              }}
             >
               {size}
             </Button>
@@ -380,7 +459,13 @@ const Gallery: React.FC = () => {
                 position: 'relative',
                 aspectRatio: '1',
                 cursor: 'pointer',
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+                transition: 'all 0.3s ease',
                 '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 5px 15px rgba(0,0,0,0.15)',
                   '& .overlay': {
                     opacity: 1,
                   },
@@ -395,7 +480,6 @@ const Gallery: React.FC = () => {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  borderRadius: '8px',
                 }}
                 onError={(e) => console.error('Errore nel caricamento dell\'immagine:', e)}
               />
@@ -407,13 +491,12 @@ const Gallery: React.FC = () => {
                   bgcolor: 'rgba(0, 0, 0, 0.5)',
                   opacity: 0,
                   transition: 'opacity 0.2s',
-                  borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Typography sx={{ color: 'white' }}>
+                <Typography sx={{ color: 'white', fontWeight: 'medium', fontSize: '0.9rem' }}>
                   Clicca per visualizzare
                 </Typography>
               </Box>
@@ -421,66 +504,161 @@ const Gallery: React.FC = () => {
           ))}
         </Box>
       ) : (
-        <Box>
+        <Box sx={{ mb: 8 }}>
           {groupImagesByMonth().map(([dateKey, monthImages]) => (
-            <Box key={dateKey} sx={{ mb: 4 }}>
-              <Typography variant="h6" sx={{ mb: 2, color: 'text.secondary' }}>
+            <Box key={dateKey} sx={{ mb: 6 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 3, 
+                  color: 'text.primary',
+                  fontWeight: 600,
+                  position: 'relative',
+                  pl: 2,
+                  '&:before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 4,
+                    height: '70%',
+                    bgcolor: 'primary.main',
+                    borderRadius: 4,
+                  }
+                }}
+              >
                 {formatMonthYear(dateKey)}
               </Typography>
-              <ImageList cols={3} gap={16}>
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' },
+                gap: 2 
+              }}>
                 {monthImages.map((image) => (
-                  <ImageListItem
+                  <Box
                     key={image.id}
+                    className="image-card"
                     onClick={() => handleImageClick(image)}
                     sx={{
+                      position: 'relative',
+                      aspectRatio: '1',
                       cursor: 'pointer',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
                       '&:hover': {
-                        transform: 'scale(1.02)',
-                        transition: 'transform 0.2s ease-in-out',
+                        transform: 'translateY(-5px)',
+                        boxShadow: '0 5px 15px rgba(0,0,0,0.15)',
+                        '& .overlay': {
+                          opacity: 1,
+                        },
                       },
                     }}
                   >
                     <img
                       src={image.thumb_big_path}
                       alt={image.description || 'Immagine'}
-                      loading="lazy"
                       style={{
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
-                        borderRadius: '8px',
                       }}
                       onError={(e) => {
                         console.error('Errore nel caricamento dell\'immagine:', e);
                       }}
                     />
-                  </ImageListItem>
+                    <Box
+                      className="overlay"
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography sx={{ color: 'white', fontWeight: 'medium', fontSize: '0.9rem' }}>
+                        Clicca per visualizzare
+                      </Typography>
+                    </Box>
+                  </Box>
                 ))}
-              </ImageList>
+              </Box>
             </Box>
           ))}
         </Box>
       )}
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)}>
-        <DialogTitle>Upload Images</DialogTitle>
+      <Dialog 
+        open={uploadDialogOpen} 
+        onClose={() => setUploadDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Upload Images</DialogTitle>
         <DialogContent>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileSelect}
-            style={{ marginTop: 16 }}
-          />
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              id="file-input"
+            />
+            <label htmlFor="file-input">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<AddPhotoAlternateIcon />}
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Seleziona immagini
+              </Button>
+            </label>
+            {selectedFiles && (
+              <Typography variant="body2" sx={{ mt: 2 }}>
+                {selectedFiles.length} {selectedFiles.length === 1 ? 'file selezionato' : 'files selezionati'}
+              </Typography>
+            )}
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button 
+            onClick={() => setUploadDialogOpen(false)}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
+          >
+            Annulla
+          </Button>
           <Button
             onClick={handleUpload}
             variant="contained"
             color="primary"
             disabled={!selectedFiles || uploading}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            }}
           >
-            {uploading ? 'Uploading...' : 'Upload'}
+            {uploading ? 'Caricamento...' : 'Carica'}
           </Button>
         </DialogActions>
       </Dialog>

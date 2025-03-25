@@ -36,10 +36,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '@mui/material/styles';
 import { alpha } from '@mui/system';
+import { useNavigate } from 'react-router-dom';
 
 const Ideas: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
+  const navigate = useNavigate();
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,8 +120,8 @@ const Ideas: React.FC = () => {
   };
 
   const handleOpenDetail = (idea: Idea) => {
-    setSelectedIdea(idea);
-    setDetailDialogOpen(true);
+    // For detail page navigation
+    navigate(`/idee/${idea.id}`);
   };
 
   const handleOpenSortMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -309,7 +311,7 @@ const Ideas: React.FC = () => {
         <Box
           sx={{
             display: 'flex',
-            gap: 1,
+            gap: 1.5,
             flexWrap: 'wrap',
             mb: 1,
           }}

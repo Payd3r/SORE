@@ -15,9 +15,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
       hidden={value !== index}
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
+      className="fade-in"
     >
       {value === index && (
-        <Box>{children}</Box>
+        <Box sx={{ pt: 2 }}>{children}</Box>
       )}
     </div>
   );
