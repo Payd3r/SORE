@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Box } from '@mui/material';
 
@@ -8,19 +7,22 @@ interface TabPanelProps {
   value: number;
 }
 
-const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other }) => {
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`tabpanel-${index}`}
-      aria-labelledby={`tab-${index}`}
+      id={`memory-tabpanel-${index}`}
+      aria-labelledby={`memory-tab-${index}`}
+      {...other}
     >
       {value === index && (
-        <Box>{children}</Box>
+        <Box sx={{ py: 3 }}>
+          {children}
+        </Box>
       )}
     </div>
   );
 };
 
-export default TabPanel;
+export default TabPanel; 

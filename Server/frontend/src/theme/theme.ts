@@ -1,3 +1,4 @@
+
 import { createTheme } from '@mui/material';
 
 const lightThemeOptions = {
@@ -37,7 +38,7 @@ const lightThemeOptions = {
       fontWeight: 600,
     },
     button: {
-      textTransform: 'none' as const,
+      textTransform: 'none',
       fontWeight: 500,
     },
   },
@@ -86,49 +87,6 @@ const lightThemeOptions = {
         },
       },
     },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16,
-        },
-        elevation1: {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        },
-        elevation2: {
-          boxShadow: '0 6px 16px rgba(0, 0, 0, 0.07)',
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-        },
-      },
-    },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          borderRight: '1px solid rgba(0, 0, 0, 0.05)',
-        },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: {
-          borderRadius: 16,
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-        },
-      },
-    },
-    MuiAvatar: {
-      styleOverrides: {
-        root: {
-          border: '2px solid #fff',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-        },
-      },
-    },
   },
 };
 
@@ -169,7 +127,7 @@ const darkThemeOptions = {
       fontWeight: 600,
     },
     button: {
-      textTransform: 'none' as const,
+      textTransform: 'none',
       fontWeight: 500,
     },
   },
@@ -216,51 +174,6 @@ const darkThemeOptions = {
       styleOverrides: {
         root: {
           borderRadius: 8,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16,
-          background: '#1a2027',
-        },
-        elevation1: {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-        },
-        elevation2: {
-          boxShadow: '0 6px 16px rgba(0, 0, 0, 0.15)',
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        },
-      },
-    },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
-          background: 'linear-gradient(180deg, #1a2027 0%, #0a1929 100%)',
-        },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: {
-          borderRadius: 16,
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-        },
-      },
-    },
-    MuiAvatar: {
-      styleOverrides: {
-        root: {
-          border: '2px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
         },
       },
     },
