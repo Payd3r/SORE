@@ -233,7 +233,7 @@ const Profile: React.FC = () => {
           >
             <Box sx={{ position: 'relative', mb: 3 }}>
               <Avatar
-                src={profilePicturePreview || userDetails?.profilePictureUrl}
+                src={profilePicturePreview || userDetails?.profilePicture}
                 sx={{ 
                   width: 150, 
                   height: 150, 

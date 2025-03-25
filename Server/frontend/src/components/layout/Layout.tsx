@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { styled } from '@mui/material/styles';
 import {
@@ -115,7 +114,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {user && (
               <Tooltip title={user.name || 'Profilo'}>
                 <Avatar 
-                  src={user.profilePictureUrl}
+                  src={user.profilePicture}
                   sx={{ 
                     width: 40, 
                     height: 40, 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -34,7 +33,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { text: 'Home', icon: <HomeIcon />, path: '/' },
+  { text: 'Home', icon: <HomeIcon />, path: '/home' },
   { text: 'Ricordi', icon: <AutoStoriesIcon />, path: '/ricordi' },
   { text: 'Galleria', icon: <PhotoLibraryIcon />, path: '/galleria' },
   { text: 'Idee', icon: <LightbulbIcon />, path: '/idee' },
@@ -78,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         }}
       >
         <Avatar
-          src={user?.profilePictureUrl}
+          src={user?.profilePicture}
           sx={{
             width: 80,
             height: 80,

@@ -1,4 +1,3 @@
-
 import { createTheme } from '@mui/material';
 
 const lightThemeOptions = {
@@ -38,7 +37,7 @@ const lightThemeOptions = {
       fontWeight: 600,
     },
     button: {
-      textTransform: 'none',
+      textTransform: 'none' as const,
       fontWeight: 500,
     },
   },
@@ -170,7 +169,7 @@ const darkThemeOptions = {
       fontWeight: 600,
     },
     button: {
-      textTransform: 'none',
+      textTransform: 'none' as const,
       fontWeight: 500,
     },
   },

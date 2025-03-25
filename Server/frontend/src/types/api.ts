@@ -17,7 +17,8 @@ export interface User {
   email: string;
   coupleId: number;
   themePreference?: 'light' | 'dark';
-  profilePictureUrl?: string;
+  profilePicture?: string;
+  biography?: string;
 }
 
 export interface Couple {
@@ -63,6 +64,7 @@ export interface Image {
   jpg_path: string;
   thumb_big_path: string;
   thumb_small_path: string;
+  image_path: string;
   taken_at: string;
   latitude?: number;
   longitude?: number;
