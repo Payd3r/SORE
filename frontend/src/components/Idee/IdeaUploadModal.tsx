@@ -1,0 +1,152 @@
+import { useState, useEffect } from 'react';
+import { createIdea } from '../../api/ideas';
+import type { IdeaType } from '../../api/ideas';
+
+interface IdeaUploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export default function IdeaUploadModal({ isOpen, onClose, onSuccess }: IdeaUploadModalProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [type, setType] = useState<IdeaType>('SEMPLICI');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Reset dei campi quando il modal viene chiuso
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setType('SEMPLICI');
+  };
+
+  const handleClose = () => {
+    setTitle('');
+    setDescription('');
+    setType('RISTORANTI');
+    onClose();
+  };
+
+  const validateForm = (): boolean => {
+    if (!title.trim()) {
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    try {
+      await createIdea({
+        title: title.trim(),
+        description: description.trim(),
+        type,
+      });
+
+      handleClose();
+      onSuccess?.();
+    } catch (err) {
+      console.error('Errore nel salvataggio:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="p-6">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Nuova Idea
+              </h2>             
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Titolo
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-transparent focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-400/20 outline-none transition-all duration-200"
+                  placeholder="Inserisci il titolo dell'idea"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="description" className="form-label">
+                  Descrizione
+                </label>
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="input-base"
+                  placeholder="Inserisci una descrizione (opzionale)"
+                  rows={4}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tipo
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(['RISTORANTI', 'VIAGGI', 'SFIDE', 'SEMPLICI'] as IdeaType[]).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setType(t)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none ${
+                        type === t
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {t === 'RISTORANTI' && 'Ristorante'}
+                      {t === 'VIAGGI' && 'Viaggio'}
+                      {t === 'SFIDE' && 'Sfida'}
+                      {t === 'SEMPLICI' && 'Semplice'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={handleClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors focus:outline-none"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isLoading || !title.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+              >
+                {isLoading ? 'Salvataggio...' : 'Salva'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+} 
