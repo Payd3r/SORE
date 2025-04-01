@@ -61,124 +61,128 @@ export default function Mappa() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">            
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mappa dei Ricordi</h1>
-          </div>
-          <p className="text-gray-600 dark:text-gray-300">
-            Esplora i tuoi momenti speciali attraverso il mondo
-          </p>
-        </div>
-
-        {/* Map Container */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
-          <div className="h-[600px] w-full">
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center min-h-screen p-4">
-                <div className="w-16 h-16 mb-4">
-                  <svg className="animate-spin w-full h-full text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-                <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Caricamento in corso...</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Stiamo preparando la tua mappa</p>
-              </div>
-            )}
-            {!isLoading && (
-              <Map
-                images={images}
-                isLoading={isLoading}
-                error={error}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Statistics Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Countries Progress */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <GlobeAltIcon className="h-6 w-6 text-blue-500" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Paesi Esplorati</h2>
+    <div className="min-h-screen bg-transparent">
+      <div className="relative max-w-7xl mx-auto">
+        {/* Safe area per la notch */}
+        <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
+        <div className="mx-2 sm:mx-0 px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
+          {/* Header Section */}
+          <div className="mb-4 sm:mb-8">
+            <div className="flex items-center gap-3 mb-2">            
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mappa dei Ricordi</h1>
             </div>
-            <div className="space-y-4">
-              {stats.countries.map(country => (
-                <div key={country.name}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{country.name}</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{country.count} foto</span>
+            <p className="hidden sm:block text-gray-600 dark:text-gray-300">
+              Esplora i tuoi momenti speciali attraverso il mondo
+            </p>
+          </div>
+
+          {/* Map Container */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden mb-8 relative z-[1]">
+            <div className="h-[400px] sm:h-[500px] md:h-[600px] w-full relative">
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center h-full p-4">
+                  <div className="w-16 h-16 mb-4">
+                    <svg className="animate-spin w-full h-full text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div
-                      className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${(country.count / Math.max(...stats.countries.map(c => c.count))) * 100}%` }}
-                    ></div>
+                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Caricamento in corso...</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Stiamo preparando la tua mappa</p>
+                </div>
+              )}
+              {!isLoading && (
+                <Map
+                  images={images}
+                  isLoading={isLoading}
+                  error={error}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Statistics Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 mt-6">
+            {/* Countries Progress */}
+            <div className="lg:col-span-2 bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-6">
+                <GlobeAltIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Paesi Esplorati</h2>
+              </div>
+              <div className="space-y-4">
+                {stats.countries.map(country => (
+                  <div key={country.name}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{country.name}</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{country.count} foto</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${(country.count / Math.max(...stats.countries.map(c => c.count))) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Monthly Distribution */}
+            <div className="lg:col-span-2 bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-6">
+                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Distribuzione Mensile</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {stats.monthStats.map(month => (
+                  <div key={month.month} className="text-center p-4 rounded-lg bg-gray-50/50 dark:bg-gray-700/50">
+                    <p className="text-2xl font-bold text-purple-500">{month.count}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">{month.month}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="lg:col-span-1 lg:col-start-5 space-y-4">
+              <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <PhotoIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Foto Totali</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{images.length}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Monthly Distribution */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <CalendarIcon className="h-6 w-6 text-blue-500" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Distribuzione Mensile</h2>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {stats.monthStats.map(month => (
-                <div key={month.month} className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                  <p className="text-2xl font-bold text-blue-500">{month.count}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">{month.month}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <PhotoIcon className="h-6 w-6 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Foto Totali</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{images.length}</p>
+              </div>
+              <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <MapPinIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Luoghi Unici</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {new Set(images.map(img => `${img.lat},${img.lon}`)).size}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <MapPinIcon className="h-6 w-6 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Luoghi Unici</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {new Set(images.map(img => `${img.lat},${img.lon}`)).size}
-                  </p>
+              <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <GlobeAltIcon className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Paesi Visitati</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCountries}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <GlobeAltIcon className="h-6 w-6 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Paesi Visitati</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCountries}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <ChartBarIcon className="h-6 w-6 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Media per Paese</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats.totalCountries ? Math.round(images.length / stats.totalCountries) : 0}
-                  </p>
+              <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3">
+                  <ChartBarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" />
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Media per Paese</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {stats.totalCountries ? Math.round(images.length / stats.totalCountries) : 0}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

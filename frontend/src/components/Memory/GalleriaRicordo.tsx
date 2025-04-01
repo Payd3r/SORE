@@ -34,7 +34,8 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
       
       for (const image of memory.images) {
         try {
-          newImagesWithType.set(image.id, 'all');
+          const imageType = (image.type || 'all').toUpperCase();
+          newImagesWithType.set(image.id, imageType);
         } catch (error) {
           console.error('Errore nel caricamento del tipo dell\'immagine:', error);
         }
@@ -56,11 +57,10 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
 
     // Filtra le immagini se c'è almeno un tipo selezionato
     return images.filter(image => {
-      const imageType = imagesWithType.get(image.id);
+      const imageType = (image.type || imagesWithType.get(image.id) || '').toUpperCase();
       if (!imageType) return false;
       
-      const selectedTypesLower = Array.from(selectedTypes).map(type => type.toLowerCase());
-      return selectedTypesLower.includes(imageType.toLowerCase());
+      return selectedTypes.has(imageType as ImageTypeFilter);
     });
   };
 

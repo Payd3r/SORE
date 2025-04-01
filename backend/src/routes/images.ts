@@ -103,7 +103,7 @@ router.get('/:imageId', auth, async (req: any, res) => {
 });
 
 // Upload images
-router.post('/upload', auth, upload.array('images', 30), async (req: any, res) => {
+router.post('/upload', auth, upload.array('images', 300), async (req: any, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
   }

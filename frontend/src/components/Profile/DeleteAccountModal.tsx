@@ -1,6 +1,5 @@
 import { Fragment, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { deleteUser } from '../../api/auth';
 
@@ -54,7 +53,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-end justify-center sm:items-center">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -64,28 +63,31 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
-                <div className="absolute right-0 top-0 pr-4 pt-4">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-t-2xl sm:rounded-lg bg-white dark:bg-gray-800 w-full sm:w-full sm:max-w-lg shadow-xl transition-all pb-6 sm:pb-0">
+                <div className="absolute right-0 top-0 pr-4 pt-4 sm:block">
                   <button
                     type="button"
                     className="rounded-md bg-white dark:bg-gray-800 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     onClick={onClose}
                   >
                     <span className="sr-only">Chiudi</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
-                <div className="sm:flex sm:items-start">
+
+                <div className="px-4 sm:px-6 pt-5 pb-4 sm:pt-6 sm:pb-6">
                   <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-gray-900 dark:text-white">
+                    <Dialog.Title as="h3" className="text-xl sm:text-lg font-semibold leading-6 text-gray-900 dark:text-white mb-6 sm:mb-4">
                       Elimina Account
                     </Dialog.Title>
-                    <div className="mt-4">
+                    <div className="mt-4 space-y-6 sm:space-y-4">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Sei sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.
                       </p>
-                      <div className="mt-4">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Password
                         </label>
                         <input
@@ -93,32 +95,35 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
                           id="password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                           placeholder="Inserisci la password per confermare"
                         />
                       </div>
                       {error && (
-                        <div className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</div>
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/50 text-red-700 dark:text-red-200 text-sm">
+                          {error}
+                        </div>
                       )}
                     </div>
+
+                    <div className="mt-6 sm:mt-4 flex flex-col sm:flex-row-reverse gap-3 sm:gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="w-full sm:w-auto px-5 py-3 sm:py-2 rounded-xl sm:rounded-lg bg-red-600 text-white text-base sm:text-sm font-semibold shadow-sm hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isDeleting ? 'Eliminazione in corso...' : 'Elimina Account'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-full sm:w-auto px-5 py-3 sm:py-2 rounded-xl sm:rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 text-base sm:text-sm font-semibold border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        Annulla
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="button"
-                    className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? 'Eliminazione in corso...' : 'Elimina Account'}
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:w-auto"
-                    onClick={onClose}
-                  >
-                    Annulla
-                  </button>
                 </div>
               </Dialog.Panel>
             </Transition.Child>

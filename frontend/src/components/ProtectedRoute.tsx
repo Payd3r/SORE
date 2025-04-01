@@ -3,16 +3,24 @@ import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  // Se stiamo ancora caricando, mostriamo il loading
+  
   if (isLoading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500" />
+      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-[3px] border-blue-200 dark:border-blue-900/30"></div>
+            <div className="absolute inset-0 rounded-full border-[3px] border-blue-500 dark:border-blue-400 border-t-transparent animate-spin"></div>
+          </div>
+        </div>
+        <div className="mt-6 text-center">
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Accesso in corso</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Verifica delle credenziali...</p>
+        </div>
       </div>
     );
   }
 
-  // Se non siamo autenticati e non stiamo più caricando, reindirizziamo
   if (!isAuthenticated && !isLoading) {
     return <Navigate to="/welcome" replace />;
   }

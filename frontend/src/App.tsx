@@ -21,33 +21,51 @@ const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen bg-white dark:bg-gray-900 overflow-hidden relative">
-      {/* Sidebar mobile overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
+    <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
+      {/* Gradient globale */}
+      <div className="fixed top-0 left-0 right-0 h-[100px] sm:h-[200px] bg-gradient-to-b from-blue-600/10 dark:from-blue-500/10 to-transparent pointer-events-none z-0" />
+      
       {/* Sidebar */}
-      <div className={`fixed lg:static inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out
+      <aside className={`fixed lg:sticky top-0 inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out w-70 shrink-0 h-screen overflow-y-auto
+        scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 
+        dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <Sidebar onClose={() => setIsSidebarOpen(false)} />
-      </div>
+      </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col w-full overflow-x-hidden">
-        <main className="flex-1 w-full">
+      {/* Main content wrapper with conditional blur */}
+      <div className="flex-1 w-full lg:pl-0 overflow-y-auto relative
+        scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 
+        dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600
+        ${isSidebarOpen ? 'blur-sm brightness-50' : ''}">
+        {/* Top blur effect - visible only on mobile */}
+        <div className="fixed top-0 left-0 right-0 h-24 lg:hidden pointer-events-none z-[1]" 
+             style={{
+               background: 'linear-gradient(to bottom, rgba(255,255,255,0.001) 0%, rgba(255,255,255,0.001) 100%)',
+               backdropFilter: 'blur(100px)',
+               maskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)',
+               WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)'
+             }}
+        />
+        {/* Main content */}
+        <main className="w-full min-h-screen">
           <Outlet />
         </main>
       </div>
 
+      {/* Sidebar mobile overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-10 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Hamburger button */}
       <button
         onClick={() => setIsSidebarOpen(true)}
-        className={`fixed bottom-4 left-4 p-3 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 
-        transition-all duration-200 lg:hidden z-50 outline-none focus:outline-none active:outline-none
+        className={`fixed bottom-6 left-6 p-3 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 
+        transition-all duration-200 lg:hidden z-30 outline-none focus:outline-none active:outline-none
         ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         aria-label="Apri menu"
       >
@@ -57,18 +75,11 @@ const Layout = () => {
   );
 };
 
-// Componente di caricamento
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
-
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={null}>
           <Routes>
             {/* Rotta pubblica per la pagina di benvenuto */}
             <Route path="/welcome" element={<WelcomeAuthenticate />} />

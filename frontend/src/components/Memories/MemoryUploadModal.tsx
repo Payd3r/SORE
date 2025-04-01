@@ -41,7 +41,7 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const MAX_IMAGES = 30;
+  const MAX_IMAGES = 300;
   const [songSuggestions, setSongSuggestions] = useState<SpotifyTrack[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
@@ -211,17 +211,17 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-full h-screen flex items-center justify-center p-0.5 sm:p-4">
-          <div className="relative bg-white dark:bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden max-h-[99vh] w-[95%] sm:max-w-[600px]">
+        <div className="w-full h-screen flex items-center justify-center p-0.5 sm:p-2">
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden max-h-[95vh] w-[95%] sm:max-w-[600px]">
             {/* Header */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-800">
+            <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-800">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Nuovo Ricordo
               </h2>
             </div>
 
             {/* Form */}
-            <div className="px-4 sm:p-6 space-y-4">
+            <div className="px-3 py-3 sm:p-4 space-y-3 overflow-y-auto">
               {error && (
                 <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   {error}
@@ -401,7 +401,7 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Immagini
                 </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-2 sm:p-4 text-center bg-gray-50 dark:bg-gray-800">
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-2 sm:p-3 text-center bg-gray-50 dark:bg-gray-800">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -463,7 +463,7 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
             </div>
 
             {/* Footer */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="border-t border-gray-200 dark:border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"

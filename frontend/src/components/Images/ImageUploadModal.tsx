@@ -10,7 +10,7 @@ export default function ImageUploadModal({ isOpen, onClose, onUpload }: ImageUpl
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const MAX_IMAGES = 30;
+  const MAX_IMAGES = 300;
   const [isDragging, setIsDragging] = useState(false);
 
   // Reset dei campi quando il modal viene chiuso

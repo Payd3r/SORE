@@ -11,6 +11,7 @@ import InfoRicordo from '../components/Memory/InfoRicordo';
 import CronologiaRicordo from '../components/Memory/CronologiaRicordo';
 import GalleriaRicordo from '../components/Memory/GalleriaRicordo';
 import MemoryEditModal from '../components/Memory/MemoryEditModal';
+import { useRef } from 'react';
 
 export interface CarouselImage {
   image: string;
@@ -23,16 +24,24 @@ interface ExtendedMemory extends Memory {
   description: string;
 }
 
+interface ProcessedCarouselImage extends CarouselImage {
+  processedUrl: string;
+}
+
 export default function DetailMemory() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [memory, setMemory] = useState<ExtendedMemory | null>(null);
-  const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
+  const [carouselImages, setCarouselImages] = useState<ProcessedCarouselImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('info');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const minSwipeDistance = 50;
 
   const fetchMemory = async () => {
     try {
@@ -46,7 +55,27 @@ export default function DetailMemory() {
   const fetchCarouselImages = async () => {
     try {
       const response = await getMemoryCarousel(id!);
-      setCarouselImages(response.data);
+      // Pre-process all image URLs
+      const processedImages = response.data.map(img => ({
+        ...img,
+        processedUrl: getImageUrl(img.image)
+      }));
+      setCarouselImages(processedImages);
+      
+      // Pre-load all images
+      const preloadImages = processedImages.map(img => {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.src = img.processedUrl;
+          image.onload = resolve;
+          image.onerror = reject;
+        });
+      });
+      
+      Promise.all(preloadImages)
+        .then(() => setImagesLoaded(true))
+        .catch(error => console.error('Error preloading images:', error));
+        
     } catch (error) {
       console.error('Error fetching carousel images:', error);
     }
@@ -69,7 +98,7 @@ export default function DetailMemory() {
 
   const handleDelete = async () => {
     if (!id) return;
-    
+
     setIsDeleting(true);
     try {
       await deleteMemory(id);
@@ -109,184 +138,215 @@ export default function DetailMemory() {
     setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeDistance = touchEndX.current - touchStartX.current;
+    if (Math.abs(swipeDistance) > minSwipeDistance) {
+      if (swipeDistance > 0) {
+        handlePrevImage();
+      } else {
+        handleNextImage();
+      }
+    }
+  };
+
   if (!memory) return <div>Caricamento...</div>;
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pt-6">
-      {/* Header */}
-      {/* Navigation bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <Link
-          to="/ricordi"
-          className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-fit"
-        >
-          <IoArrowBack className="w-5 h-5 mr-2" />
-          <span>Torna ai ricordi</span>
-        </Link>
-      </div>
-
-      {/* Title section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-2">
-        <div className="flex items-center space-x-3 mb-0">
-          <span className="px-3 py-1 text-sm rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">
-            {memory.type === 'VIAGGIO' ? 'Viaggio' :
-              memory.type === 'EVENTO' ? 'Evento' :
-                memory.type === 'SEMPLICE' ? 'Ricordo' : memory.type}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-            {memory.title}
-          </h1>
-
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors focus:outline-none"
-              title="Modifica"
+    <div className="w-full min-h-screen bg-transparent">
+      <div className="relative max-w-7xl mx-auto">
+        {/* Safe area per la notch */}
+        <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
+        <div className="mx-2 sm:mx-0 px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
+          {/* Navigation bar */}
+          <div className="py-3">
+            <Link
+              to="/ricordi"
+              className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-fit py-2 px-3 -ml-3 cursor-pointer touch-manipulation"
             >
-              <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span className="hidden sm:inline">Modifica</span>
-            </button>
-            <button
-              onClick={() => setIsDeleteModalOpen(true)}
-              className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none"
-              title="Elimina"
-            >
-              <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              <span className="hidden sm:inline">Elimina</span>
-            </button>
+              <IoArrowBack className="w-5 h-5 mr-2 flex-shrink-0" />
+              <span className="select-none">Torna ai ricordi</span>
+            </Link>
           </div>
-        </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 text-gray-600 dark:text-gray-400 text-sm">
-          {memory.start_date && (
-            <div className="flex items-center gap-2">
-              <IoCalendarOutline className="w-4 h-4" />
-              <span>{formatDate(memory.start_date)}</span>
-              {memory.end_date && memory.end_date !== memory.start_date && (
-                <span> - {formatDate(memory.end_date)}</span>
+          {/* Title section */}
+          <div className="pb-4 pt-2">
+            <div className="flex items-center space-x-3 mb-0">
+              <span className="px-3 py-1 text-sm rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">
+                {memory.type === 'VIAGGIO' ? 'Viaggio' :
+                  memory.type === 'EVENTO' ? 'Evento' :
+                    memory.type === 'SEMPLICE' ? 'Ricordo' : memory.type}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
+                {memory.title}
+              </h1>
+
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors focus:outline-none"
+                  title="Modifica"
+                >
+                  <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span className="hidden sm:inline">Modifica</span>
+                </button>
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none"
+                  title="Elimina"
+                >
+                  <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span className="hidden sm:inline">Elimina</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 text-gray-600 dark:text-gray-400 text-sm">
+              {memory.start_date && (
+                <div className="flex items-center gap-2">
+                  <IoCalendarOutline className="w-4 h-4" />
+                  <span>{formatDate(memory.start_date)}</span>
+                  {memory.end_date && memory.end_date !== memory.start_date && (
+                    <span> - {formatDate(memory.end_date)}</span>
+                  )}
+                </div>
+              )}
+              {memory.location && (
+                <div className="flex items-center gap-3">
+                  <IoLocationOutline className="w-4 h-4" />
+                  <span>{memory.location}</span>
+                </div>
+              )}
+              {memory.song && (
+                <div className="flex items-center gap-3">
+                  <IoMusicalNotesOutline className="w-4 h-4" />
+                  <span>
+                    {memory.song.split(' - ').slice(0, 2).join(' - ')}
+                  </span>
+                </div>
               )}
             </div>
-          )}
-          {memory.location && (
-            <div className="flex items-center gap-3">
-              <IoLocationOutline className="w-4 h-4" />
-              <span>{memory.location}</span>
+          </div>
+
+          {/* Content */}
+          <div className="pb-0 pt-2">
+            {/* Carousel */}
+            <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[700px] bg-gray-100 rounded-lg overflow-hidden mb-4 sm:mb-8">
+              {carouselImages.length > 0 && imagesLoaded && (
+                <>
+                  <div 
+                    className="absolute inset-0 w-full h-full"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <img
+                      key={currentImageIndex}
+                      src={carouselImages[currentImageIndex].processedUrl}
+                      alt={`Slide ${currentImageIndex + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="absolute bottom-4 left-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm">
+                    {formatDateTime(carouselImages[currentImageIndex].created_at)}
+                  </div>
+                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm">
+                    {currentImageIndex + 1} / {carouselImages.length}
+                  </div>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white w-6 h-6 sm:w-10 sm:h-10 rounded-full hover:bg-black/70 focus:outline-none backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <svg className="w-3 h-3 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={10} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white w-6 h-6 sm:w-10 sm:h-10 rounded-full hover:bg-black/70 focus:outline-none backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <svg className="w-3 h-3 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={10} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
-          )}
-          {memory.song && (
-            <div className="flex items-center gap-3">
-              <IoMusicalNotesOutline className="w-4 h-4" />
-              <span>{memory.song}</span>
+
+            {/* Tabs */}
+            <div className="mb-0 bg-transparent rounded-xl pb-4 sm:pb-8">
+              {memory.type.toLowerCase() !== 'semplice' ? (
+                <>
+                  <div className="tab-menu">
+                    <button
+                      onClick={() => setActiveTab('info')}
+                      className={`tab-menu-item ${activeTab === 'info'
+                        ? 'tab-menu-item-active'
+                        : 'tab-menu-item-inactive'
+                        }`}
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Info</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('cronologia')}
+                      className={`tab-menu-item ${activeTab === 'cronologia'
+                        ? 'tab-menu-item-active'
+                        : 'tab-menu-item-inactive'
+                        }`}
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Cronologia</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('galleria')}
+                      className={`tab-menu-item ${activeTab === 'galleria'
+                        ? 'tab-menu-item-active'
+                        : 'tab-menu-item-inactive'
+                        }`}
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Galleria</span>
+                    </button>
+                  </div>
+
+                  {/* Tab Content */}
+                  <div className="mt-6">
+                    {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={() => setActiveTab('galleria')} />}
+                    {activeTab === 'cronologia' && <CronologiaRicordo memory={memory} />}
+                    {activeTab === 'galleria' && <GalleriaRicordo memory={memory} onImagesUploaded={handleImagesUploaded} />}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <InfoRicordo memory={memory} onVisitGallery={() => { }} />
+                  <div className="mt-6">
+                    <GalleriaRicordo memory={memory} />
+                  </div>
+                </>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-0 pt-2">
-        {/* Carousel */}
-        <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[700px] bg-gray-100 rounded-lg overflow-hidden mb-4 sm:mb-8">
-          {carouselImages.length > 0 && (
-            <>
-              <img
-                src={getImageUrl(carouselImages[currentImageIndex].image)}
-                alt={`Slide ${currentImageIndex + 1}`}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute bottom-4 left-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm">
-                {formatDateTime(carouselImages[currentImageIndex].created_at)}
-              </div>
-              <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm">
-                {currentImageIndex + 1} / {carouselImages.length}
-              </div>
-              <button
-                onClick={handlePrevImage}
-                className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1.5 sm:p-2 rounded-full hover:bg-black/70 focus:outline-none backdrop-blur-sm"
-              >
-                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={handleNextImage}
-                className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1.5 sm:p-2 rounded-full hover:bg-black/70 focus:outline-none backdrop-blur-sm"
-              >
-                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Tabs */}
-        <div className="mb-0 bg-gray-50 dark:bg-gray-900 rounded-xl pb-4 sm:pb-8">
-          {memory.type.toLowerCase() !== 'semplice' ? (
-            <>
-              <div className="tab-menu">
-                <button
-                  onClick={() => setActiveTab('info')}
-                  className={`tab-menu-item ${
-                    activeTab === 'info'
-                      ? 'tab-menu-item-active'
-                      : 'tab-menu-item-inactive'
-                  }`}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Info</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('cronologia')}
-                  className={`tab-menu-item ${
-                    activeTab === 'cronologia'
-                      ? 'tab-menu-item-active'
-                      : 'tab-menu-item-inactive'
-                  }`}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Cronologia</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('galleria')}
-                  className={`tab-menu-item ${
-                    activeTab === 'galleria'
-                      ? 'tab-menu-item-active'
-                      : 'tab-menu-item-inactive'
-                  }`}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>Galleria</span>
-                </button>
-              </div>
-
-              {/* Tab Content */}
-              <div className="mt-6">
-                {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={() => setActiveTab('galleria')} />}
-                {activeTab === 'cronologia' && <CronologiaRicordo memory={memory} />}
-                {activeTab === 'galleria' && <GalleriaRicordo memory={memory} onImagesUploaded={handleImagesUploaded} />}
-              </div>
-            </>
-          ) : (
-            <>
-              <InfoRicordo memory={memory} onVisitGallery={() => { }} />
-              <div className="mt-6">
-                <GalleriaRicordo memory={memory} />
-              </div>
-            </>
-          )}
+          </div>
         </div>
       </div>
 
@@ -310,7 +370,7 @@ export default function DetailMemory() {
                 Elimina Ricordo
               </h3>
             </div>
-            
+
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Sei sicuro di voler eliminare questo ricordo? Questa azione non può essere annullata.
             </p>

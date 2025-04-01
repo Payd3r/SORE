@@ -32,6 +32,7 @@ export interface Image {
   id: number;
   thumb_big_path: string;
   created_at?: string;
+  type?: 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 }
 
 export interface Memory {

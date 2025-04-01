@@ -74,9 +74,8 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6 lg:min-h-[300px]">
         {/* Colonna sinistra - Card Info */}
         <div className="lg:col-span-2 h-full">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 h-full flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-2 border-gray-100 dark:border-gray-700 h-full flex flex-col">
             {/* Bordo superiore decorativo */}
-            <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0"></div>
 
             <div className="p-4 sm:p-6 flex-grow overflow-auto">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2 group">
@@ -177,10 +176,9 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
 
         {/* Colonna destra - Mappa */}
         <div className="lg:col-span-4 h-full">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 h-full flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-2 border-gray-100 dark:border-gray-700 h-full flex flex-col">
             {/* Bordo superiore decorativo */}
-            <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0"></div>
-            <div className="flex-grow">
+            <div className="flex-grow min-h-[230px]">
               <Map
                 images={mapImages}
                 isLoading={isLoadingMap}
@@ -193,9 +191,8 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
 
       {/* Seconda row - Anteprima Galleria (solo per ricordi non semplici) */}
       {memory.type.toLowerCase() !== 'semplice' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-2 border-gray-100 dark:border-gray-700">
           {/* Bordo superiore decorativo */}
-          <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
           <div className="p-3 sm:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-6">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 group">

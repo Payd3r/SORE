@@ -27,6 +27,31 @@
     outline: none;
     border-color: transparent;
   }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"],
+  input[type="week"],
+  textarea,
+  select {
+    @apply text-base;
+    font-size: 16px !important; /* Previene lo zoom su iOS */
+  }
+}
+
+/* Previene lo zoom su iOS per tutti i campi di input */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 @layer components {
@@ -285,6 +310,44 @@
   .tab-menu-button-inactive {
     @apply text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 bg-transparent
     hover:scale-[1.00] transform transition-all duration-300 ease-in-out;
+  }
+
+  /* Touch-friendly button styles */
+  .btn {
+    @apply touch-manipulation select-none min-w-[44px] min-h-[44px];
+  }
+
+  /* Aumenta il padding verticale su mobile, ma mantiene quello originale su desktop */
+  @media (max-width: 640px) {
+    button, 
+    [type='button'],
+    [type='submit'] {
+      @apply py-3 touch-manipulation select-none min-w-[44px] min-h-[44px];
+    }
+
+    /* Aumenta la dimensione delle icone su mobile */
+    button svg,
+    [type='button'] svg,
+    [type='submit'] svg {
+      @apply w-5 h-5 flex-shrink-0;
+    }
+  }
+
+  /* Stili per il feedback touch */
+  button:active:not(:disabled),
+  [type='button']:active:not(:disabled),
+  [type='submit']:active:not(:disabled) {
+    @apply translate-y-[1px] transition-transform duration-75;
+  }
+
+  /* Stili specifici per i bottoni primari (blu) */
+  .btn-primary:active:not(:disabled) {
+    @apply bg-blue-700;
+  }
+
+  /* Stili specifici per i bottoni di eliminazione (rossi) */
+  .btn-danger:active:not(:disabled) {
+    @apply bg-red-700;
   }
 }
 

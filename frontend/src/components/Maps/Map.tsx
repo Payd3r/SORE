@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Popup, useMapEvents } from 'react-leaflet';
 import { getImageUrl } from '../../api/images';
 import L from 'leaflet';
@@ -135,16 +135,33 @@ function PopupManager() {
       .custom-popup .leaflet-popup-content-wrapper {
         background: transparent;
         box-shadow: none;
+        padding: 0;
       }
       .custom-popup .leaflet-popup-content {
         margin: 0;
         border: none;
+        background: transparent;
       }
       .custom-popup .leaflet-popup-tip-container {
         display: none;
       }
       .custom-popup .leaflet-popup-close-button {
         display: none;
+      }
+      .custom-popup-image {
+        max-width: 300px;
+        max-height: 400px;
+        width: auto;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s ease;
+      }
+      .custom-popup-image:hover {
+        transform: scale(1.02);
+      }
+      .dark .custom-popup-image {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
       }
       .marker-dimmed img {
         opacity: 0.3;
@@ -153,9 +170,15 @@ function PopupManager() {
       .leaflet-control-attribution {
         display: none;
       }
+      .leaflet-container {
+        z-index: 1 !important;
+      }
       .leaflet-control-zoom {
         border: none !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        margin-left: 16px !important;
+        margin-bottom: 16px !important;
+        z-index: 1 !important;
       }
       .leaflet-control-zoom-in,
       .leaflet-control-zoom-out {
@@ -203,8 +226,34 @@ function PopupManager() {
   return null;
 }
 
+// Componente per gestire gli eventi della mappa
+function MapEventHandler() {
+  const map = useMap();
+  
+  useMapEvents({
+    click: () => {
+      map.closePopup();
+    },
+  });
+
+  return null;
+}
+
 // Componente per gestire i marker sulla mappa
-function Markers({ images }: { images: ImageLocation[] }) {
+function Markers({ images }: { images: ImageLocation[] }) {  
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   // Filtra le immagini con coordinate valide
   const validImages = images.filter(img => {
@@ -216,7 +265,43 @@ function Markers({ images }: { images: ImageLocation[] }) {
     <MarkerClusterGroup
       chunkedLoading
       iconCreateFunction={createClusterCustomIcon}
-      maxClusterRadius={40}
+      spiderfyOnMaxZoom={true}
+      showCoverageOnHover={false}
+      zoomToBoundsOnClick={true}
+      disableClusteringAtZoom={isMobile ? 16 : 18}
+      spiderLegPolylineOptions={{
+        weight: 1.5,
+        color: '#222',
+        opacity: 0.5,
+        className: 'dark:!stroke-gray-200'
+      }}
+      spiderfyDistanceMultiplier={isMobile ? 2 : 1.5}
+      maxClusterRadius={(zoom: number) => {
+        const baseFactor = isMobile ? 1.25 : 1;
+        if (zoom <= 10) return 120 * baseFactor;
+        if (zoom <= 13) return 100 * baseFactor;
+        if (zoom <= 15) return 80 * baseFactor;
+        if (zoom <= 16) return 60 * baseFactor;
+        if (zoom <= 17) return 40 * baseFactor;
+        return 20 * baseFactor;
+      }}
+      animate={true}
+      animateAddingMarkers={true}
+      removeOutsideVisibleBounds={true}
+      polygonOptions={{
+        fillColor: '#3B82F6',
+        color: '#2563EB',
+        weight: 2,
+        opacity: 0.5
+      }}
+      chunkInterval={100}
+      chunkDelay={50}
+      chunkProgress={(processed: number, total: number) => {
+        if (processed === total && total > 500) {
+          console.log('Rendering completato: ', processed, ' marker su ', total);
+        }
+      }}
+      singleMarkerMode={false}
     >
       {validImages.map((image) => {
         const coords = cleanCoordinates(image.lat, image.lon);
@@ -229,12 +314,22 @@ function Markers({ images }: { images: ImageLocation[] }) {
             position={[lat, lon]}
             icon={createCustomIcon(image)}
           >
-            <Popup className="custom-popup">
-              <div className="relative">
+            <Popup 
+              className="custom-popup"
+              maxWidth={isMobile ? 250 : 300}
+              minWidth={isMobile ? 150 : 200}
+              autoPanPadding={isMobile ? [50, 50] : [100, 100]}
+            >
+              <div className="relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
                 <img
                   src={getImageUrl(image.thumb_big_path)}
                   alt="Location"
-                  className="w-60 h-48 object-cover rounded-lg"
+                  className="custom-popup-image"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png';
+                  }}
                 />
               </div>
             </Popup>
@@ -263,22 +358,50 @@ function BoundsHandler({ images }: { images: ImageLocation[] }) {
           return coords ? [coords[0], coords[1]] : [0, 0];
         })
       );
-      map.fitBounds(bounds, { padding: [50, 50] });
+      
+      // Aggiungi un padding più grande e una durata di animazione più lunga
+      // Aumentato il padding per essere più mobile-friendly
+      const isMobile = window.innerWidth < 768;
+      map.fitBounds(bounds, { 
+        padding: isMobile ? [50, 50] : [100, 100],
+        maxZoom: isMobile ? 13 : 15,  // Zoom più limitato su mobile
+        animate: true,
+        duration: 1
+      });
     }
   }, [images, map]);
 
-  return null;
-}
+  // Adatta la vista quando cambia la dimensione della finestra
+  useEffect(() => {
+    const handleResize = () => {
+      // Ricalcola i bounds quando cambia la dimensione della finestra
+      const validImages = images.filter(img => {
+        const coords = cleanCoordinates(img.lat, img.lon);
+        return coords !== null;
+      });
 
-// Componente per gestire gli eventi della mappa
-function MapEventHandler() {
-  useMapEvents({
-    click: () => {
-      // Chiudi tutti i popup quando si clicca sulla mappa
-      const map = useMap();
-      map.closePopup();
-    },
-  });
+      if (validImages.length > 0) {
+        const bounds = L.latLngBounds(
+          validImages.map(img => {
+            const coords = cleanCoordinates(img.lat, img.lon);
+            return coords ? [coords[0], coords[1]] : [0, 0];
+          })
+        );
+        
+        const isMobile = window.innerWidth < 768;
+        map.fitBounds(bounds, { 
+          padding: isMobile ? [50, 50] : [100, 100],
+          maxZoom: isMobile ? 13 : 15,
+          animate: false
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [images, map]);
 
   return null;
 }
@@ -289,28 +412,110 @@ interface MapProps {
   error?: string | null;
 }
 
-export default function Map({ images }: MapProps) {
+const Map = ({ images, isLoading, error }: MapProps) => {
+  // URL delle tile per tema chiaro e scuro
+  const lightTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+
+  // Funzione per determinare l'URL della tile in base al tema
+  const getTileUrl = () => {
+    return document.documentElement.classList.contains('dark') ? darkTileUrl : lightTileUrl;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="relative w-full h-full">
+        <MapContainer
+          center={[0, 0]}
+          zoom={2}
+          className="w-full h-full"
+          attributionControl={false}
+        >
+          <TileLayer
+            url={getTileUrl()}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <PopupManager />
+          <Markers images={images} />
+          <BoundsHandler images={images} />
+          <MapEventHandler />
+        </MapContainer>
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="relative w-full h-full">
+        <MapContainer
+          center={[0, 0]}
+          zoom={2}
+          className="w-full h-full"
+          attributionControl={false}
+        >
+          <TileLayer
+            url={getTileUrl()}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <PopupManager />
+          <Markers images={images} />
+          <BoundsHandler images={images} />
+          <MapEventHandler />
+        </MapContainer>
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50">
+          <div className="text-red-500 dark:text-red-400">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!images || images.length === 0) {
+    return (
+      <div className="relative w-full h-full">
+        <MapContainer
+          center={[0, 0]}
+          zoom={2}
+          className="w-full h-full"
+          attributionControl={false}
+        >
+          <TileLayer
+            url={getTileUrl()}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <PopupManager />
+          <Markers images={images} />
+          <BoundsHandler images={images} />
+          <MapEventHandler />
+        </MapContainer>
+        <div className="absolute inset-0 flex items-center justify-center text-gray-500 dark:text-gray-400">
+          Nessuna immagine con coordinate geografiche
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <MapContainer
-      center={[41.9028, 12.4964]}
-      zoom={6}
-      className="w-full h-full"
-      preferCanvas={true}
-      zoomAnimation={false}
-      markerZoomAnimation={false}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maxZoom={19}
-        minZoom={3}
-        keepBuffer={2}
-        updateWhenIdle={true}
-        updateWhenZooming={false}
-      />
-      <PopupManager />
-      <BoundsHandler images={images} />
-      <MapEventHandler />
-      <Markers images={images} />
-    </MapContainer>
+    <div className="relative w-full h-full">
+      <MapContainer
+        center={[0, 0]}
+        zoom={2}
+        className="w-full h-full"
+        attributionControl={false}
+      >
+        <TileLayer
+          url={getTileUrl()}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        <PopupManager />
+        <Markers images={images} />
+        <BoundsHandler images={images} />
+        <MapEventHandler />
+      </MapContainer>
+    </div>
   );
-} 
+};
+
+export default Map; 

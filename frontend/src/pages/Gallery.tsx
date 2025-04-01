@@ -8,7 +8,7 @@ import LazyImage from '../components/Images/LazyImage';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 type SortOption = 'newest' | 'oldest' | 'random';
-type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
+type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO';
 
 interface GroupedImages {
   [key: string]: {
@@ -303,438 +303,461 @@ export default function Gallery() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="absolute top-0 left-0 right-0 h-[100px] sm:h-[200px] bg-gradient-to-b from-blue-600/10 dark:from-blue-500/10 to-transparent pointer-events-none" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
-          {/* Title and Actions */}
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">Galleria</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Gestisci e organizza le tue foto
-              </p>
-            </div>
+    <div className="w-full min-h-screen bg-transparent">
+      <div className="relative max-w-7xl mx-auto">
+        {/* Safe area per la notch */}
+        <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
+        <div className="mx-2 sm:mx-0 px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
+          <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
+            {/* Title and Actions */}
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">Galleria</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Gestisci e organizza le tue foto
+                </p>
+              </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                onClick={() => {
-                  setIsSelectionMode(prev => !prev);
-                  setSelectedImages(new Set());
-                }}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none ${isSelectionMode
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
-                  : 'text-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  {isSelectionMode ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  )}
-                </svg>
-                <span className="hidden sm:inline">{isSelectionMode ? 'Fine' : 'Seleziona'}</span>
-              </button>
-
-              {isSelectionMode && (
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
-                  onClick={handleDeleteSelected}
-                  disabled={isDeleting}
-                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none ${isDeleting
-                    ? 'bg-red-400 cursor-not-allowed'
-                    : 'bg-red-500 hover:bg-red-600'
+                  onClick={() => {
+                    setIsSelectionMode(prev => !prev);
+                    setSelectedImages(new Set());
+                  }}
+                  className={`btn flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none ${isSelectionMode
+                    ? 'btn-primary'
+                    : 'text-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    {isSelectionMode ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
                   </svg>
-                  <span className="hidden sm:inline">{isDeleting ? 'Eliminazione...' : 'Elimina'}</span>
+                  <span className="hidden sm:inline">{isSelectionMode ? 'Fine' : 'Seleziona'}</span>
                 </button>
-              )}
 
-              {!isSelectionMode && (
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors focus:outline-none"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span className="hidden sm:inline">Carica</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Filters and View Toggle */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            {/* View Toggle */}
-            <div className="tab-menu w-full sm:w-[400px]">
-              <button
-                className={`tab-menu-item ${
-                  activeTab === 'grid'
-                    ? 'tab-menu-item-active'
-                    : 'tab-menu-item-inactive'
-                }`}
-                onClick={() => setActiveTab('grid')}
-              >
-                <svg className="w-5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-                <span className="hidden sm:inline">Griglia</span>
-              </button>
-              <button
-                className={`tab-menu-item ${
-                  activeTab === 'month'
-                    ? 'tab-menu-item-active'
-                    : 'tab-menu-item-inactive'
-                }`}
-                onClick={() => setActiveTab('month')}
-              >
-                <svg className="w-5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span className="hidden sm:inline">Per mese</span>
-              </button>
-            </div>
-
-            {/* Sort and Filter Controls */}
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              {/* Type Filter Dropdown */}
-              <div className="relative type-menu flex-1 sm:flex-none">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsTypeMenuOpen(!isTypeMenuOpen);
-                    setIsSortMenuOpen(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none w-full justify-center sm:w-auto"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                  <span className="hidden sm:inline">{getFilterButtonText()}</span>
-                  <svg
-                    className={`w-4 h-4 transition-transform ${isTypeMenuOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                {isSelectionMode && (
+                  <button
+                    onClick={handleDeleteSelected}
+                    disabled={isDeleting}
+                    className={`btn flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none ${isDeleting
+                      ? 'bg-red-400 cursor-not-allowed'
+                      : 'btn-danger'
+                      }`}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span className="hidden sm:inline">{isDeleting ? 'Eliminazione...' : 'Elimina'}</span>
+                  </button>
+                )}
 
-                {isTypeMenuOpen && (
-                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTypeClick('VIAGGIO');
-                      }}
-                      className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('VIAGGIO') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
-                        }`}
-                    >
-                      <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('VIAGGIO')
-                        ? 'bg-blue-500 border-blue-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                        }`}>
-                        {selectedTypes.has('VIAGGIO') && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      Viaggio
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTypeClick('EVENTO');
-                      }}
-                      className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('EVENTO') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
-                        }`}
-                    >
-                      <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('EVENTO')
-                        ? 'bg-blue-500 border-blue-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                        }`}>
-                        {selectedTypes.has('EVENTO') && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      Evento
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTypeClick('SEMPLICE');
-                      }}
-                      className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('SEMPLICE') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
-                        }`}
-                    >
-                      <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('SEMPLICE')
-                        ? 'bg-blue-500 border-blue-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                        }`}>
-                        {selectedTypes.has('SEMPLICE') && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      Semplice
-                    </button>
-                  </div>
+                {!isSelectionMode && (
+                  <button
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="hidden sm:inline">Carica</span>
+                  </button>
                 )}
               </div>
+            </div>
 
-              {/* Sort Dropdown */}
-              <div className="relative sort-menu flex-1 sm:flex-none">
+            {/* Filters and View Toggle */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              {/* View Toggle */}
+              <div className="tab-menu w-full sm:w-[400px]">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsSortMenuOpen(!isSortMenuOpen);
-                    setIsTypeMenuOpen(false);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none w-full justify-center sm:w-auto"
+                  className={`tab-menu-item ${
+                    activeTab === 'grid'
+                      ? 'tab-menu-item-active'
+                      : 'tab-menu-item-inactive'
+                  }`}
+                  onClick={() => setActiveTab('grid')}
                 >
-                  <span className="hidden sm:inline">{getSortButtonText()}</span>
-                  <svg
-                    className={`w-4 h-4 transition-transform ${isSortMenuOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isSortMenuOpen && (
-                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-10">
-                    <button
-                      onClick={() => {
-                        setSortBy('newest');
-                        setIsSortMenuOpen(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors bg-white dark:bg-gray-800 flex items-center focus:outline-none gap-2 ${sortBy === 'newest'
-                        ? 'text-blue-500 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                        }`}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                      Più recenti
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSortBy('oldest');
-                        setIsSortMenuOpen(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors bg-white dark:bg-gray-800 flex items-center focus:outline-none gap-2 ${sortBy === 'oldest'
-                        ? 'text-blue-500 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                        }`}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                      Più vecchie
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSortBy('random');
-                        setIsSortMenuOpen(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors bg-white dark:bg-gray-800 flex items-center focus:outline-none gap-2 ${sortBy === 'random'
-                        ? 'text-blue-500 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                        }`}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Casuali
-                    </button>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setIsCompactGrid(prev => !prev)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none flex-1 sm:flex-none justify-center"
-                title={isCompactGrid ? "Mostra meno immagini per riga" : "Mostra più immagini per riga"}
-              >
-                {isCompactGrid ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                   </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  <span className="hidden sm:inline">Griglia</span>
+                </button>
+                <button
+                  className={`tab-menu-item ${
+                    activeTab === 'month'
+                      ? 'tab-menu-item-active'
+                      : 'tab-menu-item-inactive'
+                  }`}
+                  onClick={() => setActiveTab('month')}
+                >
+                  <svg className="w-5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                )}
-              </button>
+                  <span className="hidden sm:inline">Per mese</span>
+                </button>
+              </div>
+
+              {/* Sort and Filter Controls */}
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                {/* Type Filter Dropdown */}
+                <div className="relative type-menu flex-1 sm:flex-none">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTypeMenuOpen(!isTypeMenuOpen);
+                      setIsSortMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none w-full justify-center sm:w-auto"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    <span className="hidden sm:inline">{getFilterButtonText()}</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${isTypeMenuOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isTypeMenuOpen && (
+                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTypeClick('COPPIA');
+                        }}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('COPPIA') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                          }`}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('COPPIA')
+                          ? 'bg-blue-500 border-blue-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                          {selectedTypes.has('COPPIA') && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        Coppia
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTypeClick('SINGOLO');
+                        }}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('SINGOLO') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                          }`}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('SINGOLO')
+                          ? 'bg-blue-500 border-blue-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                          {selectedTypes.has('SINGOLO') && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        Semplice
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTypeClick('PAESAGGIO');
+                        }}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('PAESAGGIO') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                          }`}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('PAESAGGIO')
+                          ? 'bg-blue-500 border-blue-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                          {selectedTypes.has('PAESAGGIO') && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        Paesaggio
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTypeClick('CIBO');
+                        }}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('CIBO') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                          }`}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('CIBO')
+                          ? 'bg-blue-500 border-blue-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                          {selectedTypes.has('CIBO') && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        Cibo
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="relative sort-menu flex-1 sm:flex-none">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsSortMenuOpen(!isSortMenuOpen);
+                      setIsTypeMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none w-full justify-center sm:w-auto"
+                  >
+                    <span className="hidden sm:inline">{getSortButtonText()}</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${isSortMenuOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isSortMenuOpen && (
+                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-10">
+                      <button
+                        onClick={() => {
+                          setSortBy('newest');
+                          setIsSortMenuOpen(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm transition-colors bg-white dark:bg-gray-800 flex items-center focus:outline-none gap-2 ${sortBy === 'newest'
+                          ? 'text-blue-500 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
+                          }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                        Più recenti
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortBy('oldest');
+                          setIsSortMenuOpen(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm transition-colors bg-white dark:bg-gray-800 flex items-center focus:outline-none gap-2 ${sortBy === 'oldest'
+                          ? 'text-blue-500 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
+                          }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                        Più vecchie
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSortBy('random');
+                          setIsSortMenuOpen(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm transition-colors bg-white dark:bg-gray-800 flex items-center focus:outline-none gap-2 ${sortBy === 'random'
+                          ? 'text-blue-500 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
+                          }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Casuali
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsCompactGrid(prev => !prev)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none flex-1 sm:flex-none justify-center"
+                  title={isCompactGrid ? "Mostra meno immagini per riga" : "Mostra più immagini per riga"}
+                >
+                  {isCompactGrid ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Gallery Content */}
-        {images.length === 0 ? (
-          <div className="w-full flex items-center justify-center py-20">
-            <div className="text-gray-500 dark:text-gray-400">Galleria Vuota</div>
-          </div>
-        ) : (
-          <div className="w-full pb-8 lg:pt-6 pt-4">
-            <div className="max-w-[2000px] mx-auto">
-              {activeTab === 'grid' ? (
-                <div
-                  id="gallery-container"
-                  ref={parentRef}
-                  className="w-full"
-                >
+          {/* Gallery Content */}
+          {images.length === 0 ? (
+            <div className="w-full flex items-center justify-center py-20">
+              <div className="text-gray-500 dark:text-gray-400">Galleria Vuota</div>
+            </div>
+          ) : (
+            <div className="w-full pb-8 lg:pt-6 pt-4">
+              <div className="max-w-[2000px] mx-auto">
+                {activeTab === 'grid' ? (
                   <div
-                    style={{
-                      height: `${virtualizer.getTotalSize()}px`,
-                      width: '100%',
-                      position: 'relative',
-                    }}
+                    id="gallery-container"
+                    ref={parentRef}
+                    className="w-full"
                   >
-                    {virtualizer.getVirtualItems().map((virtualRow) => {
-                      const rowImages = getRowImages(virtualRow.index);
-                      return (
-                        <div
-                          key={virtualRow.index}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: `${virtualRow.size}px`,
-                            transform: `translateY(${virtualRow.start}px)`,
-                            gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-                          }}
-                          className="grid gap-1 sm:gap-2"
-                        >
-                          {rowImages.map((image) => (
-                            <div
-                              key={image.id}
-                              className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ${
-                                selectedImages.has(image.id) ? 'ring-2 ring-blue-500' : ''
-                              }`}
-                              onClick={() => handleImageClick(image)}
-                            >
-                              <LazyImage
-                                src={getImageUrl(image.thumb_big_path)}
-                                alt={`Immagine ${image.id}`}
-                                className="w-full h-full object-cover"
-                                placeholderClassName="w-full h-full"
-                              />
-                              {selectedImages.has(image.id) && (
-                                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {Object.entries(groupImagesByMonth(sortedAndFilteredImages))
-                    .sort(([keyA], [keyB]) => keyB.localeCompare(keyA))
-                    .map(([key, group]) => (
-                      <div key={key} className="space-y-4">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                          <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {formatMonthTitle(group.date)}
-                          <span className="text-sm font-normal text-gray-500">
-                            {group.images.length} immagini
-                          </span>
-                        </h2>
-                        <div className={`grid ${isCompactGrid
-                          ? 'grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-0.5'
-                          : 'grid-cols-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0.5 sm:gap-2'
-                          }`}>
-                          {group.images.map((image) => (
-                            <div
-                              key={image.id}
-                              className={`group relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm cursor-pointer ring-2 ring-transparent ${isSelectionMode && selectedImages.has(image.id) ? 'ring-blue-500' : ''
+                    <div
+                      style={{
+                        height: `${virtualizer.getTotalSize()}px`,
+                        width: '100%',
+                        position: 'relative',
+                      }}
+                    >
+                      {virtualizer.getVirtualItems().map((virtualRow) => {
+                        const rowImages = getRowImages(virtualRow.index);
+                        return (
+                          <div
+                            key={virtualRow.index}
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: `${virtualRow.size}px`,
+                              transform: `translateY(${virtualRow.start}px)`,
+                              gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                            }}
+                            className="grid gap-1 sm:gap-2"
+                          >
+                            {rowImages.map((image) => (
+                              <div
+                                key={image.id}
+                                className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ${
+                                  selectedImages.has(image.id) ? 'ring-2 ring-blue-500' : ''
                                 }`}
-                              onClick={() => handleImageClick(image)}
-                            >
-                              <div className="absolute inset-0 bg-white dark:bg-gray-800">
-                                <img
+                                onClick={() => handleImageClick(image)}
+                              >
+                                <LazyImage
                                   src={getImageUrl(image.thumb_big_path)}
                                   alt={`Immagine ${image.id}`}
                                   className="w-full h-full object-cover"
-                                  loading="eager"
-                                  decoding="sync"
+                                  placeholderClassName="w-full h-full"
                                 />
-                              </div>
-                              <div className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${isSelectionMode ? (selectedImages.has(image.id) ? 'opacity-60' : 'opacity-0 group-hover:opacity-40') : 'opacity-0 group-hover:opacity-100'
-                                }`}>
-                                {isSelectionMode && selectedImages.has(image.id) && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                {selectedImages.has(image.id) && (
+                                  <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                                       <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                       </svg>
                                     </div>
                                   </div>
                                 )}
-                                {!isSelectionMode && (
-                                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                                    <p className="text-sm">
-                                      {new Date(image.created_at).toLocaleDateString('it-IT', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric'
-                                      })}
-                                    </p>
-                                  </div>
-                                )}
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {Object.entries(groupImagesByMonth(sortedAndFilteredImages))
+                      .sort(([keyA], [keyB]) => keyB.localeCompare(keyA))
+                      .map(([key, group]) => (
+                        <div key={key} className="space-y-4">
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatMonthTitle(group.date)}
+                            <span className="text-sm font-normal text-gray-500">
+                              {group.images.length} immagini
+                            </span>
+                          </h2>
+                          <div className={`grid ${isCompactGrid
+                            ? 'grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-0.5'
+                            : 'grid-cols-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0.5 sm:gap-2'
+                            }`}>
+                            {group.images.map((image) => (
+                              <div
+                                key={image.id}
+                                className={`group relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm cursor-pointer ring-2 ring-transparent ${isSelectionMode && selectedImages.has(image.id) ? 'ring-blue-500' : ''
+                                  }`}
+                                onClick={() => handleImageClick(image)}
+                              >
+                                <div className="absolute inset-0 bg-white dark:bg-gray-800">
+                                  <img
+                                    src={getImageUrl(image.thumb_big_path)}
+                                    alt={`Immagine ${image.id}`}
+                                    className="w-full h-full object-cover"
+                                    loading="eager"
+                                    decoding="sync"
+                                  />
+                                </div>
+                                <div className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${isSelectionMode ? (selectedImages.has(image.id) ? 'opacity-60' : 'opacity-0 group-hover:opacity-40') : 'opacity-0 group-hover:opacity-100'
+                                  }`}>
+                                  {isSelectionMode && selectedImages.has(image.id) && (
+                                    <div className="absolute top-2 right-2">
+                                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {!isSelectionMode && (
+                                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                                      <p className="text-sm">
+                                        {new Date(image.created_at).toLocaleDateString('it-IT', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        })}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                </div>
-              )}
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Upload Modal */}
-        <ImageUploadModal
-          isOpen={isUploadModalOpen}
-          onClose={() => setIsUploadModalOpen(false)}
-          onUpload={handleUpload}
-        />
+          {/* Upload Modal */}
+          <ImageUploadModal
+            isOpen={isUploadModalOpen}
+            onClose={() => setIsUploadModalOpen(false)}
+            onUpload={handleUpload}
+          />
 
-        {/* Image Detail Modal */}
-        <ImageDetailModal
-          isOpen={isDetailModalOpen}
-          onClose={() => {
-            setSelectedImage(null);
-            setTimeout(() => {
-              setIsDetailModalOpen(false);
-            }, 0);
-          }}
-          image={selectedImage}
-          onImageDeleted={fetchImages}
-        />
+          {/* Image Detail Modal */}
+          <ImageDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={() => {
+              setSelectedImage(null);
+              setTimeout(() => {
+                setIsDetailModalOpen(false);
+              }, 0);
+            }}
+            image={selectedImage}
+            onImageDeleted={fetchImages}
+          />
+        </div>
       </div>
     </div>
   );

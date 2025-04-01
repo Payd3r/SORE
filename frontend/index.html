@@ -3,9 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="Memory Grove - Il tuo giardino di ricordi digitali" />
     <meta name="theme-color" content="#3B82F6" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Memory Grove" />
+    <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-startup-image" href="/splash.png" />
+    <link rel="manifest" href="/manifest.json" />
     
     <!-- Preconnect ai domini esterni -->
     <link rel="preconnect" href="https://api.example.com" />
@@ -15,8 +23,8 @@
     
     <title>Memory Grove</title>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="min-h-screen bg-gray-50">
+    <div id="root" class="min-h-screen"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script type="module">
       // Registrazione del Service Worker solo in produzione

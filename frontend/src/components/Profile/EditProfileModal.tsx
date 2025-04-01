@@ -1,6 +1,6 @@
 import { Fragment, useState, useRef } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateUserInfo } from '../../api/profile';
 import { uploadProfilePicture } from '../../api/profile';
@@ -103,7 +103,7 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-end justify-center sm:items-center">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -113,26 +113,18 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
-                <div className="absolute right-0 top-0 pr-4 pt-4">
-                  <button
-                    type="button"
-                    className="rounded-md bg-white dark:bg-gray-800 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    onClick={onClose}
-                  >
-                    <span className="sr-only">Chiudi</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="sm:flex sm:items-start">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-t-2xl sm:rounded-lg bg-white dark:bg-gray-800 w-full sm:w-full sm:max-w-lg shadow-xl transition-all pb-6 sm:pb-0">
+                
+
+                <div className="px-4 sm:px-6 pt-5 pb-4 sm:pt-6 sm:pb-6">
                   <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-gray-900 dark:text-white">
+                    <Dialog.Title as="h3" className="text-xl sm:text-lg font-semibold leading-6 text-gray-900 dark:text-white mb-6 sm:mb-4">
                       Modifica Profilo
                     </Dialog.Title>
-                    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-                      <div className="flex flex-col items-center mb-6">
+                    <form onSubmit={handleSubmit} className="mt-4 space-y-6 sm:space-y-4">
+                      <div className="flex flex-col items-center mb-8 sm:mb-6">
                         <div 
-                          className="relative w-32 h-32 group cursor-pointer"
+                          className="relative w-36 h-36 sm:w-32 sm:h-32 group cursor-pointer"
                           onClick={() => fileInputRef.current?.click()}
                         >
                           {(previewUrl || user?.profile_picture_url) ? (
@@ -143,11 +135,11 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
                             />
                           ) : (
                             <div className="w-full h-full rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                              <PhotoIcon className="w-12 h-12 text-gray-400" />
+                              <PhotoIcon className="w-14 h-14 sm:w-12 sm:h-12 text-gray-400" />
                             </div>
                           )}
                           <div className="absolute inset-0 bg-black bg-opacity-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-white text-sm">Cambia foto</span>
+                            <span className="text-white text-base sm:text-sm font-medium">Cambia foto</span>
                           </div>
                         </div>
                         <input
@@ -158,50 +150,56 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
                           className="hidden"
                         />
                       </div>
-                      <div>
-                        <label htmlFor="name" className="form-label">
-                          Nome
-                        </label>
-                        <input
-                          type="text"
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="input-base"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="email" className="form-label">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          id="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="input-base"
-                          required
-                        />
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Nome
+                          </label>
+                          <input
+                            type="text"
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            id="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            className="w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                        </div>
                       </div>
                       {error && (
-                        <div className="badge-danger">{error}</div>
+                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/50 text-red-700 dark:text-red-200 text-sm">
+                          {error}
+                        </div>
                       )}
                       {success && (
-                        <div className="badge-success">{success}</div>
+                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/50 text-green-700 dark:text-green-200 text-sm">
+                          {success}
+                        </div>
                       )}
-                      <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                      <div className="mt-6 sm:mt-4 flex flex-col sm:flex-row-reverse gap-3 sm:gap-2">
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full sm:w-auto px-5 py-3 sm:py-2 rounded-xl sm:rounded-lg bg-blue-600 text-white text-base sm:text-sm font-semibold shadow-sm hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isSubmitting ? 'Salvataggio...' : 'Salva'}
                         </button>
                         <button
                           type="button"
-                          className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 sm:mt-0 sm:w-auto"
                           onClick={onClose}
+                          className="w-full sm:w-auto px-5 py-3 sm:py-2 rounded-xl sm:rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-base sm:text-sm font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
                         >
                           Annulla
                         </button>

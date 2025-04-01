@@ -108,15 +108,15 @@ export default function IdeaUploadModal({ isOpen, onClose, onSuccess }: IdeaUplo
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tipo
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                   {(['RISTORANTI', 'VIAGGI', 'SFIDE', 'SEMPLICI'] as IdeaType[]).map((t) => (
                     <button
                       key={t}
                       onClick={() => setType(t)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none ${
+                      className={`flex items-center justify-center h-[70px] sm:h-auto w-full sm:flex-1 px-4 py-2 rounded-xl sm:rounded-lg text-sm font-medium transition-colors focus:outline-none ${
                         type === t
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          ? 'bg-blue-500 text-white shadow-lg'
+                          : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30'
                       }`}
                     >
                       {t === 'RISTORANTI' && 'Ristorante'}
@@ -129,7 +129,7 @@ export default function IdeaUploadModal({ isOpen, onClose, onSuccess }: IdeaUplo
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-4">
+            <div className="flex justify-end gap-2 mt-0 sm:mt-2">
               <button
                 onClick={handleClose}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors focus:outline-none"
@@ -139,7 +139,7 @@ export default function IdeaUploadModal({ isOpen, onClose, onSuccess }: IdeaUplo
               <button
                 onClick={handleSave}
                 disabled={isLoading || !title.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
               >
                 {isLoading ? 'Salvataggio...' : 'Salva'}
               </button>

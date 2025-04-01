@@ -76,7 +76,7 @@ app.use('/media', express.static(path.join(__dirname, '../media'), {
 // Middleware per il parsing del body (solo per le richieste non multipart)
 app.use((req, res, next) => {
   if (!req.is('multipart/form-data')) {
-    express.json({ limit: '50mb' })(req, res, next);
+    express.json({ limit: '100mb' })(req, res, next);
   } else {
     next();
   }
@@ -84,7 +84,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   if (!req.is('multipart/form-data')) {
-    express.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
+    express.urlencoded({ extended: true, limit: '100mb' })(req, res, next);
   } else {
     next();
   }
