@@ -207,21 +207,21 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-full h-screen flex items-center justify-center p-0.5 sm:p-2">
-          <div className="relative bg-white dark:bg-gray-900 rounded-lg sm:rounded-xl overflow-hidden max-h-[95vh] w-[95%] sm:max-w-[600px]">
+      <div className="relative min-h-[100dvh] flex items-center justify-center">
+        <div className="w-full min-h-[100dvh] sm:min-h-0 flex items-center justify-center p-0.5 sm:p-2">
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg sm:rounded-xl w-full h-[100dvh] sm:h-auto sm:max-h-[95vh] sm:w-[95%] sm:max-w-[600px] flex flex-col">
             {/* Header */}
-            <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex-none px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-800">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Nuovo Ricordo
               </h2>
             </div>
 
             {/* Form */}
-            <div className="px-3 py-3 sm:p-4 space-y-3 overflow-y-auto">
+            <div className="flex-1 px-3 py-3 sm:p-4 space-y-3 overflow-y-auto">
               {error && (
                 <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg">
                   {error}
@@ -463,7 +463,7 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 dark:border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
+            <div className="flex-none border-t border-gray-200 dark:border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
@@ -475,8 +475,7 @@ export default function MemoryUploadModal({ isOpen, onClose, onSuccess }: Memory
                 </button>
                 <button
                   type="button"
-                  className={`px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${isLoading ? 'cursor-wait' : ''
-                    }`}
+                  className={`px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${isLoading ? 'cursor-wait' : ''}`}
                   onClick={handleSave}
                   disabled={isLoading}
                 >

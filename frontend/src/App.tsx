@@ -1,12 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
-import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
-import { Suspense, lazy } from 'react';
-import { Bars3Icon } from '@heroicons/react/24/outline';
-import { useState } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
+import Layout from './components/Layout';
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./pages/WelcomeAuthenticate'));
@@ -19,93 +17,118 @@ const Ideas = lazy(() => import('./pages/Ideas'));
 const Recap = lazy(() => import('./pages/Recap'));
 const Mappa = lazy(() => import('./pages/Mappa'));
 
-const Layout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  return (
-    <div className="flex h-screen w-screen bg-white dark:bg-gray-900">
-      {/* Gradient globale */}
-      <div className="fixed top-0 left-0 right-0 h-[100px] sm:h-[200px] bg-gradient-to-b from-blue-600/10 dark:from-blue-500/10 to-transparent pointer-events-none z-0" />
-      
-      {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out w-70 shrink-0 h-screen overflow-y-auto
-        scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 
-        dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <Sidebar onClose={() => setIsSidebarOpen(false)} />
-      </aside>
-
-      {/* Main content wrapper with conditional blur */}
-      <div className="flex-1 w-full lg:pl-0 overflow-y-auto relative
-        scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 
-        dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600
-        ${isSidebarOpen ? 'blur-sm brightness-50' : ''}">
-        {/* Top blur effect - visible only on mobile */}
-        <div className="fixed top-0 left-0 right-0 h-24 lg:hidden pointer-events-none z-[1]" 
-             style={{
-               background: 'linear-gradient(to bottom, rgba(255,255,255,0.001) 0%, rgba(255,255,255,0.001) 100%)',
-               backdropFilter: 'blur(100px)',
-               maskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)',
-               WebkitMaskImage: 'linear-gradient(to bottom, black 0%, transparent 100%)'
-             }}
-        />
-        {/* Main content */}
-        <main className="w-full min-h-screen">
-          <Outlet />
-        </main>
-      </div>
-
-      {/* Sidebar mobile overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-10 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Hamburger button */}
-      <button
-        onClick={() => setIsSidebarOpen(true)}
-        className={`fixed bottom-6 left-6 p-3 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 
-        transition-all duration-200 lg:hidden z-30 outline-none focus:outline-none active:outline-none
-        ${isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        aria-label="Apri menu"
-      >
-        <Bars3Icon className="w-6 h-6" />
-      </button>
-    </div>
-  );
-};
-
 function App() {
+  useEffect(() => {
+    const forceViewportHeight = () => {
+      // Calcola l'altezza reale del viewport su iOS
+      const vh = window.screen.height;
+      const vw = window.screen.width;
+      
+      // Imposta le variabili CSS
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+      document.documentElement.style.setProperty('--vw', `${vw}px`);
+      
+      // Forza le dimensioni del viewport
+      document.documentElement.style.height = `${vh}px`;
+      document.documentElement.style.width = `${vw}px`;
+      document.body.style.height = `${vh}px`;
+      document.body.style.width = `${vw}px`;
+
+      // Blocca lo scroll del body ma permetti lo scroll nei contenitori
+      document.documentElement.style.position = 'fixed';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.overflow = 'hidden';
+      
+      // Forza il viewport per iOS
+      const meta = document.querySelector('meta[name="viewport"]');
+      if (meta) {
+        meta.setAttribute('content', 
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, ' +
+          'height=' + vh + ', minimal-ui, standalone=yes'
+        );
+      }
+
+      // Aggiungi meta tag specifici per iOS
+      const addMetaTag = (name: string, content: string) => {
+        let meta = document.querySelector(`meta[name="${name}"]`);
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('name', name);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      };
+
+      // Meta tag specifici per iOS
+      addMetaTag('apple-mobile-web-app-capable', 'yes');
+      addMetaTag('apple-mobile-web-app-status-bar-style', 'black-translucent');
+      addMetaTag('apple-mobile-web-app-title', 'SORE');
+      addMetaTag('mobile-web-app-capable', 'yes');
+
+      // Forza il rendering a fullscreen su iOS
+      if ('standalone' in window.navigator && !(window.navigator as any).standalone) {
+        Object.defineProperty(window.navigator, 'standalone', {
+          get: () => true,
+          configurable: true
+        });
+      }
+    };
+
+    // Esegui subito
+    forceViewportHeight();
+
+    // Aggiungi listener per vari eventi
+    window.addEventListener('resize', forceViewportHeight);
+    window.addEventListener('orientationchange', forceViewportHeight);
+    window.visualViewport?.addEventListener('resize', forceViewportHeight);
+    
+    // Forza l'aggiornamento periodicamente
+    const interval = setInterval(forceViewportHeight, 1000);
+
+    return () => {
+      window.removeEventListener('resize', forceViewportHeight);
+      window.removeEventListener('orientationchange', forceViewportHeight);
+      window.visualViewport?.removeEventListener('resize', forceViewportHeight);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <Suspense fallback={null}>
-            <Routes>
-              {/* Rotta pubblica per la pagina di benvenuto */}
-              <Route path="/welcome" element={<WelcomeAuthenticate />} />
-
-              {/* Rotte protette */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<Layout />}>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/ricordi" element={<Memory />} />
-                  <Route path="/ricordo/:id" element={<DetailMemory />} />
-                  <Route path="/galleria" element={<Gallery />} />
-                  <Route path="/idee" element={<Ideas />} />
-                  <Route path="/mappa" element={<Mappa />} />
-                  <Route path="/recap" element={<Recap />} />
-                  <Route path="/profilo" element={<Profile />} />
-                  <Route path="/logout" element={<div>Logout...</div>} />
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: 'var(--vw)',
+            height: 'var(--vh)',
+            overflow: 'hidden',
+            WebkitOverflowScrolling: 'touch'
+          }}>
+            <Suspense fallback={null}>
+              <Routes>
+                <Route path="/welcome" element={<WelcomeAuthenticate />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/ricordi" element={<Memory />} />
+                    <Route path="/ricordo/:id" element={<DetailMemory />} />
+                    <Route path="/galleria" element={<Gallery />} />
+                    <Route path="/idee" element={<Ideas />} />
+                    <Route path="/mappa" element={<Mappa />} />
+                    <Route path="/recap" element={<Recap />} />
+                    <Route path="/profilo" element={<Profile />} />
+                    <Route path="/logout" element={<div>Logout...</div>} />
+                  </Route>
                 </Route>
-              </Route>
-
-              {/* Redirect di default alla pagina di benvenuto */}
-              <Route path="*" element={<Navigate to="/welcome" replace />} />
-            </Routes>
-          </Suspense>
+                <Route path="*" element={<Navigate to="/welcome" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
         </Router>
       </AuthProvider>
     </QueryClientProvider>

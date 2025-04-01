@@ -1,12 +1,19 @@
 {
-  "display": "standalone",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
   "name": "SORE",
   "short_name": "SORE",
   "description": "SORE - Album Tecnologico",
-  "start_url": "/",  
+  "start_url": "/?mode=pwa",
+  "scope": "/",
   "background_color": "#ffffff",
   "theme_color": "#3B82F6",
   "orientation": "portrait",
+  "prefer_related_applications": false,
+  "categories": ["lifestyle", "social"],
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
   "icons": [
     {
       "src": "/icons/icon-152x152.png",

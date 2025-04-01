@@ -364,7 +364,7 @@ export default function Gallery() {
           <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
             {/* Title and Actions */}
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <div>
+              <div className="flex items-start flex-col gap-2">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">Galleria</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Gestisci e organizza le tue foto
