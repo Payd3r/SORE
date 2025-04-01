@@ -276,7 +276,7 @@ export default function Ideas() {
           setSelectedIdea(null);
         }}
         onIdeaDeleted={() => {}}
-        onIdeaUpdated={(updatedIdea) => {
+        onIdeaUpdated={() => {
           // Implementa la logica per aggiornare la lista delle idee
         }}
       />

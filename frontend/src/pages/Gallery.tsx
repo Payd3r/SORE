@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getGalleryImages, ImageType, uploadImages, getImageUrl, deleteImage, pollImageStatus, ImageStatusResponse } from '../api/images';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -26,7 +26,7 @@ export default function Gallery() {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading } = useAuth();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -43,8 +43,6 @@ export default function Gallery() {
     }
   }>({});
   const [showUploadStatus, setShowUploadStatus] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   // React Query per il fetching delle immagini
   const { data: images = [], isLoading: loading, refetch } = useQuery<ImageType[]>({
@@ -80,7 +78,7 @@ export default function Gallery() {
       
       setUploadingFiles(prev => {
         const newState = { ...prev };
-        response.data.forEach(({ file, jobId }) => {
+        response.data.forEach(({ file }) => {
           if (newState[file]) {
             newState[file].status = 'processing';
             newState[file].progress = 0;

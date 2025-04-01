@@ -571,7 +571,6 @@ const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
             const coords = cleanCoordinates(image.lat, image.lon);
             if (!coords) return null;
 
-            const isSelected = selectedMarkerId === String(image.id);
             const customIcon = createCustomIcon(image);
 
             return (
