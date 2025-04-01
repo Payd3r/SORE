@@ -7,6 +7,9 @@ const PROCESSING_DIR = path.join(QUEUE_DIR, 'processing');
 const COMPLETED_DIR = path.join(QUEUE_DIR, 'completed');
 const FAILED_DIR = path.join(QUEUE_DIR, 'failed');
 
+// Tempo di conservazione dei job completati (24 ore)
+const COMPLETED_JOB_RETENTION = 24 * 60 * 60 * 1000;
+
 // Crea le directory necessarie
 [QUEUE_DIR, PROCESSING_DIR, COMPLETED_DIR, FAILED_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) {
@@ -18,6 +21,8 @@ interface QueueJob {
   id: string;
   data: any;
   timestamp: number;
+  progress?: number;
+  status?: string;
 }
 
 class FileSystemQueue {
@@ -26,6 +31,7 @@ class FileSystemQueue {
 
   private constructor() {
     this.startProcessing();
+    this.startCleanup();
   }
 
   public static getInstance(): FileSystemQueue {
@@ -33,6 +39,32 @@ class FileSystemQueue {
       FileSystemQueue.instance = new FileSystemQueue();
     }
     return FileSystemQueue.instance;
+  }
+
+  private async startCleanup() {
+    setInterval(() => {
+      this.cleanupCompletedJobs();
+    }, 60 * 60 * 1000); // Esegui la pulizia ogni ora
+  }
+
+  private cleanupCompletedJobs() {
+    try {
+      const files = fs.readdirSync(COMPLETED_DIR);
+      const now = Date.now();
+
+      for (const file of files) {
+        const filePath = path.join(COMPLETED_DIR, file);
+        const stats = fs.statSync(filePath);
+        const age = now - stats.mtimeMs;
+
+        if (age > COMPLETED_JOB_RETENTION) {
+          fs.unlinkSync(filePath);
+          console.log(`[Queue] Cleaned up old completed job: ${file}`);
+        }
+      }
+    } catch (error) {
+      console.error('[Queue] Error cleaning up completed jobs:', error);
+    }
   }
 
   private async startProcessing() {
@@ -48,14 +80,27 @@ class FileSystemQueue {
           const jobData = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as QueueJob;
           
           try {
+            // Aggiungi l'ID del job ai dati
+            jobData.data.id = jobData.id;
+            
             await processImageJob(jobData.data);
+            
+            // Aggiorna il job con lo stato finale
+            jobData.progress = 100;
+            jobData.status = 'Completato';
+            
             // Sposta il file nella directory completed
-            fs.renameSync(filePath, path.join(COMPLETED_DIR, file));
+            fs.writeFileSync(path.join(COMPLETED_DIR, file), JSON.stringify(jobData));
+            fs.unlinkSync(filePath);
             console.log(`[Queue] Job ${jobData.id} completed successfully`);
           } catch (error) {
             console.error(`[Queue] Error processing job ${jobData.id}:`, error);
+            // Aggiorna il job con lo stato di errore
+            jobData.progress = 0;
+            jobData.status = error instanceof Error ? error.message : 'Errore sconosciuto';
             // Sposta il file nella directory failed
-            fs.renameSync(filePath, path.join(FAILED_DIR, file));
+            fs.writeFileSync(path.join(FAILED_DIR, file), JSON.stringify(jobData));
+            fs.unlinkSync(filePath);
           }
         }
       } catch (error) {
@@ -71,19 +116,23 @@ class FileSystemQueue {
     const job: QueueJob = {
       id: Math.random().toString(36).substring(7),
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      progress: 0,
+      status: 'In coda'
     };
 
     const fileName = `${job.id}.json`;
     const filePath = path.join(PROCESSING_DIR, fileName);
     
     fs.writeFileSync(filePath, JSON.stringify(job));
-    console.log(`[Queue] Added job ${job.id} to queue`);
+    console.log(`[Queue] Added job ${job.id} to queue with initial progress 0%`);
 
     return job;
   }
 
   public async getJob(jobId: string): Promise<QueueJob | null> {
+    console.log(`[GetJob] Looking for job ${jobId}`);
+    
     // Cerca il job in tutte le directory
     const directories = [PROCESSING_DIR, COMPLETED_DIR, FAILED_DIR];
     
@@ -93,27 +142,79 @@ class FileSystemQueue {
       
       if (file) {
         const filePath = path.join(dir, file);
+        console.log(`[GetJob] Found job ${jobId} in directory ${dir}`);
         const jobData = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as QueueJob;
+        console.log(`[GetJob] Job data:`, {
+          id: jobData.id,
+          progress: jobData.progress,
+          status: jobData.status
+        });
         return jobData;
       }
     }
 
+    console.log(`[GetJob] Job ${jobId} not found in any directory`);
     return null;
   }
 
-  public async getJobState(jobId: string): Promise<string> {
+  public async getJobState(jobId: string): Promise<{ state: string; progress?: number; status?: string }> {
+    console.log(`\n[JobState] Checking state for job ${jobId}`);
+    
     const job = await this.getJob(jobId);
-    if (!job) return 'notfound';
+    if (!job) {
+      console.log(`[JobState] Job ${jobId} not found in any directory`);
+      return { state: 'notfound' };
+    }
 
+    console.log(`[JobState] Found job ${jobId} with current progress: ${job.progress}%, status: "${job.status}"`);
+
+    // Se il job è in processing, restituisci il progresso corrente
+    if (fs.existsSync(path.join(PROCESSING_DIR, `${jobId}.json`))) {
+      console.log(`[JobState] Job ${jobId} is in processing directory`);
+      const state = { 
+        state: 'processing',
+        progress: job.progress || 0,
+        status: job.status || 'In elaborazione'
+      };
+      console.log(`[JobState] Returning state:`, state);
+      return state;
+    }
+
+    // Se il job è completato
     if (fs.existsSync(path.join(COMPLETED_DIR, `${jobId}.json`))) {
-      return 'completed';
+      console.log(`[JobState] Job ${jobId} is in completed directory`);
+      const state = { state: 'completed', progress: 100, status: 'Completato' };
+      console.log(`[JobState] Returning state:`, state);
+      return state;
     }
 
+    // Se il job è fallito
     if (fs.existsSync(path.join(FAILED_DIR, `${jobId}.json`))) {
-      return 'failed';
+      console.log(`[JobState] Job ${jobId} is in failed directory`);
+      const state = { state: 'failed', progress: 0, status: job.status || 'Fallito' };
+      console.log(`[JobState] Returning state:`, state);
+      return state;
     }
 
-    return 'processing';
+    console.log(`[JobState] Job ${jobId} not found in any directory`);
+    return { state: 'notfound' };
+  }
+
+  public async updateJob(job: QueueJob): Promise<void> {
+    const directories = [PROCESSING_DIR, COMPLETED_DIR, FAILED_DIR];
+    
+    for (const dir of directories) {
+      const files = fs.readdirSync(dir);
+      const file = files.find(f => f.startsWith(job.id));
+      
+      if (file) {
+        const filePath = path.join(dir, file);
+        fs.writeFileSync(filePath, JSON.stringify(job));
+        console.log(`[Queue] Updated job ${job.id} with progress ${job.progress}% and status "${job.status}"`);
+        return;
+      }
+    }
+    console.warn(`[Queue] Could not find job ${job.id} to update`);
   }
 
   public stop() {

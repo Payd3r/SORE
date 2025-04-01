@@ -1,6 +1,7 @@
 import { getMemories } from '../api/memory';
 import type { Memory } from '../api/memory';
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import MemoryUploadModal from '../components/Memories/MemoryUploadModal';
 import MemoryCard from '../components/Memories/MemoryCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,8 +23,6 @@ interface MemoryWithImages extends Memory {
 }
 
 export default function Memory() {
-  const [memories, setMemories] = useState<Memory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -33,6 +32,24 @@ export default function Memory() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [visibleMemories, setVisibleMemories] = useState<number>(12);
   const [hasMore, setHasMore] = useState<boolean>(true);
+
+  // React Query per il fetching dei ricordi
+  const { data: memories = [], isLoading } = useQuery<MemoryWithImages[]>({
+    queryKey: ['memories'],
+    queryFn: async () => {
+      const data = await getMemories();
+      return data.map(memory => ({
+        ...memory,
+        images: memory.images.map(img => ({
+          ...img,
+          created_at: memory.created_at,
+          width: 1920,
+          height: 1080
+        }))
+      }));
+    },
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
 
   // Funzione per ottimizzare il layout della griglia
   const optimizeGridLayout = useMemo(() => {
@@ -145,7 +162,7 @@ export default function Memory() {
 
     // Filtra per ricerca
     if (searchQuery) {
-      filtered = filtered.filter(memory =>
+      filtered = filtered.filter((memory: MemoryWithImages) =>
         memory.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         memory.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         memory.song?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -154,16 +171,16 @@ export default function Memory() {
 
     // Filtra per tipo solo se ci sono tipi selezionati
     if (selectedTypes.size > 0) {
-      filtered = filtered.filter(memory => {
+      filtered = filtered.filter((memory: MemoryWithImages) => {
         const upperCaseType = memory.type.toUpperCase() as ImageTypeFilter;
         return selectedTypes.has(upperCaseType);
       });
     }
 
     // Applica l'ottimizzazione del layout con ordinamento intelligente
-    const memoriesWithImages = filtered.map(memory => ({
+    const memoriesWithImages = filtered.map((memory: MemoryWithImages) => ({
       ...memory,
-      images: memory.images.map(img => ({
+      images: memory.images.map((img: MemoryImage) => ({
         ...img,
         width: 1920,
         height: 1080
@@ -197,31 +214,9 @@ export default function Memory() {
     setHasMore(true);
   }, [searchQuery, selectedTypes]);
 
-  const fetchMemories = async () => {
-    try {
-      const data = await getMemories();
-      // Aggiungi width e height alle immagini
-      const memoriesWithImages = data.map(memory => ({
-        ...memory,
-        images: memory.images.map(img => ({
-          ...img,
-          created_at: memory.created_at, // Usa la data del ricordo come fallback
-          width: 1920, // Valori di default per width e height
-          height: 1080
-        }))
-      }));
-      setMemories(memoriesWithImages);
-    } catch (error) {
-      // Gestione silenziosa dell'errore
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (location.state?.openUploadModal) {
       setIsUploadModalOpen(true);
-      // Rimuovi lo stato dalla location per evitare che il modal si riapra al refresh
       window.history.replaceState({}, document.title);
     }
   }, [location]);
@@ -258,11 +253,6 @@ export default function Memory() {
     if (selectedTypes.size === 0) return 'Filtra';
     return `${selectedTypes.size} ${selectedTypes.size === 1 ? 'filtro' : 'filtri'}`;
   };
-
-  // Effetto per il caricamento iniziale dei ricordi
-  useEffect(() => {
-    fetchMemories();
-  }, []);
 
   // Effetto per il ridimensionamento della finestra
   useEffect(() => {
@@ -351,7 +341,7 @@ export default function Memory() {
                     e.stopPropagation();
                     setIsTypeMenuOpen(!isTypeMenuOpen);
                   }}
-                  className="flex items-center gap-2 h-[46px] sm:h-10 px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none whitespace-nowrap"
+                  className="flex items-center gap-2 h-[46px] px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none whitespace-nowrap"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -481,7 +471,6 @@ export default function Memory() {
       <MemoryUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={fetchMemories}
       />
     </div>
   );

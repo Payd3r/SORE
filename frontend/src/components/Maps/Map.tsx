@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
+import '../../styles/map.css';
 
 interface ImageLocation {
   id: number;
@@ -53,76 +54,65 @@ const cleanCoordinates = (lat: number | string, lon: number | string): [number, 
   }
 };
 
-// Funzione per creare l'icona del cluster
-const createClusterCustomIcon = (cluster: L.MarkerCluster) => {
+// Funzione per creare l'icona del cluster personalizzata
+const createClusterCustomIcon = (cluster: any) => {
   const count = cluster.getChildCount();
-  const markers = cluster.getAllChildMarkers();
+  
+  // Per cluster grandi (più di 50 immagini)
+  if (count > 50) {
+    const markers = cluster.getAllChildMarkers();
+    // Prendi 4 marker casuali
+    const randomMarkers = markers
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 4);
+    
+    const previewsHtml = randomMarkers.map((marker: any, index: number) => {
+      const image = marker.options.image as ImageLocation;
+      return `
+        <div class="cluster-preview-image" style="grid-area: img${index + 1}">
+          <img src="${getImageUrl(image.thumb_small_path)}" alt="preview" />
+        </div>
+      `;
+    }).join('');
 
-  // Prendi fino a 4 immagini per il preview
-  const previewMarkers = markers.slice(0, 4);
-  const remainingCount = count - 4;
-
-  // Calcola dimensioni della griglia
-  const size = 120;
-  const previewSize = size / 2 - 2; // 2px di gap
-
-  const previews = previewMarkers.map((marker: L.Marker, index: number) => {
-    const row = Math.floor(index / 2);
-    const col = index % 2;
-    const iconHtml = ((marker.options.icon as L.DivIcon).options.html || '').toString();
-    const imageUrl = iconHtml.match(/src="([^"]+)"/)?.[1] || 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png';
-
-    return `
-      <div style="position: absolute; left: ${col * (previewSize + 2)}px; top: ${row * (previewSize + 2)}px;">
-        <img 
-          src="${imageUrl}"
-          alt="Preview"
-          class="rounded-lg"
-          style="width: ${previewSize}px; height: ${previewSize}px; object-fit: cover; display: block;"
-          onerror="this.onerror=null; this.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png';"
-        />
-      </div>
-    `;
-  }).join('');
-
-  const counterHtml = remainingCount > 0 ? `
-    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-      +${remainingCount}
-    </div>
-  ` : '';
-
-  return L.divIcon({
-    html: `
-      <div class="relative" style="width: ${size}px; height: ${size}px;">
-        ${previews}
-        ${counterHtml}
-      </div>
-    `,
-    className: 'custom-cluster',
-    iconSize: L.point(size, size),
-    iconAnchor: L.point(size / 2, size / 2)
+    return new L.DivIcon({
+      html: `
+        <div class="cluster-icon-grid">
+          ${previewsHtml}
+          <div class="cluster-counter">+${count}</div>
+        </div>
+      `,
+      className: 'custom-cluster-icon',
+      iconSize: L.point(80, 80),
+      iconAnchor: L.point(40, 40)
+    });
+  }
+  
+  // Per cluster più piccoli, usa lo stile normale
+  const size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
+  
+  return new L.DivIcon({
+    html: `<div class="cluster-icon cluster-icon-${size}">
+            <span>${count}</span>
+          </div>`,
+    className: 'custom-cluster-icon',
+    iconSize: L.point(40, 40),
+    iconAnchor: L.point(20, 20)
   });
 };
 
-// Funzione per creare l'icona personalizzata del marker
+// Funzione per creare l'icona del marker personalizzata
 const createCustomIcon = (image: ImageLocation) => {
-  const imageUrl = getImageUrl(image.thumb_small_path);
-  return L.divIcon({
+  return new L.DivIcon({
     html: `
-      <div class="relative group">
-        <div class="w-12 h-12 overflow-hidden transform transition-transform duration-200 hover:scale-110">
-          <img
-            src="${imageUrl}"
-            alt="Location"
-            class="w-full h-full object-cover rounded-lg"
-            onerror="this.onerror=null; this.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png';"
-          />
-        </div>
+      <div class="marker-icon">
+        <img src="${getImageUrl(image.thumb_small_path)}" alt="thumbnail" />
       </div>
     `,
-    className: 'custom-marker',
-    iconSize: [48, 48],
-    iconAnchor: [24, 24]
+    className: 'custom-marker-icon',
+    iconSize: L.point(40, 40),
+    iconAnchor: L.point(20, 40),
+    popupAnchor: L.point(0, -40)
   });
 };
 
@@ -410,9 +400,66 @@ interface MapProps {
   images: ImageLocation[];
   isLoading?: boolean;
   error?: string | null;
+  initialLocation?: {
+    lat?: number;
+    lon?: number;
+    zoom?: number;
+    imageId?: string;
+    imagePath?: string;
+    focusedImage?: boolean;
+  };
 }
 
-const Map = ({ images, isLoading, error }: MapProps) => {
+// Componente per gestire la posizione iniziale della mappa
+function InitialLocationHandler({ initialLocation }: { initialLocation?: MapProps['initialLocation'] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (initialLocation?.lat && initialLocation?.lon) {
+      const lat = Number(initialLocation.lat);
+      const lon = Number(initialLocation.lon);
+      const zoom = Number(initialLocation.zoom || 18);
+
+      // Aggiungiamo un piccolo delay per assicurarci che la mappa sia completamente caricata
+      const timer = setTimeout(() => {
+        // Verifichiamo che la mappa sia effettivamente inizializzata
+        if (map && !map.getContainer().classList.contains('leaflet-container')) {
+          return;
+        }
+
+        // Impostiamo la vista con una durata di animazione più lunga
+        map.setView(
+          [lat, lon],
+          zoom,
+          { 
+            animate: true,
+            duration: 1.5, // Aumentiamo la durata dell'animazione
+            easeLinearity: 0.25 // Aggiungiamo una curva di easing più fluida
+          }
+        );
+
+        // Forziamo un refresh della mappa dopo lo zoom
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [map, initialLocation]);
+
+  return null;
+}
+
+const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(initialLocation?.imageId || null);
+
+  useEffect(() => {
+    if (initialLocation?.imageId) {
+      setSelectedMarkerId(initialLocation.imageId);
+    }
+  }, [initialLocation]);
+
   // URL delle tile per tema chiaro e scuro
   const lightTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
@@ -436,6 +483,7 @@ const Map = ({ images, isLoading, error }: MapProps) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           <PopupManager />
+          <InitialLocationHandler initialLocation={initialLocation} />
           <Markers images={images} />
           <BoundsHandler images={images} />
           <MapEventHandler />
@@ -461,6 +509,7 @@ const Map = ({ images, isLoading, error }: MapProps) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           <PopupManager />
+          <InitialLocationHandler initialLocation={initialLocation} />
           <Markers images={images} />
           <BoundsHandler images={images} />
           <MapEventHandler />
@@ -486,6 +535,7 @@ const Map = ({ images, isLoading, error }: MapProps) => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           <PopupManager />
+          <InitialLocationHandler initialLocation={initialLocation} />
           <Markers images={images} />
           <BoundsHandler images={images} />
           <MapEventHandler />
@@ -500,19 +550,47 @@ const Map = ({ images, isLoading, error }: MapProps) => {
   return (
     <div className="relative w-full h-full">
       <MapContainer
-        center={[0, 0]}
-        zoom={2}
+        center={[41.9028, 12.4964]}
+        zoom={6}
         className="w-full h-full"
-        attributionControl={false}
+        zoomControl={true}
       >
-        <TileLayer
-          url={getTileUrl()}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        <PopupManager />
-        <Markers images={images} />
-        <BoundsHandler images={images} />
-        <MapEventHandler />
+        <InitialLocationHandler initialLocation={initialLocation} />
+        <TileLayer url={getTileUrl()} />
+        <MarkerClusterGroup
+          chunkedLoading
+          maxClusterRadius={50}
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick={true}
+          iconCreateFunction={createClusterCustomIcon}
+          spiderfyDistanceMultiplier={2}
+          disableClusteringAtZoom={19}
+        >
+          {images.map((image) => {
+            const coords = cleanCoordinates(image.lat, image.lon);
+            if (!coords) return null;
+
+            const isSelected = selectedMarkerId === String(image.id);
+            const customIcon = createCustomIcon(image);
+
+            return (
+              <Marker
+                key={image.id}
+                position={coords}
+                icon={customIcon}
+              >
+                <Popup className="custom-popup">
+                  <img
+                    src={getImageUrl(image.thumb_big_path)}
+                    alt={`Location ${image.id}`}
+                    className="custom-popup-image"
+                  />
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MarkerClusterGroup>
       </MapContainer>
     </div>
   );

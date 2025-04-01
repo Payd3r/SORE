@@ -2,19 +2,23 @@ import { API_URLS } from './config';
 import axios from 'axios';
 
 export interface HomeStats {
-  statistics: {
-    tot_ricordi: number;
-    tot_foto: number;
-    tot_idee: number;
-    tot_luoghi: number;
+  data: {
+    num_ricordi: number;
+    num_foto: number;
+    num_idee: number;
+    num_luoghi: number;
+    Ricordi: Array<{
+      id: number;
+      title: string;
+      data_inizio: string;
+      data_fine: string | null;
+    }>;
+    Images: Array<{
+      id: number;
+      created_at: string;
+      image: string;
+    }>;
   };
-  recent_memories: Array<{
-    id: number;
-    title: string;
-    start_date: string;
-    end_date: string | null;
-    thumb_big_path: string;
-  }>;
 }
 
 const getAuthHeaders = () => {

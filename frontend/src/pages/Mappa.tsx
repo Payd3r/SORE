@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Map from '../components/Maps/Map';
 import { getMapImages, type ImageLocation } from '../api/map';
 import { PhotoIcon, GlobeAltIcon, CalendarIcon, ChartBarIcon, MapPinIcon } from '@heroicons/react/24/outline';
@@ -10,55 +11,49 @@ type StatsType = {
 };
 
 export default function Mappa() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [images, setImages] = useState<ImageLocation[]>([]);
-  const [stats, setStats] = useState<StatsType>({
+  const location = useLocation();
+  const mapState = location.state as {
+    latitude?: number;
+    longitude?: number;
+    imageId?: string;
+    imagePath?: string;
+    zoom?: number;
+    focusedImage?: boolean;
+  } | null;
+
+  const { data: images = [], isLoading, error: queryError } = useQuery({
+    queryKey: ['mapImages'],
+    queryFn: getMapImages,
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
+
+  const error = queryError ? queryError.message : null;
+
+  // Calcola le statistiche dai dati
+  const stats: StatsType = {
     countries: [],
     totalCountries: 0,
     monthStats: []
-  });
+  };
 
-  useEffect(() => {
-    const fetchImages = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getMapImages();
+  if (images.length > 0) {
+    const countriesCount: Record<string, number> = {};
+    const monthsCount: Record<string, number> = {};
 
-        if (!data) {
-          throw new Error('Nessun dato ricevuto');
-        }
+    images.forEach(img => {
+      // Calcola statistiche per paese
+      countriesCount[img.country] = (countriesCount[img.country] || 0) + 1;
 
-        setImages(data);
-        // Calcola le statistiche
-        const countriesCount: Record<string, number> = {};
-        const monthsCount: Record<string, number> = {};
+      // Calcola statistiche per mese
+      const date = new Date(img.created_at);
+      const month = date.toLocaleString('it-IT', { month: 'long' });
+      monthsCount[month] = (monthsCount[month] || 0) + 1;
+    });
 
-        data.forEach(img => {
-          // Calcola statistiche per paese
-          countriesCount[img.country] = (countriesCount[img.country] || 0) + 1;
-
-          // Calcola statistiche per mese
-          const date = new Date(img.created_at);
-          const month = date.toLocaleString('it-IT', { month: 'long' });
-          monthsCount[month] = (monthsCount[month] || 0) + 1;
-        });
-
-        setStats({
-          countries: Object.entries(countriesCount).map(([name, count]) => ({ name, count })),
-          totalCountries: Object.keys(countriesCount).length,
-          monthStats: Object.entries(monthsCount).map(([month, count]) => ({ month, count }))
-        });
-      } catch (err) {
-        console.error('Errore nel caricamento delle immagini:', err);
-        setError(err instanceof Error ? err.message : 'Errore nel caricamento delle immagini');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchImages();
-  }, []);
+    stats.countries = Object.entries(countriesCount).map(([name, count]) => ({ name, count }));
+    stats.totalCountries = Object.keys(countriesCount).length;
+    stats.monthStats = Object.entries(monthsCount).map(([month, count]) => ({ month, count }));
+  }
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -96,6 +91,14 @@ export default function Mappa() {
                   images={images}
                   isLoading={isLoading}
                   error={error}
+                  initialLocation={mapState ? {
+                    lat: mapState.latitude,
+                    lon: mapState.longitude,
+                    zoom: mapState.zoom || 18,
+                    imageId: mapState.imageId,
+                    imagePath: mapState.imagePath,
+                    focusedImage: mapState.focusedImage
+                  } : undefined}
                 />
               )}
             </div>

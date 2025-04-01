@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Idea } from '../../api/ideas';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -13,56 +14,65 @@ interface DetailIdeaModalProps {
 }
 
 export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, onIdeaDeleted, onIdeaUpdated }: DetailIdeaModalProps) {
-  const [idea, setIdea] = useState<Idea | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  // React Query per la gestione dell'idea
+  const { data: idea = initialIdea } = useQuery<Idea>({
+    queryKey: ['idea', initialIdea?.id],
+    queryFn: () => Promise.resolve(initialIdea!),
+    enabled: !!initialIdea,
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
+
+  // Mutation per l'aggiornamento dell'idea
+  const updateMutation = useMutation({
+    mutationFn: (updatedData: { title: string; description: string }) => 
+      updateIdea(idea!.id, updatedData),
+    onSuccess: (updatedIdea) => {
+      queryClient.setQueryData(['idea', updatedIdea.id], updatedIdea);
+      onIdeaUpdated?.(updatedIdea);
+      setIsEditing(false);
+    },
+  });
+
+  // Mutation per l'eliminazione dell'idea
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteIdea(idea!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ideas'] });
+      onIdeaDeleted?.();
+      onClose();
+    },
+  });
 
   useEffect(() => {
-    if (initialIdea) {
-      setIdea(initialIdea);
-      setTitle(initialIdea.title);
-      setDescription(initialIdea.description || '');
+    if (idea) {
+      setTitle(idea.title);
+      setDescription(idea.description || '');
     }
-  }, [initialIdea]);
+  }, [idea]);
 
   useEffect(() => {
     if (!isOpen) {
       setIsEditing(false);
-      if (initialIdea) {
-        setTitle(initialIdea.title);
-        setDescription(initialIdea.description || '');
+      if (idea) {
+        setTitle(idea.title);
+        setDescription(idea.description || '');
       }
     }
-  }, [isOpen, initialIdea]);
+  }, [isOpen, idea]);
 
   const handleSave = async () => {
-    if (isSaving || !idea) return;
-    
-    setIsSaving(true);
-    try {
-      const updatedIdea = await updateIdea(idea.id, { title, description });
-      setIdea(updatedIdea);
-      onIdeaUpdated?.(updatedIdea);
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Errore durante il salvataggio:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    if (!idea) return;
+    updateMutation.mutate({ title, description });
   };
 
   const handleDelete = async () => {
     if (!idea) return;
-    
-    try {
-      await deleteIdea(idea.id);
-      onIdeaDeleted?.();
-      onClose();
-    } catch (error) {
-      console.error('Errore durante l\'eliminazione:', error);
-    }
+    deleteMutation.mutate();
   };
 
   if (!isOpen || !idea) return null;
@@ -139,7 +149,8 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
                   {isEditing ? (
                     <button
                       onClick={handleSave}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors focus:outline-none"
+                      disabled={updateMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors focus:outline-none disabled:opacity-50"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -159,7 +170,8 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors focus:outline-none"
+                        disabled={deleteMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors focus:outline-none disabled:opacity-50"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

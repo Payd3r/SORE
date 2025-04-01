@@ -56,5 +56,23 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Home Screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nuovo Ricordo",
+      "short_name": "Nuovo Ricordo",
+      "description": "Crea un nuovo ricordo",
+      "url": "/ricordi/nuovo",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
   ]
 } 

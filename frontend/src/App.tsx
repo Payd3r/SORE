@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/react-query';
 import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Suspense, lazy } from 'react';
@@ -77,34 +79,36 @@ const Layout = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Suspense fallback={null}>
-          <Routes>
-            {/* Rotta pubblica per la pagina di benvenuto */}
-            <Route path="/welcome" element={<WelcomeAuthenticate />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <Suspense fallback={null}>
+            <Routes>
+              {/* Rotta pubblica per la pagina di benvenuto */}
+              <Route path="/welcome" element={<WelcomeAuthenticate />} />
 
-            {/* Rotte protette */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/ricordi" element={<Memory />} />
-                <Route path="/ricordo/:id" element={<DetailMemory />} />
-                <Route path="/galleria" element={<Gallery />} />
-                <Route path="/idee" element={<Ideas />} />
-                <Route path="/mappa" element={<Mappa />} />
-                <Route path="/recap" element={<Recap />} />
-                <Route path="/profilo" element={<Profile />} />
-                <Route path="/logout" element={<div>Logout...</div>} />
+              {/* Rotte protette */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/ricordi" element={<Memory />} />
+                  <Route path="/ricordo/:id" element={<DetailMemory />} />
+                  <Route path="/galleria" element={<Gallery />} />
+                  <Route path="/idee" element={<Ideas />} />
+                  <Route path="/mappa" element={<Mappa />} />
+                  <Route path="/recap" element={<Recap />} />
+                  <Route path="/profilo" element={<Profile />} />
+                  <Route path="/logout" element={<div>Logout...</div>} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Redirect di default alla pagina di benvenuto */}
-            <Route path="*" element={<Navigate to="/welcome" replace />} />
-          </Routes>
-        </Suspense>
-      </Router>
-    </AuthProvider>
+              {/* Redirect di default alla pagina di benvenuto */}
+              <Route path="*" element={<Navigate to="/welcome" replace />} />
+            </Routes>
+          </Suspense>
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

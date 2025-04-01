@@ -286,7 +286,7 @@ router.get('/status/:jobId', auth, async (req: any, res) => {
     const { jobId } = req.params;
     console.log(`[Status] Checking status for job ${jobId}`);
 
-    const state = await imageQueue.getJobState(jobId);
+    const jobState = await imageQueue.getJobState(jobId);
     const job = await imageQueue.getJob(jobId);
 
     if (!job) {
@@ -296,7 +296,7 @@ router.get('/status/:jobId', auth, async (req: any, res) => {
 
     res.json({ 
       jobId,
-      state,
+      ...jobState,
       data: job.data
     });
   } catch (error) {

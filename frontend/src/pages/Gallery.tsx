@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getGalleryImages, ImageType, uploadImages, getImageUrl, deleteImage, pollImageStatus, ImageStatusResponse } from '../api/images';
 import { useAuth } from '../contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 import ImageUploadModal from '../components/Images/ImageUploadModal';
 import ImageDetailModal from '../components/Images/ImageDetailModal';
+import UploadStatus from '../components/Images/UploadStatus';
 import { useLocation } from 'react-router-dom';
 import LazyImage from '../components/Images/LazyImage';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -18,8 +20,6 @@ interface GroupedImages {
 }
 
 export default function Gallery() {
-  const [images, setImages] = useState<ImageType[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('grid'); // 'grid' | 'month'
   const [isCompactGrid, setIsCompactGrid] = useState(true); // false = 5 colonne, true = 8 colonne
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -34,50 +34,105 @@ export default function Gallery() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const location = useLocation();
-
-  const fetchImages = async () => {
-    try {
-      const galleryImages = await getGalleryImages();
-      setImages(galleryImages);
-    } catch (error) {
-      // Gestione silenziosa dell'errore
-    } finally {
-      setLoading(false);
+  const [uploadingFiles, setUploadingFiles] = useState<{
+    [key: string]: {
+      fileName: string;
+      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+      progress: number;
+      message: string;
     }
-  };
+  }>({});
+  const [showUploadStatus, setShowUploadStatus] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // React Query per il fetching delle immagini
+  const { data: images = [], isLoading: loading, refetch } = useQuery<ImageType[]>({
+    queryKey: ['galleryImages'],
+    queryFn: getGalleryImages,
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      fetchImages();
-    }
-  }, [authLoading, isAuthenticated]);
-
-  useEffect(() => {
-    // Controlla se il modal deve essere aperto automaticamente
     if (location.state?.openUploadModal) {
       setIsUploadModalOpen(true);
-      // Rimuovi lo stato dalla location per evitare che il modal si riapra al refresh
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
   const handleUpload = async (files: File[]) => {
+    setShowUploadStatus(true);
+    
+    const initialUploadState = files.reduce((acc, file) => {
+      acc[file.name] = {
+        fileName: file.name,
+        status: 'queued' as const,
+        progress: 0,
+        message: 'In coda...'
+      };
+      return acc;
+    }, {} as typeof uploadingFiles);
+    
+    setUploadingFiles(initialUploadState);
+
     try {
       const response = await uploadImages(files);
-
-      // Avvia il polling per ogni immagine
-      response.data.forEach(({ jobId }) => {
-        pollImageStatus(jobId, (status: ImageStatusResponse) => {
-          if (status.state === 'completed') {
-            // Ricarica le immagini quando un file viene caricato con successo
-            fetchImages();
+      
+      setUploadingFiles(prev => {
+        const newState = { ...prev };
+        response.data.forEach(({ file, jobId }) => {
+          if (newState[file]) {
+            newState[file].status = 'processing';
+            newState[file].progress = 0;
+            newState[file].message = 'Inizio processamento';
           }
+        });
+        return newState;
+      });
+
+      response.data.forEach(({ jobId, file }) => {
+        pollImageStatus(jobId, (status: ImageStatusResponse) => {
+          setUploadingFiles(prev => {
+            const newState = { ...prev };
+            if (newState[file]) {
+              newState[file].status = status.state;
+              newState[file].progress = status.progress;
+              newState[file].message = status.status;
+              if (status.state === 'completed') {
+                setTimeout(() => {
+                  setUploadingFiles(prev => {
+                    const newState = { ...prev };
+                    delete newState[file];
+                    if (Object.keys(newState).length === 0) {
+                      setShowUploadStatus(false);
+                    }
+                    return newState;
+                  });
+                }, 2000);
+                // Ricarica le immagini usando React Query
+                refetch();
+              } else if (status.state === 'failed') {
+                newState[file].message = 'Errore durante il caricamento';
+              } else if (status.state === 'notfound') {
+                newState[file].message = 'File non trovato';
+              }
+            }
+            return newState;
+          });
         });
       });
 
     } catch (error) {
       console.error('Error uploading images:', error);
-      throw error;
+      setUploadingFiles(prev => {
+        const newState = { ...prev };
+        Object.keys(newState).forEach(fileName => {
+          newState[fileName].status = 'failed';
+          newState[fileName].progress = 0;
+          newState[fileName].message = 'Errore durante il caricamento';
+        });
+        return newState;
+      });
     }
   };
 
@@ -212,7 +267,7 @@ export default function Gallery() {
       await Promise.all(Array.from(selectedImages).map(id => deleteImage(id)));
       setSelectedImages(new Set());
       setIsSelectionMode(false);
-      await fetchImages();
+      await refetch();
     } catch (error) {
       // Gestione silenziosa dell'errore
     } finally {
@@ -738,7 +793,13 @@ export default function Gallery() {
             </div>
           )}
 
-          {/* Upload Modal */}
+          {/* Upload Status Panel */}
+          <UploadStatus
+            show={showUploadStatus}
+            onClose={() => setShowUploadStatus(false)}
+            uploadingFiles={uploadingFiles}
+          />
+
           <ImageUploadModal
             isOpen={isUploadModalOpen}
             onClose={() => setIsUploadModalOpen(false)}
@@ -755,7 +816,7 @@ export default function Gallery() {
               }, 0);
             }}
             image={selectedImage}
-            onImageDeleted={fetchImages}
+            onImageDeleted={refetch}
           />
         </div>
       </div>

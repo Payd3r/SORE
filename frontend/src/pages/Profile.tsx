@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserInfo, getCoupleInfo } from '../api/profile';
 import { UserInfo, CoupleInfo } from '../api/types';
+import { useQuery } from '@tanstack/react-query';
 import { Tab } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 import EditProfileModal from '../components/Profile/EditProfileModal';
@@ -12,10 +13,6 @@ import { getImageUrl } from '../api/images';
 const Profile: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-    const [coupleInfo, setCoupleInfo] = useState<CoupleInfo | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
@@ -25,44 +22,31 @@ const Profile: React.FC = () => {
         navigate('/login');
     };
 
-    const fetchData = async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
+    // React Query per il fetching dei dati dell'utente
+    const { data: userInfo, isLoading: isLoadingUser } = useQuery<UserInfo>({
+        queryKey: ['user-info', user?.id],
+        queryFn: async () => {
+            if (!user?.id) throw new Error('Utente non autenticato');
+            return getUserInfo(parseInt(user.id));
+        },
+        enabled: !!user?.id,
+        staleTime: 5 * 60 * 1000, // 5 minuti
+    });
 
-            if (!user?.id) {
-                setError('Utente non autenticato');
-                return;
-            }
+    // React Query per il fetching dei dati della coppia
+    const { data: coupleInfo, isLoading: isLoadingCouple } = useQuery<CoupleInfo>({
+        queryKey: ['couple-info', userInfo?.couple_id],
+        queryFn: async () => {
+            if (!userInfo?.couple_id) throw new Error('Nessuna coppia associata all\'utente');
+            return getCoupleInfo(userInfo.couple_id);
+        },
+        enabled: !!userInfo?.couple_id,
+        staleTime: 5 * 60 * 1000, // 5 minuti
+    });
 
-            const userId = parseInt(user.id);
-            // Prima otteniamo i dati dell'utente
-            const userDataResponse = await getUserInfo(userId);
-            setUserInfo(userDataResponse);
-
-            // Poi usiamo il couple_id per ottenere i dati della coppia
-            if (userDataResponse.couple_id) {
-                try {
-                    const coupleDataResponse = await getCoupleInfo(userDataResponse.couple_id);
-                    setCoupleInfo(coupleDataResponse);
-                } catch (coupleError) {
-                    console.error('Error fetching couple data:', coupleError);
-                    setError(coupleError instanceof Error ? coupleError.message : 'Errore nel caricamento dei dati della coppia');
-                }
-            } else {
-                setError('Nessuna coppia associata all\'utente');
-            }
-        } catch (error) {
-            console.error('Error fetching profile data:', error);
-            setError(error instanceof Error ? error.message : 'Errore nel caricamento dei dati del profilo');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, [user?.id]);
+    const isLoading = isLoadingUser || isLoadingCouple;
+    const error = !user?.id ? 'Utente non autenticato' : 
+                 !userInfo?.couple_id ? 'Nessuna coppia associata all\'utente' : null;
 
     if (isLoading) {
         return (
@@ -131,7 +115,7 @@ const Profile: React.FC = () => {
                                 <Tab.Panel className="w-full">
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 mt-4 sm:mt-6">
                                         <div className="lg:col-span-2">
-                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200 border-2 border-gray-200 dark:border-gray-700">
                                                 <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 dark:text-white mb-6 lg:mb-8">Informazioni personali</h2>
                                                 <div className="flex flex-col md:flex-row items-center gap-6 lg:gap-8">
                                                     <div className="w-32 h-32 lg:w-48 lg:h-48 bg-gradient-to-br from-blue-500/10 to-blue-600/10 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl flex items-center justify-center text-2xl lg:text-3xl text-blue-500 dark:text-blue-400 font-medium shadow-sm">
@@ -190,7 +174,7 @@ const Profile: React.FC = () => {
                                         </div>
 
                                         <div className="lg:col-span-1">
-                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200 border-2 border-gray-200 dark:border-gray-700">
                                                 <h2 className="text-lg lg:text-xl font-semibold text-gray-800 dark:text-white mb-4 lg:mb-6">Privacy e sicurezza</h2>
                                                 <div className="space-y-3 lg:space-y-4">
                                                     <div className="group hover:scale-[1.02] transition-all duration-200">
@@ -226,7 +210,7 @@ const Profile: React.FC = () => {
                                 <Tab.Panel className="w-full">
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8 mt-4 sm:mt-6">
                                         <div className="lg:col-span-2">
-                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200 border-2 border-gray-200 dark:border-gray-700">
                                                 <div className="flex flex-col items-center text-center mb-3 lg:mb-6">
                                                     <h2 className="text-2xl lg:text-3xl font-semibold text-gray-800 dark:text-white mb-3 lg:mb-4">{coupleInfo.name}</h2>
                                                     {coupleInfo.anniversary_date && (
@@ -267,7 +251,7 @@ const Profile: React.FC = () => {
                                         </div>
 
                                         <div className="lg:col-span-1">
-                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md transition-shadow duration-200 border-2 border-gray-200 dark:border-gray-700">
                                                 <h2 className="text-lg lg:text-xl font-semibold text-gray-800 dark:text-white mb-4 lg:mb-6">Membri</h2>
                                                 <div className="space-y-3 lg:space-y-4">
                                                     {coupleInfo.membri && coupleInfo.membri.map((membro, index) => (

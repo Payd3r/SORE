@@ -39,6 +39,8 @@ export interface ImageStatusResponse {
     userId: number;
     type: string;
   };
+  progress: number;
+  status: string;
 }
 
 const getAuthHeaders = () => {
@@ -139,6 +141,8 @@ export const pollImageStatus = async (
           userId: 0,
           type: '',
         },
+        progress: 0,
+        status: '',
       });
     }
   };

@@ -1,6 +1,7 @@
 import { getIdeas } from '../api/ideas';
 import type { Idea } from '../api/ideas';
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import IdeaUploadModal from '../components/Idee/IdeaUploadModal';
 import IdeaCard from '../components/Idee/IdeaCard';
 import DetailIdeaModal from '../components/Idee/DetailIdeaModal';
@@ -9,42 +10,31 @@ import { useLocation } from 'react-router-dom';
 type IdeaTypeFilter = 'RISTORANTI' | 'VIAGGI' | 'SFIDE' | 'SEMPLICI';
 
 export default function Ideas() {
-  const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<IdeaTypeFilter>>(new Set());
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const location = useLocation();
-  const [statusFilter, setStatusFilter] = useState<'completed' | 'pending'>('completed');
+  const [statusFilter, setStatusFilter] = useState<'completed' | 'pending' | 'all'>('all');
+
+  // React Query per il fetching delle idee
+  const { data: ideas = [], isLoading } = useQuery<Idea[]>({
+    queryKey: ['ideas'],
+    queryFn: getIdeas,
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
 
   const getFilterButtonText = () => {
     if (selectedTypes.size === 0) {
       if (statusFilter === 'completed') return 'Realizzate';
       if (statusFilter === 'pending') return 'Da Fare';
+      if (statusFilter === 'all') return 'Tutte';
       return 'Filtra';
     }
     return `${selectedTypes.size} ${selectedTypes.size === 1 ? 'filtro' : 'filtri'}`;
   };
-
-  const fetchIdeas = async () => {
-    try {
-      const data = await getIdeas();
-      setIdeas(data);
-    } catch (error) {
-      console.error('Errore nel caricamento delle idee:', error);
-      setError('Errore nel caricamento delle idee');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchIdeas();
-  }, []);
 
   useEffect(() => {
     if (location.state?.openUploadModal) {
@@ -56,7 +46,8 @@ export default function Ideas() {
   const filteredIdeas = ideas.filter(idea =>
     (selectedTypes.size === 0 || selectedTypes.has(idea.type as IdeaTypeFilter)) &&
     idea.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    ((statusFilter === 'completed' && idea.checked === 1) ||
+    ((statusFilter === 'all') ||
+     (statusFilter === 'completed' && idea.checked === 1) ||
      (statusFilter === 'pending' && idea.checked === 0))
   );
 
@@ -116,7 +107,7 @@ export default function Ideas() {
                     e.stopPropagation();
                     setIsTypeMenuOpen(!isTypeMenuOpen);
                   }}
-                  className="flex items-center gap-2 h-[46px] sm:h-10 px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none whitespace-nowrap"
+                  className="flex items-center gap-2 h-[46px] px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none whitespace-nowrap"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -174,6 +165,26 @@ export default function Ideas() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          setStatusFilter('all');
+                        }}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${statusFilter === 'all' ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'}`}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${statusFilter === 'all'
+                          ? 'bg-blue-500 border-blue-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                          {statusFilter === 'all' && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        Tutte
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setStatusFilter('completed');
                         }}
                         className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${statusFilter === 'completed' ? 'text-green-500 dark:text-green-400' : 'text-gray-700 dark:text-white'}`}
@@ -196,7 +207,9 @@ export default function Ideas() {
                           e.stopPropagation();
                           setStatusFilter('pending');
                         }}
-                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${statusFilter === 'pending' ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-700 dark:text-white'}`}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${statusFilter === 'pending'
+                          ? 'text-yellow-500 dark:text-yellow-400'
+                          : 'text-gray-700 dark:text-white'}`}
                       >
                         <div className={`w-4 h-4 border rounded flex items-center justify-center ${statusFilter === 'pending'
                           ? 'bg-yellow-500 border-yellow-500'
@@ -228,8 +241,6 @@ export default function Ideas() {
                 <p className="text-lg font-medium text-gray-700 dark:text-gray-300">Caricamento in corso...</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Stiamo preparando le tue idee</p>
               </div>
-            ) : error ? (
-              <div className="text-center text-red-500 dark:text-red-400">{error}</div>
             ) : filteredIdeas.length === 0 ? (
               <div className="text-center text-gray-500 dark:text-gray-400">Nessuna idea trovata</div>
             ) : (
@@ -254,7 +265,7 @@ export default function Ideas() {
       <IdeaUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={fetchIdeas}
+        onSuccess={() => {}}
       />
 
       <DetailIdeaModal
@@ -264,14 +275,9 @@ export default function Ideas() {
           setIsDetailModalOpen(false);
           setSelectedIdea(null);
         }}
-        onIdeaDeleted={fetchIdeas}
+        onIdeaDeleted={() => {}}
         onIdeaUpdated={(updatedIdea) => {
-          setIdeas(ideas.map(idea =>
-            idea.id === updatedIdea.id ? updatedIdea : idea
-          ));
-          if (selectedIdea?.id === updatedIdea.id) {
-            setSelectedIdea(updatedIdea);
-          }
+          // Implementa la logica per aggiornare la lista delle idee
         }}
       />
     </div>

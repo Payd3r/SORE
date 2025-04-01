@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tab } from '@headlessui/react';
 import { getRecapData, getRecapConfronto, RecapStats, RecapConfronto } from '../api/recap';
 import { getTrackDetails, SpotifyTrack } from '../api/spotify';
+import { useQuery } from '@tanstack/react-query';
 import {
     BookOpenIcon,
     PhotoIcon,
@@ -12,51 +13,56 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Recap: React.FC = () => {
-    const [recapData, setRecapData] = useState<RecapStats | null>(null);
-    const [confrontoData, setConfrontoData] = useState<RecapConfronto | null>(null);
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [songDetails, setSongDetails] = useState<Record<string, SpotifyTrack>>({});
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
+    // React Query per il fetching dei dati del recap
+    const { data: recapData, isLoading: isLoadingRecap } = useQuery<RecapStats>({
+        queryKey: ['recap-data'],
+        queryFn: getRecapData,
+        staleTime: 5 * 60 * 1000, // 5 minuti
+    });
 
-                // Fetch recap data
-                const data = await getRecapData();
-                setRecapData(data);
+    // React Query per il fetching dei dati del confronto
+    const { data: confrontoData, isLoading: isLoadingConfronto } = useQuery<RecapConfronto>({
+        queryKey: ['recap-confronto'],
+        queryFn: getRecapConfronto,
+        staleTime: 5 * 60 * 1000, // 5 minuti
+    });
 
-                // Fetch confronto data
-                const confronto = await getRecapConfronto();
-                setConfrontoData(confronto);
-                // Imposta l'utente selezionato di default al primo utente
-                setSelectedUserId(confronto.data.users[0]?.id_utente || null);
-
-                // Fetch song details
-                const songDetailsPromises = data.data.canzoni.slice(0, 8).map(async (canzone) => {
+    // React Query per il fetching dei dettagli delle canzoni
+    const { data: songDetailsData } = useQuery<Record<string, SpotifyTrack>>({
+        queryKey: ['song-details', recapData?.data.canzoni],
+        queryFn: async () => {
+            if (!recapData?.data.canzoni) return {};
+            const details = await Promise.all(
+                recapData.data.canzoni.slice(0, 8).map(async (canzone) => {
                     const details = await getTrackDetails(canzone.song);
-                    if (details) {
-                        setSongDetails(prev => ({
-                            ...prev,
-                            [canzone.song]: details
-                        }));
-                    }
-                });
+                    return details ? { [canzone.song]: details } : {};
+                })
+            );
+            return details.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+        },
+        enabled: !!recapData?.data.canzoni,
+        staleTime: 5 * 60 * 1000, // 5 minuti
+    });
 
-                await Promise.all(songDetailsPromises);
-            } catch (err) {
-                setError('Errore nel caricamento dei dati');
-                console.error('Errore nel caricamento dei dati del recap:', err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const isLoading = isLoadingRecap || isLoadingConfronto;
+    const error = !recapData || !confrontoData ? 'Errore nel caricamento dei dati' : null;
 
-        fetchData();
-    }, []);
+    // Imposta l'utente selezionato di default al primo utente quando i dati sono disponibili
+    React.useEffect(() => {
+        if (confrontoData?.data.users[0]?.id_utente) {
+            setSelectedUserId(confrontoData.data.users[0].id_utente);
+        }
+    }, [confrontoData]);
+
+    // Aggiorna i dettagli delle canzoni quando cambiano
+    React.useEffect(() => {
+        if (songDetailsData) {
+            setSongDetails(songDetailsData);
+        }
+    }, [songDetailsData]);
 
     if (isLoading) {
         return (

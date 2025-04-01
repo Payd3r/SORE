@@ -59,18 +59,10 @@ export async function processImage(file: Express.Multer.File): Promise<Processed
     const metadata = await extractMetadata(buffer, originalFormat);
 
     if (originalFormat === 'heic' || originalFormat === 'heif') {
-      const outputBuffer = await heicConvert(buffer) as Buffer;
+      const outputBuffer = await heicConvert({ buffer, format: 'JPEG', quality: 0.92 }) as Buffer;
       buffer = outputBuffer;
       originalFormat = 'jpg';
     }
-
-    // Converti in JPEG
-    const jpegBuffer = await sharp(buffer)
-      .jpeg({
-        quality: 80,
-        progressive: true
-      })
-      .toBuffer();
 
     // Converti in WebP
     const webpBuffer = await sharp(buffer)
@@ -172,7 +164,7 @@ async function getCountryFromCoordinates(lat: number, lon: number): Promise<stri
         }
       }
     );
-    
+
     if (!response.ok) {
       throw new Error('Errore nella richiesta di geocoding');
     }
@@ -189,7 +181,7 @@ async function extractMetadata(buffer: Buffer, format: string): Promise<ImageMet
   try {
     const exif = await exifr.parse(buffer);
     const taken_at = exif?.DateTimeOriginal ? new Date(exif.DateTimeOriginal) : new Date();
-    
+
     let country: string | undefined;
     if (exif?.latitude && exif?.longitude) {
       country = await getCountryFromCoordinates(exif.latitude, exif.longitude);
@@ -256,7 +248,7 @@ export async function processProfilePicture(file: Express.Multer.File): Promise<
 
     // Se è un'immagine HEIC, convertila in JPG
     if (originalFormat === 'heic' || originalFormat === 'heif') {
-      const outputBuffer = await heicConvert(buffer) as Buffer;
+      const outputBuffer = await heicConvert({ buffer, format: 'JPEG', quality: 0.92 }) as Buffer;
       buffer = outputBuffer;
     }
 
@@ -311,7 +303,7 @@ export async function processProfilePicture(file: Express.Multer.File): Promise<
     return relativePath;
   } catch (error) {
     console.error('Error processing profile picture:', error);
-    
+
     // Pulisci il file temporaneo in caso di errore
     try {
       if (fs.existsSync(file.path)) {

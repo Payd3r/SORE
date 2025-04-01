@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { getMemory, getMemoryCarousel, updateMemory, deleteMemory } from '../api/memory';
 import type { Memory } from '../api/memory';
 import { getImageUrl } from '../api/images';
@@ -11,7 +12,6 @@ import InfoRicordo from '../components/Memory/InfoRicordo';
 import CronologiaRicordo from '../components/Memory/CronologiaRicordo';
 import GalleriaRicordo from '../components/Memory/GalleriaRicordo';
 import MemoryEditModal from '../components/Memory/MemoryEditModal';
-import { useRef } from 'react';
 
 export interface CarouselImage {
   image: string;
@@ -31,39 +31,49 @@ interface ProcessedCarouselImage extends CarouselImage {
 export default function DetailMemory() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [memory, setMemory] = useState<ExtendedMemory | null>(null);
-  const [carouselImages, setCarouselImages] = useState<ProcessedCarouselImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('info');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const minSwipeDistance = 50;
 
-  const fetchMemory = async () => {
-    try {
+  // React Query per il fetching del ricordo
+  const { data: memory, isLoading: isLoadingMemory } = useQuery<ExtendedMemory>({
+    queryKey: ['memory', id],
+    queryFn: async () => {
       const response = await getMemory(id!);
-      setMemory(response.data as ExtendedMemory);
-    } catch (error) {
-      console.error('Errore nel recupero del ricordo:', error);
-    }
-  };
+      return response.data as ExtendedMemory;
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
 
-  const fetchCarouselImages = async () => {
-    try {
+  // React Query per il fetching delle immagini del carousel
+  const { data: carouselImages = [], isLoading: isLoadingCarousel } = useQuery<ProcessedCarouselImage[]>({
+    queryKey: ['memoryCarousel', id],
+    queryFn: async () => {
       const response = await getMemoryCarousel(id!);
-      // Pre-process all image URLs
-      const processedImages = response.data.map(img => ({
+      return response.data.map(img => ({
         ...img,
         processedUrl: getImageUrl(img.image)
       }));
-      setCarouselImages(processedImages);
-      
-      // Pre-load all images
-      const preloadImages = processedImages.map(img => {
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
+
+  const isLoading = isLoadingMemory || isLoadingCarousel;
+
+  // Pre-load delle immagini quando cambiano
+  useEffect(() => {
+    if (carouselImages.length > 0) {
+      const preloadImages = carouselImages.map(img => {
         return new Promise((resolve, reject) => {
           const image = new Image();
           image.src = img.processedUrl;
@@ -75,21 +85,13 @@ export default function DetailMemory() {
       Promise.all(preloadImages)
         .then(() => setImagesLoaded(true))
         .catch(error => console.error('Error preloading images:', error));
-        
-    } catch (error) {
-      console.error('Error fetching carousel images:', error);
     }
-  };
-
-  const handleImagesUploaded = async () => {
-    await fetchMemory();
-  };
+  }, [carouselImages]);
 
   const handleUpdateMemory = async (updatedData: Partial<Memory>) => {
     try {
       await updateMemory(id!, updatedData);
-      await fetchMemory(); // Refresh della memory dopo l'aggiornamento
-      setIsEditModalOpen(false); // Chiudi il modal dopo il salvataggio
+      setIsEditModalOpen(false);
     } catch (error) {
       console.error('Errore durante l\'aggiornamento del ricordo:', error);
       throw error;
@@ -112,9 +114,68 @@ export default function DetailMemory() {
   };
 
   useEffect(() => {
-    fetchMemory();
-    fetchCarouselImages();
-  }, [id]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        handleNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const preloadImage = (url: string) => {
+    if (loadedImages.has(url)) return Promise.resolve();
+    
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => {
+        setLoadedImages(prev => new Set([...prev, url]));
+        resolve(undefined);
+      };
+      img.onerror = reject;
+    });
+  };
+
+  const preloadAdjacentImages = async (currentIndex: number) => {
+    const prevIndex = currentIndex === 0 ? carouselImages.length - 1 : currentIndex - 1;
+    const nextIndex = currentIndex === carouselImages.length - 1 ? 0 : currentIndex + 1;
+    
+    await Promise.all([
+      preloadImage(carouselImages[prevIndex].processedUrl),
+      preloadImage(carouselImages[currentIndex].processedUrl),
+      preloadImage(carouselImages[nextIndex].processedUrl)
+    ]);
+  };
+
+  useEffect(() => {
+    if (carouselImages.length > 0) {
+      preloadAdjacentImages(currentImageIndex);
+    }
+  }, [currentImageIndex, carouselImages]);
+
+  const handlePrevImage = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentImageIndex((prev) => {
+      const newIndex = prev === 0 ? carouselImages.length - 1 : prev - 1;
+      return newIndex;
+    });
+    setTimeout(() => setIsTransitioning(false), 300);
+  };
+
+  const handleNextImage = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentImageIndex((prev) => {
+      const newIndex = prev === carouselImages.length - 1 ? 0 : prev + 1;
+      return newIndex;
+    });
+    setTimeout(() => setIsTransitioning(false), 300);
+  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
@@ -128,14 +189,6 @@ export default function DetailMemory() {
 
   const formatDateTime = (dateString: string) => {
     return format(new Date(dateString), "d MMMM yyyy 'alle' HH:mm", { locale: it });
-  };
-
-  const handlePrevImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? carouselImages.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -178,7 +231,7 @@ export default function DetailMemory() {
 
           {/* Title section */}
           <div className="pb-4 pt-2">
-            <div className="flex items-center space-x-3 mb-0">
+            <div className="flex items-center space-x-3 mb-0 sm:mb-2">
               <span className="px-3 py-1 text-sm rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">
                 {memory.type === 'VIAGGIO' ? 'Viaggio' :
                   memory.type === 'EVENTO' ? 'Evento' :
@@ -246,7 +299,7 @@ export default function DetailMemory() {
           <div className="pb-0 pt-2">
             {/* Carousel */}
             <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[700px] bg-gray-100 rounded-lg overflow-hidden mb-4 sm:mb-8">
-              {carouselImages.length > 0 && imagesLoaded && (
+              {carouselImages.length > 0 && (
                 <>
                   <div 
                     className="absolute inset-0 w-full h-full"
@@ -254,35 +307,53 @@ export default function DetailMemory() {
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
-                    <img
-                      key={currentImageIndex}
-                      src={carouselImages[currentImageIndex].processedUrl}
-                      alt={`Slide ${currentImageIndex + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    {carouselImages.map((image, index) => (
+                      <img
+                        key={image.processedUrl}
+                        src={image.processedUrl}
+                        alt={`Slide ${index + 1}`}
+                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                          index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        style={{ zIndex: 0 }}
+                      />
+                    ))}
                   </div>
-                  <div className="absolute bottom-4 left-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm">
+                  <div className="absolute bottom-4 left-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm z-20">
                     {formatDateTime(carouselImages[currentImageIndex].created_at)}
                   </div>
-                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm">
+                  <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm z-20">
                     {currentImageIndex + 1} / {carouselImages.length}
                   </div>
-                  <button
-                    onClick={handlePrevImage}
-                    className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white w-6 h-6 sm:w-10 sm:h-10 rounded-full hover:bg-black/70 focus:outline-none backdrop-blur-sm flex items-center justify-center"
-                  >
-                    <svg className="w-3 h-3 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={10} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={handleNextImage}
-                    className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white w-6 h-6 sm:w-10 sm:h-10 rounded-full hover:bg-black/70 focus:outline-none backdrop-blur-sm flex items-center justify-center"
-                  >
-                    <svg className="w-3 h-3 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={10} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                  
+                  {/* Navigation buttons */}
+                  <div className="absolute inset-y-0 left-0 flex items-center z-10">
+                    <button
+                      onClick={handlePrevImage}
+                      className="group h-full px-2 sm:px-4 focus:outline-none focus:ring-0 bg-transparent border-none"
+                      disabled={isTransitioning}
+                    >
+                      <div className="p-1 sm:p-2 rounded-full bg-black/30 backdrop-blur-sm transition-all duration-300 group-hover:bg-black/50">
+                        <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
+                  
+                  <div className="absolute inset-y-0 right-0 flex items-center z-10">
+                    <button
+                      onClick={handleNextImage}
+                      className="group h-full px-2 sm:px-4 focus:outline-none focus:ring-0 bg-transparent  border-none"
+                      disabled={isTransitioning}
+                    >
+                      <div className="p-1 sm:p-2 rounded-full bg-black/30 backdrop-blur-sm transition-all duration-300 group-hover:bg-black/50">
+                        <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -334,7 +405,7 @@ export default function DetailMemory() {
                   <div className="mt-6">
                     {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={() => setActiveTab('galleria')} />}
                     {activeTab === 'cronologia' && <CronologiaRicordo memory={memory} />}
-                    {activeTab === 'galleria' && <GalleriaRicordo memory={memory} onImagesUploaded={handleImagesUploaded} />}
+                    {activeTab === 'galleria' && <GalleriaRicordo memory={memory} />}
                   </div>
                 </>
               ) : (

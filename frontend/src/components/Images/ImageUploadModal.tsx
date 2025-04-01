@@ -42,9 +42,9 @@ export default function ImageUploadModal({ isOpen, onClose, onUpload }: ImageUpl
 
     setIsLoading(true);
     try {
+      onClose();
       await onUpload(selectedFiles);
       setSelectedFiles([]);
-      onClose();
     } catch (error) {
       console.error('Error uploading images:', error);
       alert('Errore nel caricamento delle immagini');
@@ -60,7 +60,7 @@ export default function ImageUploadModal({ isOpen, onClose, onUpload }: ImageUpl
       {isLoading && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60]" />
       )}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={isLoading ? undefined : onClose} />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-full h-screen flex items-center justify-center p-0.5 sm:p-4">

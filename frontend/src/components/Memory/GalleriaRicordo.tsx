@@ -6,6 +6,7 @@ import { uploadImages, pollImageStatus, ImageStatusResponse, ImageType } from '.
 import { getImageUrl } from '../../api/images';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ImageUploadModal from '../Images/ImageUploadModal';
+import UploadStatus from '../Images/UploadStatus';
 
 type ImageTypeFilter = 'all' | 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 
@@ -14,7 +15,17 @@ interface GalleriaRicordoProps {
   onImagesUploaded?: () => void;
 }
 
-type MemoryImage = NonNullable<Memory['images']>[number];
+type MemoryImage = {
+  id: number;
+  thumb_big_path: string;
+  created_at?: string;
+  type?: string;
+  latitude?: number;
+  longitude?: number;
+  created_by_user_id?: number;
+  created_by_name?: string;
+  jpg_path?: string;
+};
 
 export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRicordoProps) {
   const [isCompactGrid, setIsCompactGrid] = useState<boolean>(memory.type.toLowerCase() !== 'semplice');
@@ -24,6 +35,15 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [imagesWithType, setImagesWithType] = useState<Map<number, string>>(new Map());
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [showUploadStatus, setShowUploadStatus] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<{
+    [key: string]: {
+      fileName: string;
+      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+      progress: number;
+      message: string;
+    }
+  }>({});
 
   // Carica i tipi delle immagini quando necessario
   useEffect(() => {
@@ -97,14 +117,15 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
     try {
       setSelectedImage({
         id: String(image.id),
-        latitude: 0,
-        longitude: 0,
-        created_by_user_id: 0,
-        created_by_name: '',
-        type: 'all',
+        latitude: image.latitude || 0,
+        longitude: image.longitude || 0,
+        created_by_user_id: image.created_by_user_id || 0,
+        created_by_name: image.created_by_name || '',
+        type: image.type || 'all',
         image: image.thumb_big_path,
         thumb_big_path: image.thumb_big_path,
-        created_at: image.created_at || new Date().toISOString()
+        created_at: image.created_at || new Date().toISOString(),
+        jpg_path: image.jpg_path
       });
       setIsDetailModalOpen(true);
     } catch (error) {
@@ -113,22 +134,94 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
   };
 
   const handleUpload = async (files: File[]) => {
+    setIsUploadModalOpen(false);
+    setShowUploadStatus(true);
+    
+    // Inizializza lo stato di caricamento per ogni file
+    const initialUploadState = files.reduce((acc, file) => {
+      acc[file.name] = {
+        fileName: file.name,
+        status: 'queued' as const,
+        progress: 0,
+        message: 'In coda...'
+      };
+      return acc;
+    }, {} as typeof uploadingFiles);
+    
+    setUploadingFiles(initialUploadState);
+
     try {
       const response = await uploadImages(files, memory.id);
-      
-      // Avvia il polling per ogni immagine
-      response.data.forEach(({ jobId }) => {
-        pollImageStatus(jobId, (status: ImageStatusResponse) => {
-          if (status.state === 'completed') {
-            // Notifica il componente padre che le immagini sono state caricate
-            onImagesUploaded?.();
+
+      // Aggiorna lo stato per mostrare che i file sono in elaborazione
+      setUploadingFiles(prev => {
+        const newState = { ...prev };
+        response.data.forEach(({ file }) => {
+          if (newState[file]) {
+            newState[file].status = 'processing';
+            newState[file].progress = 0;
+            newState[file].message = 'Inizio processamento';
           }
+        });
+        return newState;
+      });
+
+      // Avvia il polling per ogni immagine
+      response.data.forEach(({ jobId, file }) => {
+        pollImageStatus(jobId, (status: ImageStatusResponse) => {
+          console.log(`Status update for ${file}:`, {
+            jobId,
+            state: status.state,
+            progress: status.progress,
+            status: status.status,
+            data: status.data
+          });
+
+          setUploadingFiles(prev => {
+            const newState = { ...prev };
+            if (newState[file]) {
+              newState[file].status = status.state;
+              newState[file].progress = status.progress;
+              newState[file].message = status.status;
+
+              if (status.state === 'completed') {
+                // Rimuovi il file dallo stato dopo 2 secondi
+                setTimeout(() => {
+                  setUploadingFiles(prev => {
+                    const newState = { ...prev };
+                    delete newState[file];
+                    // Se non ci sono più file in caricamento, nascondi il pannello
+                    if (Object.keys(newState).length === 0) {
+                      setShowUploadStatus(false);
+                    }
+                    return newState;
+                  });
+                }, 2000);
+                // Notifica il componente padre che le immagini sono state caricate
+                onImagesUploaded?.();
+              } else if (status.state === 'failed') {
+                newState[file].message = 'Errore durante il caricamento';
+              } else if (status.state === 'notfound') {
+                newState[file].message = 'File non trovato';
+              }
+            }
+            return newState;
+          });
         });
       });
 
     } catch (error) {
       console.error('Error uploading images:', error);
-      throw error;
+      // Aggiorna lo stato per mostrare l'errore
+      setUploadingFiles(prev => {
+        const newState = { ...prev };
+        Object.keys(newState).forEach(fileName => {
+          newState[fileName].status = 'failed';
+          newState[fileName].progress = 0;
+          newState[fileName].message = 'Errore durante il caricamento';
+        });
+        return newState;
+      });
     }
   };
 
@@ -257,21 +350,22 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
         </div>
       )}
 
-      {/* Image Detail Modal */}
-      <ImageDetailModal
-        isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedImage(null);
-        }}
-        image={selectedImage}
+      <UploadStatus
+        show={showUploadStatus}
+        onClose={() => setShowUploadStatus(false)}
+        uploadingFiles={uploadingFiles}
       />
 
-      {/* Upload Modal */}
       <ImageUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onUpload={handleUpload}
+      />
+
+      <ImageDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        image={selectedImage}
       />
     </div>
   );

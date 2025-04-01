@@ -52,7 +52,6 @@ const Home = () => {
 
     fetchHomeData();
   }, []);
-
   const quickActions = [
     {
       name: 'Ricordo',
@@ -106,18 +105,18 @@ const Home = () => {
   ];
 
   const stats = useMemo(() => {
-    if (!homeData?.statistics) return [];
+    if (!homeData?.data) return [];
 
     return [
-      { label: 'Ricordi', value: homeData.statistics.tot_ricordi.toString(), color: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-      { label: 'Foto', value: homeData.statistics.tot_foto.toString(), color: 'bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400' },
-      { label: 'Idee', value: homeData.statistics.tot_idee.toString(), color: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' },
-      { label: 'Luoghi', value: homeData.statistics.tot_luoghi.toString(), color: 'bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400' }
+      { label: 'Ricordi', value: homeData.data.num_ricordi.toString(), color: 'bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' },
+      { label: 'Foto', value: homeData.data.num_foto.toString(), color: 'bg-purple-100 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400' },
+      { label: 'Idee', value: homeData.data.num_idee.toString(), color: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' },
+      { label: 'Luoghi', value: homeData.data.num_luoghi.toString(), color: 'bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400' }
     ];
   }, [homeData]);
 
-  const ricordi = useMemo(() => homeData?.recent_memories ?? [], [homeData]);
-  const images = useMemo(() => homeData?.recent_memories ?? [], [homeData]);
+  const ricordi = useMemo(() => homeData?.data?.Ricordi ?? [], [homeData]);
+  const images = useMemo(() => homeData?.data?.Images ?? [], [homeData]);
 
   const formatDateRange = (startDate: Date, endDate: Date | null) => {
     const start = format(new Date(startDate), 'd', { locale: it });
@@ -187,7 +186,7 @@ const Home = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full min-h-screen bg-transparent">        
+      <div className="w-full min-h-screen bg-transparent">
         <div className="relative max-w-7xl mx-auto">
           <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
           <div className="px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
@@ -209,7 +208,7 @@ const Home = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Explore con skeleton */}
               <div className="px-4 sm:px-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -315,9 +314,9 @@ const Home = () => {
                       <div className="flex flex-col items-center sm:items-start gap-2 sm:gap-3">
                         <div className={`w-12 h-12 sm:w-10 sm:h-10 rounded-xl sm:rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
                           <item.icon className={`w-6 h-6 sm:w-8 sm:h-8 ${item.name === 'Ricordi' ? 'text-blue-400 dark:text-blue-400' :
-                              item.name === 'Galleria' ? 'text-purple-400 dark:text-purple-400' :
-                                item.name === 'Idee' ? 'text-yellow-400 dark:text-yellow-400' :
-                                  'text-green-400 dark:text-green-400'
+                            item.name === 'Galleria' ? 'text-purple-400 dark:text-purple-400' :
+                              item.name === 'Idee' ? 'text-yellow-400 dark:text-yellow-400' :
+                                'text-green-400 dark:text-green-400'
                             }`} />
                         </div>
                         <div className="text-center sm:text-left">
@@ -345,15 +344,15 @@ const Home = () => {
                         <div
                           key={stat.label}
                           className={`p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center hover:scale-105 transition-all duration-300 cursor-pointer ${stat.label === 'Ricordi' ? 'bg-blue-50 dark:bg-blue-950/50' :
-                              stat.label === 'Foto' ? 'bg-purple-50 dark:bg-[#2D1B69]/50' :
-                                stat.label === 'Idee' ? 'bg-yellow-50 dark:bg-[#392C1B]/50' :
-                                  'bg-green-50 dark:bg-[#1B392C]/50'
+                            stat.label === 'Foto' ? 'bg-purple-50 dark:bg-[#2D1B69]/50' :
+                              stat.label === 'Idee' ? 'bg-yellow-50 dark:bg-[#392C1B]/50' :
+                                'bg-green-50 dark:bg-[#1B392C]/50'
                             }`}
                         >
                           <div className={`text-2xl sm:text-3xl font-bold mb-1 ${stat.label === 'Ricordi' ? 'text-blue-600 dark:text-blue-400' :
-                              stat.label === 'Foto' ? 'text-purple-600 dark:text-purple-400' :
-                                stat.label === 'Idee' ? 'text-yellow-600 dark:text-yellow-400' :
-                                  'text-green-600 dark:text-green-400'
+                            stat.label === 'Foto' ? 'text-purple-600 dark:text-purple-400' :
+                              stat.label === 'Idee' ? 'text-yellow-600 dark:text-yellow-400' :
+                                'text-green-600 dark:text-green-400'
                             }`}>
                             {stat.value}
                           </div>
@@ -391,7 +390,7 @@ const Home = () => {
                             <div className="min-w-0">
                               <h3 className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white truncate">{ricordo.title}</h3>
                               <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-                                {formatDateRange(ricordo.data_inizio, ricordo.data_fine)}
+                                {formatDateRange(new Date(ricordo.data_inizio), ricordo.data_fine ? new Date(ricordo.data_fine) : null)}
                               </p>
                             </div>
                           </div>
