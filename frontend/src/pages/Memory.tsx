@@ -43,6 +43,17 @@ export default function Memory() {
   }>({});
   const [showUploadStatus, setShowUploadStatus] = useState(false);
 
+  // Ripristina lo stato dell'upload dal localStorage
+  useEffect(() => {
+    const savedUploadingFiles = localStorage.getItem('uploadingFiles');
+    const isUploading = localStorage.getItem('isUploading');
+    
+    if (savedUploadingFiles && isUploading) {
+      setUploadingFiles(JSON.parse(savedUploadingFiles));
+      setShowUploadStatus(true);
+    }
+  }, []);
+
   // React Query per il fetching dei ricordi
   const { data: memories = [], isLoading, refetch } = useQuery<MemoryWithImages[]>({
     queryKey: ['memories'],

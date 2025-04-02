@@ -11,17 +11,19 @@ import { createPortal } from 'react-dom';
 
 type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
 
+interface UploadingFile {
+  fileName: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+  progress: number;
+  message: string;
+}
+
 interface MemoryUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   setUploadingFiles: React.Dispatch<React.SetStateAction<{
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
+    [key: string]: UploadingFile
   }>>;
   setShowUploadStatus: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -155,8 +157,9 @@ export default function MemoryUploadModal({
 
     setIsLoading(true);
     setError(null);
+
     try {
-      // Creo il ricordo
+      // Preparo i dati del ricordo
       const memoryData = {
         title: title.trim(),
         type,
@@ -166,12 +169,8 @@ export default function MemoryUploadModal({
         location: location.trim() || undefined,
       };
 
-      const response = await createMemory(memoryData);
-
-      // Se ci sono immagini, le carico
+      // Se ci sono immagini, preparo lo stato iniziale dell'upload
       if (selectedFiles.length > 0) {
-        setShowUploadStatus(true);
-
         // Inizializza lo stato per ogni file
         const initialUploadState = selectedFiles.reduce((acc, file) => {
           acc[file.name] = {
@@ -181,10 +180,24 @@ export default function MemoryUploadModal({
             message: 'In coda...'
           };
           return acc;
-        }, {} as { [key: string]: { fileName: string; status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound'; progress: number; message: string; } });
+        }, {} as { [key: string]: UploadingFile });
+
+        // Salva lo stato iniziale nel localStorage
+        localStorage.setItem('uploadingFiles', JSON.stringify(initialUploadState));
+        localStorage.setItem('isUploading', 'true');
 
         setUploadingFiles(initialUploadState);
+        setShowUploadStatus(true);
+      }
 
+      // Chiudo immediatamente il modal
+      handleClose();
+
+      // Creo il ricordo
+      const response = await createMemory(memoryData);
+
+      // Se ci sono immagini, avvio l'upload in background
+      if (selectedFiles.length > 0) {
         try {
           const uploadResponse = await uploadImages(selectedFiles, response.data.id);
 
@@ -198,6 +211,7 @@ export default function MemoryUploadModal({
                 newState[file].message = 'Inizio processamento';
               }
             });
+            localStorage.setItem('uploadingFiles', JSON.stringify(newState));
             return newState;
           });
 
@@ -216,25 +230,26 @@ export default function MemoryUploadModal({
                       setUploadingFiles(prev => {
                         const newState = { ...prev };
                         delete newState[file];
+                        localStorage.setItem('uploadingFiles', JSON.stringify(newState));
                         if (Object.keys(newState).length === 0) {
                           setShowUploadStatus(false);
+                          localStorage.removeItem('uploadingFiles');
+                          localStorage.removeItem('isUploading');
                           onSuccess?.();
                         }
                         return newState;
                       });
                     }, 2000);
-                  } else if (status.state === 'failed') {
-                    newState[file].message = 'Errore durante il caricamento';
-                  } else if (status.state === 'notfound') {
-                    newState[file].message = 'File non trovato';
+                  } else if (status.state === 'failed' || status.state === 'notfound') {
+                    newState[file].message = status.state === 'failed' ? 'Errore durante il caricamento' : 'File non trovato';
                   }
                 }
+                localStorage.setItem('uploadingFiles', JSON.stringify(newState));
                 return newState;
               });
             });
           });
         } catch (uploadError) {
-          setError('Errore durante il caricamento delle immagini');
           setUploadingFiles(prev => {
             const newState = { ...prev };
             Object.keys(newState).forEach(fileName => {
@@ -242,18 +257,18 @@ export default function MemoryUploadModal({
               newState[fileName].progress = 0;
               newState[fileName].message = 'Errore durante il caricamento';
             });
+            localStorage.setItem('uploadingFiles', JSON.stringify(newState));
             return newState;
           });
-          return;
         }
+      } else {
+        // Se non ci sono immagini, chiamo onSuccess
+        onSuccess?.();
       }
-
-      // Chiudi il modale subito dopo l'inizio dell'upload
-      handleClose();
     } catch (err) {
       setError('Errore durante il salvataggio del ricordo');
-    } finally {
       setIsLoading(false);
+      return;
     }
   };
 
