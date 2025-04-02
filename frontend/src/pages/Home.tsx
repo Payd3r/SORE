@@ -236,7 +236,7 @@ const Home = () => {
       </div>
     );
   }
-
+  console.log(homeData);
   return (
     <div className="w-full min-h-screen pb-[30px] sm:pb-[150px] overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 h-[100px] sm:h-[200px] bg-gradient-to-b from-blue-600/10 dark:bg-gray-900 pointer-events-none z-0" />

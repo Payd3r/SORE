@@ -22,6 +22,7 @@ build/
 logs/
 *.log
 
+
 # Media files
 media/
 
@@ -31,3 +32,6 @@ temp/
 
 # TypeScript cache
 *.tsbuildinfo 
+
+# Cosa
+queue/

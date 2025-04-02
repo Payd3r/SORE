@@ -136,8 +136,16 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
         created_at: date.toISOString()
       });
 
-      // Invalida la query per aggiornare i dati
+      // Invalida tutte le query relative alle immagini per aggiornare i dati
+      await queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
       await queryClient.invalidateQueries({ queryKey: ['image', image?.id] });
+      
+      // Aggiorna i dati locali
+      if (image) {
+        image.type = editData.type;
+        image.created_at = date.toISOString();
+      }
+      
       setIsEditing(false);
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);

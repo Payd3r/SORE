@@ -65,27 +65,27 @@ export default function UploadStatus({ show, uploadingFiles, onClose }: UploadSt
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[90vw] sm:w-[40vw] w-full max-h-[90vh] overflow-y-auto upload-status-modal"
+        className="bg-white dark:bg-gray-800 mx-4 sm:mx-0 rounded-lg shadow-xl w-[90vw] sm:w-[40vw] w-full max-h-[60vh] sm:max-h-[90vh] overflow-y-auto upload-status-modal"
         onClick={e => e.stopPropagation()}
         style={{
           position: 'relative',
           margin: 'auto',
-          maxHeight: '90vh'
+          maxWidth: 'calc(100vw - 2rem)',
         }}
       >
         {/* Header */}
-        <div className="flex-none px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+        <div className="flex-none px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Stato Caricamento
           </h2>          
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-3 py-3 sm:p-4 space-y-3 overflow-y-auto">
+        <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 8rem)' }}>
           {Object.entries(uploadingFiles).map(([fileName, file]) => (
             <div
               key={fileName}
-              className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4"
+              className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">

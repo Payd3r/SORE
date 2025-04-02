@@ -10,7 +10,7 @@ export const API_URLS = {
 };
 
 export const STATIC_URLS = {
-  images: 'http://192.168.0.23:3002',
+  images: 'http://101.58.39.17:3002',
 };
 
 export default API_URLS; 
