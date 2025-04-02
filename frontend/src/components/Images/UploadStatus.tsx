@@ -116,7 +116,7 @@ export default function UploadStatus({ show, uploadingFiles, onClose }: UploadSt
         </div>
 
         {/* Footer */}
-        <div className="flex-none border-t border-gray-200 dark:border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
+        <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
           <div className="flex justify-end">
             <button
               onClick={onClose}

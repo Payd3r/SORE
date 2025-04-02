@@ -6,7 +6,7 @@ const ProtectedRoute = () => {
   
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center">
+      <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="relative">
           <div className="w-16 h-16">
             <div className="absolute inset-0 rounded-full border-[3px] border-blue-200 dark:border-blue-900/30"></div>

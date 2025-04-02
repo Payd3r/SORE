@@ -445,6 +445,12 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                       dateFormat="dd/MM/yyyy"
                       locale={it}
                       className="text-right text-xs text-gray-500 dark:text-gray-400 bg-transparent border-none p-0"
+                      onCalendarOpen={() => {
+                        // Forza la chiusura della tastiera su mobile
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
                     />
                   ) : (
                     <>
