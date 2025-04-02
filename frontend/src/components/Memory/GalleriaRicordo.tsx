@@ -13,24 +13,6 @@ type ImageTypeFilter = 'all' | 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 interface GalleriaRicordoProps {
   memory: Memory;
   onImagesUploaded?: () => void;
-  uploadingFiles: {
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
-  };
-  setUploadingFiles: React.Dispatch<React.SetStateAction<{
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
-  }>>;
-  showUploadStatus: boolean;
-  setShowUploadStatus: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 type MemoryImage = {
@@ -45,7 +27,7 @@ type MemoryImage = {
   jpg_path?: string;
 };
 
-export default function GalleriaRicordo({ memory, onImagesUploaded, uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus }: GalleriaRicordoProps) {
+export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRicordoProps) {
   const [isCompactGrid, setIsCompactGrid] = useState<boolean>(memory.type.toLowerCase() !== 'semplice');
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -53,6 +35,15 @@ export default function GalleriaRicordo({ memory, onImagesUploaded, uploadingFil
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [imagesWithType, setImagesWithType] = useState<Map<number, string>>(new Map());
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [showUploadStatus, setShowUploadStatus] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<{
+    [key: string]: {
+      fileName: string;
+      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+      progress: number;
+      message: string;
+    }
+  }>({});
 
   // Carica i tipi delle immagini quando necessario
   useEffect(() => {

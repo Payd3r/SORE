@@ -3,9 +3,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import Layout from './components/Layout';
-import UploadStatus from './components/Images/UploadStatus';
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./pages/WelcomeAuthenticate'));
@@ -18,19 +17,7 @@ const Ideas = lazy(() => import('./pages/Ideas'));
 const Recap = lazy(() => import('./pages/Recap'));
 const Mappa = lazy(() => import('./pages/Mappa'));
 
-interface UploadingFile {
-  fileName: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-  progress: number;
-  message: string;
-}
-
 function App() {
-  const [uploadingFiles, setUploadingFiles] = useState<{
-    [key: string]: UploadingFile
-  }>({});
-  const [showUploadStatus, setShowUploadStatus] = useState(false);
-
   useEffect(() => {
     const forceViewportHeight = () => {
       // Calcola l'altezza reale del viewport su iOS
@@ -107,17 +94,6 @@ function App() {
     };
   }, []);
 
-  // Ripristina lo stato dell'upload dal localStorage
-  useEffect(() => {
-    const savedUploadingFiles = localStorage.getItem('uploadingFiles');
-    const isUploading = localStorage.getItem('isUploading');
-    
-    if (savedUploadingFiles && isUploading) {
-      setUploadingFiles(JSON.parse(savedUploadingFiles));
-      setShowUploadStatus(true);
-    }
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -139,39 +115,9 @@ function App() {
                 <Route element={<ProtectedRoute />}>
                   <Route element={<Layout />}>
                     <Route path="/" element={<Home />} />
-                    <Route 
-                      path="/ricordi" 
-                      element={
-                        <Memory 
-                          uploadingFiles={uploadingFiles}
-                          setUploadingFiles={setUploadingFiles}
-                          showUploadStatus={showUploadStatus}
-                          setShowUploadStatus={setShowUploadStatus}
-                        />
-                      } 
-                    />
-                    <Route 
-                      path="/ricordo/:id" 
-                      element={
-                        <DetailMemory 
-                          uploadingFiles={uploadingFiles}
-                          setUploadingFiles={setUploadingFiles}
-                          showUploadStatus={showUploadStatus}
-                          setShowUploadStatus={setShowUploadStatus}
-                        />
-                      } 
-                    />
-                    <Route 
-                      path="/galleria" 
-                      element={
-                        <Gallery 
-                          uploadingFiles={uploadingFiles}
-                          setUploadingFiles={setUploadingFiles}
-                          showUploadStatus={showUploadStatus}
-                          setShowUploadStatus={setShowUploadStatus}
-                        />
-                      } 
-                    />
+                    <Route path="/ricordi" element={<Memory />} />
+                    <Route path="/ricordo/:id" element={<DetailMemory />} />
+                    <Route path="/galleria" element={<Gallery />} />
                     <Route path="/idee" element={<Ideas />} />
                     <Route path="/mappa" element={<Mappa />} />
                     <Route path="/recap" element={<Recap />} />
@@ -185,15 +131,6 @@ function App() {
           </div>
         </Router>
       </AuthProvider>
-
-      {/* Upload Status Component */}
-      {showUploadStatus && (
-        <UploadStatus
-          show={showUploadStatus}
-          uploadingFiles={uploadingFiles}
-          onClose={() => setShowUploadStatus(false)}
-        />
-      )}
     </QueryClientProvider>
   );
 }

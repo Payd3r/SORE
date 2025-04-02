@@ -234,7 +234,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 }}
               style={{
                 maxHeight: `${modalDimensions.height}px`
-              }}
+                }}
               />
             )}
             {isImageLoading && (
