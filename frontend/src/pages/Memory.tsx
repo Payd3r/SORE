@@ -229,12 +229,6 @@ export default function Memory() {
     setHasMore(true);
   }, [searchQuery, selectedTypes]);
 
-  useEffect(() => {
-    if (location.state?.openUploadModal) {
-      setIsUploadModalOpen(true);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location]);
 
   // Chiudi i dropdown quando si clicca fuori
   useEffect(() => {

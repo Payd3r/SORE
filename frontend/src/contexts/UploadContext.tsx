@@ -21,31 +21,28 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
   const [uploadingFiles, setUploadingFiles] = useState<{ [key: string]: UploadingFile }>({});
   const [showUploadStatus, setShowUploadStatus] = useState(false);
 
+  // Calcola hasActiveUploads come uno stato derivato
+  const hasActiveUploads = Object.keys(uploadingFiles).length > 0;
+
   // Carica lo stato iniziale dal localStorage
   useEffect(() => {
     const savedUploadingFiles = localStorage.getItem('uploadingFiles');
-    const savedShowUploadStatus = localStorage.getItem('isUploading');
     
     if (savedUploadingFiles) {
       setUploadingFiles(JSON.parse(savedUploadingFiles));
-    }
-    if (savedShowUploadStatus === 'true') {
-      setShowUploadStatus(true);
     }
   }, []);
 
   // Salva lo stato nel localStorage quando cambia
   useEffect(() => {
-    if (Object.keys(uploadingFiles).length > 0) {
+    if (hasActiveUploads) {
       localStorage.setItem('uploadingFiles', JSON.stringify(uploadingFiles));
       localStorage.setItem('isUploading', 'true');
     } else {
       localStorage.removeItem('uploadingFiles');
       localStorage.removeItem('isUploading');
     }
-  }, [uploadingFiles]);
-
-  const hasActiveUploads = Object.keys(uploadingFiles).length > 0;
+  }, [uploadingFiles, hasActiveUploads]);
 
   return (
     <UploadContext.Provider value={{
