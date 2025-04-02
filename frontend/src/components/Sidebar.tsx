@@ -67,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               <div className="relative">
                 {user?.profile_picture_url ? (
                   <div className="relative h-16 w-16 sm:h-14 sm:w-14">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-600 dark:from-blue-500 dark:to-purple-700 rounded-full blur-md opacity-70 scale-90 animate-pulse-slow"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-600 dark:from-blue-500 dark:to-purple-700 rounded-full blur-md opacity-70 scale-90 animate-pulse-slow -z-10"></div>
                     <img
                       className="relative h-full w-full rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-lg"
                       src={getImageUrl(user.profile_picture_url)}
