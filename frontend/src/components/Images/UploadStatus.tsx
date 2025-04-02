@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface UploadStatusProps {
@@ -47,10 +47,6 @@ export default function UploadStatus({ show, uploadingFiles, onClose }: UploadSt
   }, [isVisible, onClose]);
 
   if (!isVisible) return null;
-
-  const hasActiveUploads = Object.values(uploadingFiles).some(file => 
-    file.status === 'queued' || file.status === 'processing'
-  );
 
   const modalContent = (
     <div 

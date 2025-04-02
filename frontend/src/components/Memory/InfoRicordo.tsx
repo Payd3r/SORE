@@ -239,7 +239,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
                 images={mapImages}
                 isLoading={isLoadingMap}
                 error={mapError}
-                bounds={mapBounds}
+                bounds={mapBounds || undefined}
               />
             </div>
           </div>
