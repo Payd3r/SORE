@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { UploadProvider } from './contexts/UploadContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -97,39 +98,41 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: 'var(--vw)',
-            height: 'var(--vh)',
-            overflow: 'hidden',
-            WebkitOverflowScrolling: 'touch'
-          }}>
-            <Suspense fallback={null}>
-              <Routes>
-                <Route path="/welcome" element={<WelcomeAuthenticate />} />
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<Layout />}>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/ricordi" element={<Memory />} />
-                    <Route path="/ricordo/:id" element={<DetailMemory />} />
-                    <Route path="/galleria" element={<Gallery />} />
-                    <Route path="/idee" element={<Ideas />} />
-                    <Route path="/mappa" element={<Mappa />} />
-                    <Route path="/recap" element={<Recap />} />
-                    <Route path="/profilo" element={<Profile />} />
-                    <Route path="/logout" element={<div>Logout...</div>} />
+        <UploadProvider>
+          <Router>
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: 'var(--vw)',
+              height: 'var(--vh)',
+              overflow: 'hidden',
+              WebkitOverflowScrolling: 'touch'
+            }}>
+              <Suspense fallback={null}>
+                <Routes>
+                  <Route path="/welcome" element={<WelcomeAuthenticate />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<Layout />}>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/ricordi" element={<Memory />} />
+                      <Route path="/ricordo/:id" element={<DetailMemory />} />
+                      <Route path="/galleria" element={<Gallery />} />
+                      <Route path="/idee" element={<Ideas />} />
+                      <Route path="/mappa" element={<Mappa />} />
+                      <Route path="/recap" element={<Recap />} />
+                      <Route path="/profilo" element={<Profile />} />
+                      <Route path="/logout" element={<div>Logout...</div>} />
+                    </Route>
                   </Route>
-                </Route>
-                <Route path="*" element={<Navigate to="/welcome" replace />} />
-              </Routes>
-            </Suspense>
-          </div>
-        </Router>
+                  <Route path="*" element={<Navigate to="/welcome" replace />} />
+                </Routes>
+              </Suspense>
+            </div>
+          </Router>
+        </UploadProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

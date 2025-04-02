@@ -7,6 +7,7 @@ import { getImageUrl } from '../../api/images';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ImageUploadModal from '../Images/ImageUploadModal';
 import UploadStatus from '../Images/UploadStatus';
+import { useUpload } from '../../contexts/UploadContext';
 
 type ImageTypeFilter = 'all' | 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 
@@ -35,15 +36,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [imagesWithType, setImagesWithType] = useState<Map<number, string>>(new Map());
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [showUploadStatus, setShowUploadStatus] = useState(false);
-  const [uploadingFiles, setUploadingFiles] = useState<{
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
-  }>({});
+  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
 
   // Carica i tipi delle immagini quando necessario
   useEffect(() => {
@@ -201,10 +194,8 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
           });
         });
       });
-
     } catch (error) {
       console.error('Error uploading images:', error);
-      // Aggiorna lo stato per mostrare l'errore
       setUploadingFiles(prev => {
         const newState = { ...prev };
         Object.keys(newState).forEach(fileName => {
@@ -303,12 +294,11 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
 
         {/* Bottone Carica */}
         <div className="flex items-center gap-2">
-          {Object.keys(uploadingFiles).length > 0 && (
+          {/* Upload Status Button */}
+          {hasActiveUploads && (
             <button
-              onClick={() => {                          
-                setShowUploadStatus(true);
-              }}
-              className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
+              onClick={() => setShowUploadStatus(true)}
+              className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -374,8 +364,14 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
 
       <ImageDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          setSelectedImage(null);
+          setTimeout(() => {
+            setIsDetailModalOpen(false);
+          }, 0);
+        }}
         image={selectedImage}
+        onImageDeleted={onImagesUploaded}
       />
     </div>
   );

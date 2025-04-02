@@ -8,6 +8,7 @@ import UploadStatus from '../components/Images/UploadStatus';
 import { useLocation } from 'react-router-dom';
 import LazyImage from '../components/Images/LazyImage';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useUpload } from '../contexts/UploadContext';
 
 type SortOption = 'newest' | 'oldest' | 'random';
 type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO';
@@ -34,15 +35,7 @@ export default function Gallery() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const location = useLocation();
-  const [uploadingFiles, setUploadingFiles] = useState<{
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
-  }>({});
-  const [showUploadStatus, setShowUploadStatus] = useState(false);
+  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
 
   // React Query per il fetching delle immagini
   const { data: images = [], isLoading: loading, refetch } = useQuery<ImageType[]>({
@@ -377,19 +370,22 @@ export default function Gallery() {
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-3">
-                    {Object.keys(uploadingFiles).length > 0 && (
-                      <button
-                        onClick={() => {
-                          setShowUploadStatus(true);
-                        }}
-                        className="btn btn-primary flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span className="hidden sm:inline">Upload</span>
-                      </button>
-                    )}
+                    {/* Upload Button */}
+                    <div className="flex items-center gap-2">
+                      {hasActiveUploads && (
+                        <button
+                          onClick={() => {
+                            setShowUploadStatus(true);
+                          }}
+                          className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          <span className="hidden sm:inline">Upload</span>
+                        </button>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         setIsSelectionMode(prev => !prev);

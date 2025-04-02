@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
 import UploadStatus from '../components/Images/UploadStatus';
+import { useUpload } from '../contexts/UploadContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
 
@@ -27,21 +29,13 @@ export default function Memory() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const location = useLocation();
   const { isAuthenticated } = useAuth();
+  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [visibleMemories, setVisibleMemories] = useState<number>(12);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [uploadingFiles, setUploadingFiles] = useState<{
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
-  }>({});
-  const [showUploadStatus, setShowUploadStatus] = useState(false);
 
   // Ripristina lo stato dell'upload dal localStorage
   useEffect(() => {
@@ -55,7 +49,7 @@ export default function Memory() {
   }, []);
 
   // React Query per il fetching dei ricordi
-  const { data: memories = [], isLoading, refetch } = useQuery<MemoryWithImages[]>({
+  const { data: memories = [], isLoading } = useQuery<MemoryWithImages[]>({
     queryKey: ['memories'],
     queryFn: async () => {
       const data = await getMemories();
@@ -285,6 +279,8 @@ export default function Memory() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const queryClient = useQueryClient();
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -327,7 +323,7 @@ export default function Memory() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {Object.keys(uploadingFiles).length > 0 && (
+                  {hasActiveUploads && (
                     <button
                       onClick={() => {
                         setShowUploadStatus(true);
@@ -507,29 +503,23 @@ export default function Memory() {
         </div>
       </div>
 
-      {/* Upload Modal */}
+      {/* Upload Status Modal */}
+      <UploadStatus
+        show={showUploadStatus}
+        uploadingFiles={uploadingFiles}
+        onClose={() => setShowUploadStatus(false)}
+      />
+
+      {/* Memory Upload Modal */}
       <MemoryUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onSuccess={() => {
-          refetch();
-          setIsUploadModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['memories'] });
         }}
         setUploadingFiles={setUploadingFiles}
         setShowUploadStatus={setShowUploadStatus}
       />
-
-      {/* Upload Status Component */}
-      {showUploadStatus && (
-        <UploadStatus
-          show={showUploadStatus}
-          uploadingFiles={uploadingFiles}
-          onClose={() => setShowUploadStatus(false)}
-        />
-      )}
-
-
-
     </>
   );
 } 
