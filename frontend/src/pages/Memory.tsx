@@ -23,7 +23,30 @@ interface MemoryWithImages extends Memory {
   images: MemoryImage[];
 }
 
-export default function Memory() {
+interface UploadingFile {
+  fileName: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+  progress: number;
+  message: string;
+}
+
+interface MemoryProps {
+  uploadingFiles: {
+    [key: string]: UploadingFile;
+  };
+  setUploadingFiles: React.Dispatch<React.SetStateAction<{
+    [key: string]: UploadingFile;
+  }>>;
+  showUploadStatus: boolean;
+  setShowUploadStatus: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export default function Memory({
+  uploadingFiles,
+  setUploadingFiles,
+  showUploadStatus,
+  setShowUploadStatus
+}: MemoryProps) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -33,15 +56,6 @@ export default function Memory() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [visibleMemories, setVisibleMemories] = useState<number>(12);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [uploadingFiles, setUploadingFiles] = useState<{
-    [key: string]: {
-      fileName: string;
-      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-      progress: number;
-      message: string;
-    }
-  }>({});
-  const [showUploadStatus, setShowUploadStatus] = useState(false);
 
   // Ripristina lo stato dell'upload dal localStorage
   useEffect(() => {
@@ -527,9 +541,6 @@ export default function Memory() {
           onClose={() => setShowUploadStatus(false)}
         />
       )}
-
-
-
     </>
   );
 } 

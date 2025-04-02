@@ -29,7 +29,33 @@ interface ProcessedCarouselImage extends CarouselImage {
   processedUrl: string;
 }
 
-export default function DetailMemory() {
+interface DetailMemoryProps {
+  uploadingFiles: {
+    [key: string]: {
+      fileName: string;
+      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+      progress: number;
+      message: string;
+    }
+  };
+  setUploadingFiles: React.Dispatch<React.SetStateAction<{
+    [key: string]: {
+      fileName: string;
+      status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+      progress: number;
+      message: string;
+    }
+  }>>;
+  showUploadStatus: boolean;
+  setShowUploadStatus: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export default function DetailMemory({
+  uploadingFiles,
+  setUploadingFiles,
+  showUploadStatus,
+  setShowUploadStatus
+}: DetailMemoryProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -216,6 +242,10 @@ export default function DetailMemory() {
     setActiveTab('galleria');
     // Scroll alla sezione della galleria con animazione smooth
     galleriaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const refetch = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['memory', id] });
   };
 
   if (!memory) return <div className="flex items-center justify-center h-screen">Caricamento...</div>;
@@ -413,14 +443,28 @@ export default function DetailMemory() {
                   <div className="mt-4 sm:mt-6" ref={galleriaRef}>
                     {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={handleVisitGallery} />}
                     {activeTab === 'cronologia' && <CronologiaRicordo memory={memory} />}
-                    {activeTab === 'galleria' && <GalleriaRicordo memory={memory} />}
+                    {activeTab === 'galleria' && <GalleriaRicordo
+                      memory={memory}
+                      onImagesUploaded={refetch}
+                      uploadingFiles={uploadingFiles}
+                      setUploadingFiles={setUploadingFiles}
+                      showUploadStatus={showUploadStatus}
+                      setShowUploadStatus={setShowUploadStatus}
+                    />}
                   </div>
                 </>
               ) : (
                 <>
                   <InfoRicordo memory={memory} onVisitGallery={handleVisitGallery} />
                   <div className="mt-6" ref={galleriaRef}>
-                    <GalleriaRicordo memory={memory} />
+                    <GalleriaRicordo
+                      memory={memory}
+                      onImagesUploaded={refetch}
+                      uploadingFiles={uploadingFiles}
+                      setUploadingFiles={setUploadingFiles}
+                      showUploadStatus={showUploadStatus}
+                      setShowUploadStatus={setShowUploadStatus}
+                    />
                   </div>
                 </>
               )}
