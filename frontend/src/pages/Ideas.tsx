@@ -47,8 +47,8 @@ export default function Ideas() {
     (selectedTypes.size === 0 || selectedTypes.has(idea.type as IdeaTypeFilter)) &&
     idea.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
     ((statusFilter === 'all') ||
-     (statusFilter === 'completed' && idea.checked === 1) ||
-     (statusFilter === 'pending' && idea.checked === 0))
+      (statusFilter === 'completed' && idea.checked === 1) ||
+      (statusFilter === 'pending' && idea.checked === 0))
   );
 
   const handleCheckChange = () => {
@@ -56,7 +56,7 @@ export default function Ideas() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-transparent">      
+    <div className="w-full min-h-screen bg-transparent pb-[30px] sm:pb-[170px]">
       <div className="relative max-w-7xl mx-auto">
         {/* Safe area per la notch */}
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
@@ -64,7 +64,7 @@ export default function Ideas() {
           <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
             <div className="flex justify-between items-center mb-4 sm:mb-8">
               <div>
-                <h1 className="text-3xl font-bold mb-2 dark:text-white">Le Nostre Idee</h1>
+                <h1 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-white">Le Nostre Idee</h1>
                 <p className="hidden sm:block text-gray-600 dark:text-gray-400">Organizza e gestisci le idee per il futuro</p>
               </div>
               <button
@@ -265,7 +265,7 @@ export default function Ideas() {
       <IdeaUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={() => {}}
+        onSuccess={() => { }}
       />
 
       <DetailIdeaModal
@@ -275,7 +275,7 @@ export default function Ideas() {
           setIsDetailModalOpen(false);
           setSelectedIdea(null);
         }}
-        onIdeaDeleted={() => {}}
+        onIdeaDeleted={() => { }}
         onIdeaUpdated={() => {
           // Implementa la logica per aggiornare la lista delle idee
         }}

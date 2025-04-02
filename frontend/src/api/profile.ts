@@ -79,7 +79,7 @@ export const uploadProfilePicture = async (file: File): Promise<AuthResponse['us
 };
 
 export const updatePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
-  const response = await fetch(`${API_URLS.base}/auth/password`, {
+  const response = await fetch(`${API_URLS.base}/api/users/edit-password`, {
     method: 'PUT',
     headers: {
       ...getAuthHeaders(),

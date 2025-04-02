@@ -6,6 +6,8 @@ import { debounce } from 'lodash';
 import { searchTracks } from '../../api/spotify';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import { createPortal } from 'react-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ExtendedMemory extends Memory {
   created_by_name: string;
@@ -35,7 +37,14 @@ interface SpotifyTrack {
 }
 
 const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memory, onSave }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    start_date: string;
+    end_date?: string;
+    location: string;
+    song: string;
+    description: string;
+  }>({
     title: memory.title,
     start_date: memory.start_date ? format(new Date(memory.start_date), 'yyyy-MM-dd', { locale: it }) : '',
     end_date: memory.end_date ? format(new Date(memory.end_date), 'yyyy-MM-dd', { locale: it }) : '',
@@ -48,6 +57,7 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (isOpen) {
@@ -94,8 +104,13 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const dataToSave = { ...formData };
+    if (!dataToSave.end_date) {
+      delete dataToSave.end_date;
+    }
     try {
-      await onSave(formData);
+      await onSave(dataToSave);
+      queryClient.invalidateQueries({ queryKey: ['memory', memory.id] });
       onClose();
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
@@ -115,14 +130,32 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
 
   if (!isOpen) return null;
 
-  return (
-    <>
-      {/* Backdrop con blur */}
-      <div className="fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl shadow-xl dark:shadow-2xl pointer-events-auto">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999]"
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        height: '100vh',
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[90vw] sm:w-[40vw] max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          margin: 'auto',
+          maxHeight: '90vh'
+        }}
+      >
+        <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Modifica Ricordo</h2>
           </div>
@@ -169,6 +202,10 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
                     dateFormat="dd/MM/yyyy"
                     locale={it}
                     placeholderText="Seleziona la data di fine"
+                    minDate={formData.start_date ? new Date(formData.start_date) : undefined}
+                    openToDate={formData.start_date ? new Date(formData.start_date) : undefined}
+                    calendarStartDay={1}
+                    className="input-base"
                   />
                 </div>
               </div>
@@ -267,8 +304,10 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
           </form>
         </div>
       </div>
-    </>
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default MemoryEditModal; 

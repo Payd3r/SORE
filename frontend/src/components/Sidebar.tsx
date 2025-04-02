@@ -23,13 +23,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(() => {
-    // Controlla se c'è una preferenza salvata
     const savedTheme = localStorage.getItem('darkMode');
     return savedTheme ? savedTheme === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
   useEffect(() => {
-    // Applica il tema all'avvio
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -56,34 +54,59 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
-
   return (
     <div className="flex flex-col h-screen w-72 sm:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       {/* Header con profilo */}
       <div className="relative">
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-white dark:bg-gray-900"></div>
-        <div className="p-6 sm:p-4 border-b border-gray-200 dark:border-gray-800 mt-14 sm:mt-4">
-          <div className="flex items-center gap-4">
-            {user?.profile_picture_url ? (
-              <img
-                className="h-8 w-8 rounded-full"
-                src={getImageUrl(user.profile_picture_url)}
-                alt={user.name}
-              />
-            ) : (
-              <div className="w-14 h-14 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl sm:text-xl font-semibold shadow-md ring-4 ring-blue-100 dark:ring-blue-900/50">
-                {user?.name?.[0] || 'U'}
+        <div className="p-5 sm:p-4 border-b border-gray-200 dark:border-gray-800 mt-14 sm:mt-4">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-500/20 dark:via-purple-500/20 dark:to-blue-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            
+            <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-3 py-2 px-3 rounded-xl transition-all duration-300 hover:shadow-md">
+              <div className="relative">
+                {user?.profile_picture_url ? (
+                  <div className="relative h-16 w-16 sm:h-14 sm:w-14">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-600 dark:from-blue-500 dark:to-purple-700 rounded-full blur-md opacity-70 scale-90 animate-pulse-slow"></div>
+                    <img
+                      className="relative h-full w-full rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-lg"
+                      src={getImageUrl(user.profile_picture_url)}
+                      alt={user.name}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative h-16 w-16 sm:h-14 sm:w-14">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-600 dark:from-blue-500 dark:to-purple-700 rounded-full blur-md opacity-70 scale-90 animate-pulse-slow"></div>
+                    <div className="relative h-full w-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl sm:text-xl font-bold shadow-md border-2 border-white dark:border-gray-800">
+                      {user?.name?.[0] || 'U'}
+                    </div>
+                  </div>
+                )}
+                <div className="absolute bottom-0 right-0 h-3.5 w-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
               </div>
-            )}
-            <span className="text-gray-900 dark:text-white font-semibold text-xl sm:text-lg tracking-wide">
-              {user?.name || 'Utente'}
-            </span>
+              
+              <div className="flex flex-col items-center sm:items-start mt-1 sm:mt-0 sm:ml-1 flex-1">
+                <span className="text-gray-900 dark:text-white font-semibold text-lg sm:text-base tracking-wide">
+                  {user?.name || 'Utente'}
+                </span>
+                
+                <Link
+                  to="/profilo"
+                  className="mt-2 sm:mt-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" />
+                  </svg>
+                  Visualizza profilo
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Menu principale */}
-      <nav className="flex-1 p-6 sm:p-4">
+      <nav className="flex-1 p-6 sm:p-4 pb-0 sm:pb-4">
         <ul className="space-y-2">
           <li>
             <Link
@@ -167,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       </nav>
 
       {/* Footer con profilo e tema */}
-      <div className="p-6 sm:p-4 border-t border-gray-200 dark:border-gray-800 pb-safe-bottom">
+      <div className="p-6 sm:p-4 border-t border-gray-200 dark:border-gray-800 pb-safe-bottom mb-3 sm:mb-0">
         <Link
           to="/profilo"
           onClick={onClose}

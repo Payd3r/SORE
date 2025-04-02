@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Map from '../components/Maps/Map';
-import { getMapImages, type ImageLocation } from '../api/map';
+import { getMapImages } from '../api/map';
 import { PhotoIcon, GlobeAltIcon, CalendarIcon, ChartBarIcon, MapPinIcon } from '@heroicons/react/24/outline';
 
 type StatsType = {
@@ -56,7 +56,7 @@ export default function Mappa() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent">
+    <div className="min-h-screen bg-transparent pb-[30px] sm:pb-[180px]">
       <div className="relative max-w-7xl mx-auto">
         {/* Safe area per la notch */}
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
@@ -64,7 +64,7 @@ export default function Mappa() {
           {/* Header Section */}
           <div className="mb-4 sm:mb-8">
             <div className="flex items-center gap-3 mb-2">            
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mappa dei Ricordi</h1>
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">Mappa dei Ricordi</h1>
             </div>
             <p className="hidden sm:block text-gray-600 dark:text-gray-300">
               Esplora i tuoi momenti speciali attraverso il mondo
@@ -147,7 +147,7 @@ export default function Mappa() {
             </div>
 
             {/* Quick Stats */}
-            <div className="lg:col-span-1 lg:col-start-5 space-y-4">
+            <div className="lg:col-span-1 lg:col-start-5 grid grid-cols-2 lg:grid-cols-1 gap-4">
               <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   <PhotoIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
@@ -181,7 +181,7 @@ export default function Mappa() {
                 <div className="flex items-center gap-3">
                   <ChartBarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" />
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Media per Paese</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Media Paese</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {stats.totalCountries ? Math.round(images.length / stats.totalCountries) : 0}
                     </p>

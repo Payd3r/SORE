@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserInfo, getCoupleInfo } from '../api/profile';
 import { UserInfo, CoupleInfo } from '../api/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Tab } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 import EditProfileModal from '../components/Profile/EditProfileModal';
@@ -10,16 +10,37 @@ import DeleteAccountModal from '../components/Profile/DeleteAccountModal';
 import { ChangePassModal } from '../components/Profile/ChangePassModal';
 import { getImageUrl } from '../api/images';
 
+
 const Profile: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
+    const queryClient = useQueryClient();
 
     const handleLogout = () => {
         logout();
         navigate('/login');
+    };
+
+    // Funzione per aggiornare i dati dell'utente
+    const refreshUserData = () => {
+        if (user?.id) {
+            queryClient.invalidateQueries({ queryKey: ['user-info', user.id] });
+        }
+    };
+
+    // Funzione per chiudere il modal e aggiornare i dati
+    const handleEditModalClose = () => {
+        setIsEditModalOpen(false);
+        refreshUserData();
+    };
+
+    // Funzione per chiudere il modal di cambio password e aggiornare i dati
+    const handlePasswordModalClose = () => {
+        setIsChangePassModalOpen(false);
+        refreshUserData();
     };
 
     // React Query per il fetching dei dati dell'utente
@@ -45,8 +66,8 @@ const Profile: React.FC = () => {
     });
 
     const isLoading = isLoadingUser || isLoadingCouple;
-    const error = !user?.id ? 'Utente non autenticato' : 
-                 !userInfo?.couple_id ? 'Nessuna coppia associata all\'utente' : null;
+    const error = !user?.id ? 'Utente non autenticato' :
+        !userInfo?.couple_id ? 'Nessuna coppia associata all\'utente' : null;
 
     if (isLoading) {
         return (
@@ -86,9 +107,9 @@ const Profile: React.FC = () => {
                 <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
                 <div className="mx-2 sm:mx-0 px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
                     <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
-                        <div className="mb-6 lg:mb-12">
-                            <h1 className="text-2xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-2 lg:mb-3">Profilo</h1>
-                            <p className="text-sm lg:text-base text-gray-500 dark:text-gray-400">Gestisci il tuo profilo e le impostazioni dell'account</p>
+                        <div className="mb-4 lg:mb-12">
+                            <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-0 lg:mb-3">Profilo</h1>
+                            <p className="hidden sm:block text-sm lg:text-base text-gray-500 dark:text-gray-400">Gestisci il tuo profilo e le impostazioni dell'account</p>
                         </div>
 
                         <Tab.Group>
@@ -288,7 +309,7 @@ const Profile: React.FC = () => {
 
             <EditProfileModal
                 isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
+                onClose={handleEditModalClose}
             />
 
             <DeleteAccountModal
@@ -298,7 +319,7 @@ const Profile: React.FC = () => {
 
             <ChangePassModal
                 isOpen={isChangePassModalOpen}
-                onClose={() => setIsChangePassModalOpen(false)}
+                onClose={handlePasswordModalClose}
             />
         </div>
     );

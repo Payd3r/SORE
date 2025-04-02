@@ -8,10 +8,19 @@ import { getTrackDetails, SpotifyTrack } from '../../api/spotify';
 import { getMemoryMapImages, type ImageLocation } from '../../api/map';
 import Map from '../Maps/Map';
 import { getImageUrl } from '../../api/images';
+import ImageDetailModal from '../Images/ImageDetailModal';
+import { ImageType } from '../../api/images';
 
 interface InfoRicordoProps {
   memory: Memory;
   onVisitGallery: () => void;
+}
+
+interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
 }
 
 const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => {
@@ -20,6 +29,9 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
   const [mapImages, setMapImages] = useState<ImageLocation[]>([]);
   const [isLoadingMap, setIsLoadingMap] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
 
   useEffect(() => {
     const fetchTrackInfo = async () => {
@@ -42,6 +54,30 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
       try {
         const images = await getMemoryMapImages(memory.id);
         setMapImages(images);
+        
+        // Calcola i bounds della mappa
+        if (images.length > 0) {
+          const bounds = images.reduce((acc, img) => ({
+            north: Math.max(acc.north, img.lat),
+            south: Math.min(acc.south, img.lat),
+            east: Math.max(acc.east, img.lon),
+            west: Math.min(acc.west, img.lon)
+          }), {
+            north: images[0].lat,
+            south: images[0].lat,
+            east: images[0].lon,
+            west: images[0].lon
+          });
+
+          // Aggiungi un po' di padding ai bounds
+          const padding = 0.1;
+          setMapBounds({
+            north: bounds.north + padding,
+            south: bounds.south - padding,
+            east: bounds.east + padding,
+            west: bounds.west - padding
+          });
+        }
       } catch (error) {
         console.error('Errore nel caricamento delle immagini sulla mappa:', error);
         setMapError('Errore nel caricamento delle immagini sulla mappa');
@@ -66,6 +102,26 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
 
   const handleGalleryClick = () => {
     onVisitGallery();
+  };
+
+  const handleImageClick = async (image: NonNullable<Memory['images']>[number]) => {
+    try {
+      setSelectedImage({
+        id: String(image.id),
+        latitude: null,
+        longitude: null,
+        created_by_user_id: 0,
+        created_by_name: null,
+        type: image.type || 'all',
+        image: image.thumb_big_path,
+        thumb_big_path: image.thumb_big_path,
+        created_at: image.created_at || new Date().toISOString(),
+        jpg_path: undefined
+      });
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      console.error('Errore nel caricamento dell\'immagine:', error);
+    }
   };
   
   return (
@@ -183,6 +239,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
                 images={mapImages}
                 isLoading={isLoadingMap}
                 error={mapError}
+                bounds={mapBounds}
               />
             </div>
           </div>
@@ -212,19 +269,21 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
                 {memory.images.slice(0, 5).map((image, index) => (
                   <div
                     key={index}
-                    className="aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
+                    onClick={() => handleImageClick(image)}
+                    className="group relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer touch-manipulation active:scale-95 active:opacity-90"
                   >
                     <img
                       src={getImageUrl(image.thumb_big_path)}
                       alt={`Preview ${index + 1}`}
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                     />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
                   </div>
                 ))}
                 {memory.images.length > 5 && (
                   <div
                     onClick={handleGalleryClick}
-                    className="aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center border border-gray-100 dark:border-gray-600 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-300"
+                    className="group relative aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center border border-gray-100 dark:border-gray-600 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-300"
                   >
                     <div className="text-center">
                       <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white group-hover:text-blue-500 transition-colors">
@@ -246,6 +305,14 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
           </div>
         </div>
       )}
+      <ImageDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedImage(null);
+        }}
+        image={selectedImage}
+      />
     </div>
   );
 };

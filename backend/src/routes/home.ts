@@ -1,7 +1,7 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
 import pool from '../config/db';
-import { Memory, Image } from '../types/db';
+import { Memory, Image, Idea } from '../types/db';
 import { RowDataPacket } from 'mysql2';
 import fs from 'fs';
 import path from 'path';
@@ -30,17 +30,20 @@ router.get('/', auth, async (req: any, res) => {
       [coupleId, coupleId, coupleId, coupleId]
     );
 
-    // Get random memories
+    // Get random memories with their associated images
     const [memories] = await pool.promise().query<Memory[]>(
       `SELECT 
-        id,
-        title,
-        start_date as data_inizio,
-        end_date as data_fine
-       FROM memories 
-       WHERE couple_id = ?
+        m.id,
+        m.title,
+        m.start_date as data_inizio,
+        m.end_date as data_fine,
+        i.thumb_big_path as image
+       FROM memories m
+       LEFT JOIN images i ON i.memory_id = m.id
+       WHERE m.couple_id = ?
+       GROUP BY m.id
        ORDER BY RAND()
-       LIMIT 3`,
+       LIMIT 6`,
       [coupleId]
     );
 
@@ -54,6 +57,33 @@ router.get('/', auth, async (req: any, res) => {
        WHERE couple_id = ?
        ORDER BY RAND()
        LIMIT 6`,
+      [coupleId]
+    );
+
+    // Get latest completed ideas
+    const [ideas] = await pool.promise().query<Idea[]>(
+      `SELECT 
+        id,
+        title,
+        description,
+        created_at,
+        date_checked
+       FROM ideas 
+       WHERE couple_id = ? AND date_checked IS NOT NULL
+       ORDER BY date_checked DESC
+       LIMIT 5`,
+      [coupleId]
+    );
+
+    // Get latest songs from memories
+    const [songs] = await pool.promise().query<Memory[]>(
+      `SELECT 
+        song as title       
+       FROM memories 
+       WHERE couple_id = ? 
+       AND song IS NOT NULL 
+       AND song != ''       
+       LIMIT 3`,
       [coupleId]
     );
 
@@ -81,7 +111,9 @@ router.get('/', auth, async (req: any, res) => {
         num_idee: stats[0].num_idee,
         num_luoghi: stats[0].num_luoghi,
         Ricordi: memories,
-        Images: validImages
+        Images: validImages,
+        Ideas: ideas,
+        Songs: songs
       }
     });
   } catch (error) {

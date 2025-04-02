@@ -68,7 +68,7 @@ router.get('/:imageId', auth, async (req: any, res) => {
     const { imageId } = req.params;
     const coupleId = req.user.coupleId;
 
-    const [rows] = await pool.promise().query<Image[]>(
+    const [rows] = await pool.promise().query<Image[]>((
       `SELECT 
         i.id,
         i.jpg_path,
@@ -81,7 +81,8 @@ router.get('/:imageId', auth, async (req: any, res) => {
         u.name as created_by_name
       FROM images i 
       LEFT JOIN users u ON i.created_by_user_id = u.id 
-      WHERE i.id = ?`,
+      WHERE i.id = ?`
+    ) as any,
       [imageId]
     );
 
@@ -147,11 +148,12 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
           status: 'queued'
         };
       } catch (error) {
-        console.error(`[Upload] Error queuing file ${file.originalname}:`, error instanceof Error ? error.message : 'Unknown error');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[Upload] Error queuing file ${file.originalname}:`, errorMessage);
         return {
           success: false,
           file: file.originalname,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: errorMessage
         };
       }
     });
@@ -165,7 +167,8 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
       data: results 
     });
   } catch (error) {
-    console.error('[Upload] Error during upload:', error instanceof Error ? error.message : 'Unknown error');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Upload] Error during upload:', errorMessage);
     res.status(500).json({ error: 'Failed to queue images for processing' });
   }
 });
@@ -176,8 +179,9 @@ router.delete('/:imageId', auth, async (req: any, res) => {
     const { imageId } = req.params;
     const coupleId = req.user.coupleId;
 
-    const [imageResult] = await pool.promise().query<Image[]>(
-      'SELECT * FROM images WHERE id = ?',
+    const [imageResult] = await pool.promise().query<Image[]>((
+      'SELECT * FROM images WHERE id = ?'
+    ) as any,
       [imageId]
     );
 
@@ -216,67 +220,54 @@ router.delete('/:imageId', auth, async (req: any, res) => {
 });
 
 // Update image metadata
-router.patch('/:imageId', auth, async (req: any, res) => {
+router.put('/:imageId/metadata', auth, async (req: any, res) => {
   try {
-    const { imageId } = req.params;
-    const {
-      description,
-      latitude,
-      longitude,
-      location,
-      taken_at,
-      type
-    } = req.body;
+    const imageId = req.params.imageId;
     const coupleId = req.user.coupleId;
+    const { type, created_at } = req.body;
 
-    const [imageResult] = await pool.promise().query<Image[]>(
-      'SELECT * FROM images WHERE id = ?',
-      [imageId]
+    // Valida i dati in input manualmente
+    if (!type || !Object.values(ImageType).includes(type)) {
+      return res.status(400).json({ error: 'Il campo \'type\' è mancante o non valido.' });
+    }
+
+    if (!created_at || isNaN(Date.parse(created_at))) {
+      return res.status(400).json({ error: 'Il campo \'created_at\' è mancante o non è una data valida.' });
+    }
+
+    // Verifica che l'immagine esista e appartenga alla coppia
+    const [images] = await pool.promise().query((
+      'SELECT id FROM images WHERE id = ? AND couple_id = ?'
+    ) as any,
+      [imageId, coupleId]
     );
 
-    if (imageResult.length === 0) {
-      return res.status(404).json({ error: 'Image not found' });
+    if (!images || (images as any[]).length === 0) {
+      return res.status(404).json({ error: 'Immagine non trovata' });
     }
 
-    const image = imageResult[0];
-
-    if (req.user.coupleId !== image.couple_id) {
-      return res.status(403).json({ error: 'Not authorized to update this image' });
-    }
-
-    const [result] = await pool.promise().query<ResultSetHeader>(
+    // Aggiorna i metadati
+    await pool.promise().query(
       `UPDATE images 
-       SET description = ?,
-           latitude = ?,
-           longitude = ?,
-           location = ?,
-           taken_at = ?,
-           type = ?
-       WHERE id = ?`,
-      [
-        description || null,
-        latitude || null,
-        longitude || null,
-        location || null,
-        taken_at || image.taken_at,
-        type || image.type,
-        imageId
-      ]
+       SET 
+        type = ?,
+        created_at = ?
+       WHERE id = ? AND couple_id = ?`,
+      [type, created_at, imageId, coupleId]
     );
 
-    const [updatedImage] = await pool.promise().query<Image[]>(
-      `SELECT i.*, u.name as created_by_name, m.title as memory_title 
-       FROM images i 
-       LEFT JOIN users u ON i.created_by_user_id = u.id 
-       LEFT JOIN memories m ON i.memory_id = m.id 
-       WHERE i.id = ?`,
-      [imageId]
-    );
+    res.json({ 
+      message: 'Metadati aggiornati con successo',
+      data: {
+        id: imageId,
+        type,
+        created_at
+      }
+    });
 
-    res.json({ data: updatedImage[0] });
   } catch (error) {
-    console.error('Errore aggiornamento metadata:', error);
-    res.status(500).json({ error: 'Failed to update image metadata' });
+    console.error('Error updating image metadata:', error);
+    res.status(500).json({ error: 'Errore durante l\'aggiornamento dei metadati' });
   }
 });
 
@@ -300,7 +291,8 @@ router.get('/status/:jobId', auth, async (req: any, res) => {
       data: job.data
     });
   } catch (error) {
-    console.error('[Status] Error checking job status:', error instanceof Error ? error.message : 'Unknown error');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Status] Error checking job status:', errorMessage);
     res.status(500).json({ error: 'Failed to check job status' });
   }
 });

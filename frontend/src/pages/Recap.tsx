@@ -119,13 +119,13 @@ const Recap: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-transparent">            
+        <div className="min-h-screen bg-transparent">
             <div className="relative max-w-7xl mx-auto">
                 {/* Safe area per la notch */}
                 <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
                 <div className="mx-2 sm:mx-0 px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
                     <div className="mb-10 sm:mb-6">
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Recap</h1>
+                        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">Recap</h1>
                         <p className="hidden sm:block text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2 sm:pb-4">Statistiche e analisi dei vostri ricordi insieme</p>
                     </div>
 
@@ -411,9 +411,9 @@ const Recap: React.FC = () => {
                                                         onClick={() => setSelectedUserId(user.id_utente)}
                                                         className={`flex-1 py-1.5 sm:py-2 px-2 sm:px-4 rounded-md font-medium transition-all duration-200
                                                             focus:outline-none focus:ring-0
-                                                            ${selectedUserId === user.id_utente 
-                                                            ? 'bg-blue-500 text-white shadow-sm' 
-                                                            : 'bg-transparent hover:bg-white/10 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'}`}
+                                                            ${selectedUserId === user.id_utente
+                                                                ? 'bg-blue-500 text-white shadow-sm'
+                                                                : 'bg-transparent hover:bg-white/10 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400'}`}
                                                     >
                                                         {user.nome_utente.split(' ')[0]}
                                                     </button>
@@ -427,7 +427,7 @@ const Recap: React.FC = () => {
                                                         {(() => {
                                                             const selectedUser = confrontoData.data.users.find(u => u.id_utente === selectedUserId);
                                                             if (!selectedUser) return null;
-                                                            
+
                                                             return (
                                                                 <>
                                                                     <div className="text-center">
@@ -495,7 +495,7 @@ const Recap: React.FC = () => {
                                                     </div>
                                                 </>
                                             )}
-                                            
+
                                         </div>
                                     </div>
                                 </Tab.Panel>

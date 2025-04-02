@@ -6,10 +6,6 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '../components/ui/button';
 
 type AuthMode = 'login' | 'register';
 type RegisterStep = 1 | 2 | 3;
@@ -163,7 +159,7 @@ const WelcomeAuthenticate = () => {
       {/* Theme Toggle */}
       <button
         onClick={toggleTheme}
-        className="absolute top-4 right-4 p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg bg-transparent focus:outline-none"
+        className="absolute top-10 sm:top-4 right-4 p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg bg-transparent focus:outline-none"
         aria-label={theme === 'light' ? 'Passa al tema scuro' : 'Passa al tema chiaro'}
       >
         {theme === 'light' ? (
@@ -333,7 +329,7 @@ const WelcomeAuthenticate = () => {
 
                   {/* Step 1: User Info */}
                   {registerStep === 1 && (
-                    <div className="space-y-6">
+                    <div className="space-y-3 sm:space-y-6">
                       <div className="space-y-1">
                         <label className={`block text-sm font-medium ${
                           theme === 'light' ? 'text-gray-700' : 'text-gray-300'

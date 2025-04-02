@@ -110,7 +110,7 @@ router.post('/register/join', async (req, res) => {
         email: userResult[0].email,
         coupleId: userResult[0].couple_id,
         themePreference: userResult[0].theme_preference || 'light',
-        profilePictureUrl: userResult[0].profile_picture_url
+        profile_picture_url: userResult[0].profile_picture_url
       },
     });
   } catch (error) {
@@ -222,7 +222,7 @@ router.post('/register/new', async (req, res) => {
           email: createdUser[0].email,
           coupleId: createdUser[0].couple_id,
           themePreference: createdUser[0].theme_preference || 'light',
-          profilePictureUrl: createdUser[0].profile_picture_url
+          profile_picture_url: createdUser[0].profile_picture_url
         },
       });
     } catch (error) {
@@ -253,21 +253,27 @@ router.post('/register/new', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  console.log('=== LOGIN ROUTE ===');
+  console.log('\n=== LOGIN ROUTE ===');
+  console.log('Request body:', { email: req.body.email, password: req.body.password ? '[REDACTED]' : undefined });
+  
   try {
     const { email, password } = req.body;
 
     // Validate input
     if (!email || !password) {
+      console.log('Login failed: Missing credentials');
       return res.status(400).json({ error: 'Email e password sono obbligatori' });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('Login failed: Invalid email format');
       return res.status(400).json({ error: 'Formato email non valido' });
     }
 
+    console.log('Searching for user with email:', email);
+    
     // Find user
     const [userResult] = await pool.promise().query<User[]>(
       'SELECT id, name, email, password_hash, couple_id, theme_preference, profile_picture_url FROM users WHERE email = ?',
@@ -275,23 +281,41 @@ router.post('/login', async (req, res) => {
     );
 
     if (userResult.length === 0) {
+      console.log('Login failed: User not found');
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
     const user = userResult[0];
+    console.log('User found:', { 
+      id: user.id, 
+      email: user.email, 
+      hasPasswordHash: !!user.password_hash,
+      coupleId: user.couple_id 
+    });
 
     // Check password
+    console.log('Verifying password...');
     const isMatch = await bcrypt.compare(password, user.password_hash);
+    console.log('Password verification result:', isMatch);
+    
     if (!isMatch) {
+      console.log('Login failed: Invalid password');
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
     // Generate token
+    console.log('Generating JWT token...');
     const token = jwt.sign(
       { id: user.id, email: user.email, coupleId: user.couple_id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
+
+    console.log('Login successful for user:', { 
+      id: user.id, 
+      email: user.email,
+      coupleId: user.couple_id 
+    });
 
     res.json({
       token,
@@ -301,11 +325,14 @@ router.post('/login', async (req, res) => {
         email: user.email,
         coupleId: user.couple_id,
         themePreference: user.theme_preference || 'light',
-        profilePictureUrl: user.profile_picture_url
+        profile_picture_url: user.profile_picture_url
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error:', error instanceof Error ? {
+      message: error.message,
+      stack: error.stack
+    } : error);
     res.status(500).json({ error: 'Errore durante il login' });
   }
 });

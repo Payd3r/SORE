@@ -168,15 +168,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
 
       // Avvia il polling per ogni immagine
       response.data.forEach(({ jobId, file }) => {
-        pollImageStatus(jobId, (status: ImageStatusResponse) => {
-          console.log(`Status update for ${file}:`, {
-            jobId,
-            state: status.state,
-            progress: status.progress,
-            status: status.status,
-            data: status.data
-          });
-
+        pollImageStatus(jobId, (status: ImageStatusResponse) => {         
           setUploadingFiles(prev => {
             const newState = { ...prev };
             if (newState[file]) {
@@ -310,14 +302,28 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
         </div>
 
         {/* Bottone Carica */}
-        <button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="inline-flex items-center justify-center p-2 sm:px-4 sm:py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-colors duration-200"
-          title="Carica immagini"
-        >
-          <PlusIcon className="h-5 w-5 sm:mr-2" />
-          <span className="hidden sm:inline">Carica</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {Object.keys(uploadingFiles).length > 0 && (
+            <button
+              onClick={() => {                          
+                setShowUploadStatus(true);
+              }}
+              className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span className="hidden sm:inline">Upload</span>
+            </button>
+          )}
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span className="hidden sm:inline">Carica</span>
+          </button>
+        </div>
       </div>
 
       {/* Gallery Grid */}
@@ -338,23 +344,27 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
             <div
               key={image.id}
               onClick={() => handleImageClick(image)}
-              className="relative aspect-square overflow-hidden rounded-lg cursor-pointer group"
+              className="relative aspect-square overflow-hidden rounded-lg cursor-pointer group touch-manipulation active:scale-95 active:opacity-90 transition-all duration-200"
             >
               <img
                 src={getImageUrl(image.thumb_big_path)}
                 alt={`Immagine ${image.id}`}
                 className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
               />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
             </div>
           ))}
         </div>
       )}
 
-      <UploadStatus
-        show={showUploadStatus}
-        onClose={() => setShowUploadStatus(false)}
-        uploadingFiles={uploadingFiles}
-      />
+      {/* Upload Status Component */}
+      {showUploadStatus && (
+        <UploadStatus
+          show={showUploadStatus}
+          uploadingFiles={uploadingFiles}
+          onClose={() => setShowUploadStatus(false)}
+        />
+      )}
 
       <ImageUploadModal
         isOpen={isUploadModalOpen}

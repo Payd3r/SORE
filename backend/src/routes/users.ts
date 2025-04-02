@@ -8,39 +8,8 @@ import sharp from 'sharp';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { processImage, processProfilePicture } from '../services/imageProcessor';
 
 const router = express.Router();
-
-// Configurazione multer per il caricamento temporaneo
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join('media', 'temp');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = uuidv4();
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-// Configurazione multer per la foto profilo
-const profilePictureUpload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    console.log('Multer fileFilter - File:', file);
-    // Accetta solo immagini
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo le immagini sono permesse'));
-    }
-  }
-}).single('profile_picture');
-
 
 // Modifica password
 router.put('/edit-password', auth, async (req: any, res) => {

@@ -1,5 +1,6 @@
 import { API_URLS, STATIC_URLS } from './config';
 import { ApiResponse } from './types';
+import { getAuthHeaders } from './auth';
 
 export interface ImageType {
   id: string;
@@ -43,16 +44,6 @@ export interface ImageStatusResponse {
   status: string;
 }
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    throw new Error('Token di autenticazione non trovato');
-  }
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-};
 
 export const getGalleryImages = async (): Promise<ImageType[]> => {
   try {
@@ -193,6 +184,28 @@ export const deleteImage = async (imageId: string): Promise<void> => {
     }
   } catch (error) {
     console.error('Errore durante l\'eliminazione dell\'immagine:', error);
+    throw error;
+  }
+};
+
+interface ImageMetadata {
+  type: string;
+  created_at: string;
+}
+
+export const updateImageMetadata = async (imageId: string, metadata: ImageMetadata): Promise<void> => {
+  try {
+    const response = await fetch(`${API_URLS.base}/api/images/${imageId}/metadata`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(metadata),
+    });
+
+    if (!response.ok) {
+      throw new Error('Errore durante l\'aggiornamento dei metadata');
+    }
+  } catch (error) {
+    console.error('Errore nell\'aggiornamento dei metadata:', error);
     throw error;
   }
 }; 

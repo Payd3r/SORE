@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMemory, getMemoryCarousel, updateMemory, deleteMemory } from '../api/memory';
 import type { Memory } from '../api/memory';
 import { getImageUrl } from '../api/images';
-import { IoArrowBack, IoTrashOutline } from 'react-icons/io5';
+import { IoArrowBack } from 'react-icons/io5';
 import { IoCalendarOutline, IoLocationOutline, IoMusicalNotesOutline } from 'react-icons/io5';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -12,6 +12,7 @@ import InfoRicordo from '../components/Memory/InfoRicordo';
 import CronologiaRicordo from '../components/Memory/CronologiaRicordo';
 import GalleriaRicordo from '../components/Memory/GalleriaRicordo';
 import MemoryEditModal from '../components/Memory/MemoryEditModal';
+import DeleteModal from '../components/Memory/DeleteModal';
 
 export interface CarouselImage {
   image: string;
@@ -31,20 +32,22 @@ interface ProcessedCarouselImage extends CarouselImage {
 export default function DetailMemory() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('info');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [isTransitioning, setIsTransitioning] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const minSwipeDistance = 50;
+  const galleriaRef = useRef<HTMLDivElement>(null);
 
   // React Query per il fetching del ricordo
-  const { data: memory, isLoading: isLoadingMemory } = useQuery<ExtendedMemory>({
+  const { data: memory } = useQuery<ExtendedMemory>({
     queryKey: ['memory', id],
     queryFn: async () => {
       const response = await getMemory(id!);
@@ -55,7 +58,7 @@ export default function DetailMemory() {
   });
 
   // React Query per il fetching delle immagini del carousel
-  const { data: carouselImages = [], isLoading: isLoadingCarousel } = useQuery<ProcessedCarouselImage[]>({
+  const { data: carouselImages = [] } = useQuery<ProcessedCarouselImage[]>({
     queryKey: ['memoryCarousel', id],
     queryFn: async () => {
       const response = await getMemoryCarousel(id!);
@@ -67,8 +70,6 @@ export default function DetailMemory() {
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
-
-  const isLoading = isLoadingMemory || isLoadingCarousel;
 
   // Pre-load delle immagini quando cambiano
   useEffect(() => {
@@ -82,9 +83,9 @@ export default function DetailMemory() {
         });
       });
       
-      Promise.all(preloadImages)
-        .then(() => setImagesLoaded(true))
-        .catch(error => console.error('Error preloading images:', error));
+      Promise.all(preloadImages).catch(error => 
+        console.error('Error preloading images:', error)
+      );
     }
   }, [carouselImages]);
 
@@ -104,6 +105,7 @@ export default function DetailMemory() {
     setIsDeleting(true);
     try {
       await deleteMemory(id);
+      queryClient.invalidateQueries({ queryKey: ['memories'] });
       navigate('/ricordi');
     } catch (error) {
       console.error('Errore durante l\'eliminazione:', error);
@@ -210,10 +212,16 @@ export default function DetailMemory() {
     }
   };
 
-  if (!memory) return <div>Caricamento...</div>;
+  const handleVisitGallery = () => {
+    setActiveTab('galleria');
+    // Scroll alla sezione della galleria con animazione smooth
+    galleriaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  if (!memory) return <div className="flex items-center justify-center h-screen">Caricamento...</div>;
 
   return (
-    <div className="w-full min-h-screen bg-transparent">
+    <div className="w-full min-h-screen bg-transparent pb-[50px] sm:pb-[150px]">
       <div className="relative max-w-7xl mx-auto">
         {/* Safe area per la notch */}
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
@@ -222,10 +230,10 @@ export default function DetailMemory() {
           <div className="py-3">
             <Link
               to="/ricordi"
-              className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors w-fit py-2 px-3 -ml-3 cursor-pointer touch-manipulation"
+              className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 w-fit py-3 px-4 -ml-4 cursor-pointer touch-manipulation active:scale-95 active:opacity-80 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <IoArrowBack className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span className="select-none">Torna ai ricordi</span>
+              <IoArrowBack className="w-6 h-6 mr-2 flex-shrink-0" />
+              <span className="select-none text-base font-medium">Torna ai ricordi</span>
             </Link>
           </div>
 
@@ -247,7 +255,7 @@ export default function DetailMemory() {
               <div className="flex items-center space-x-2 sm:space-x-4">
                 <button
                   onClick={() => setIsEditModalOpen(true)}
-                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors focus:outline-none"
+                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors focus:outline-none flex items-center justify-center"
                   title="Modifica"
                 >
                   <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,7 +265,7 @@ export default function DetailMemory() {
                 </button>
                 <button
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none"
+                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none flex items-center justify-center"
                   title="Elimina"
                 >
                   <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -402,16 +410,16 @@ export default function DetailMemory() {
                   </div>
 
                   {/* Tab Content */}
-                  <div className="mt-6">
-                    {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={() => setActiveTab('galleria')} />}
+                  <div className="mt-4 sm:mt-6" ref={galleriaRef}>
+                    {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={handleVisitGallery} />}
                     {activeTab === 'cronologia' && <CronologiaRicordo memory={memory} />}
                     {activeTab === 'galleria' && <GalleriaRicordo memory={memory} />}
                   </div>
                 </>
               ) : (
                 <>
-                  <InfoRicordo memory={memory} onVisitGallery={() => { }} />
-                  <div className="mt-6">
+                  <InfoRicordo memory={memory} onVisitGallery={handleVisitGallery} />
+                  <div className="mt-6" ref={galleriaRef}>
                     <GalleriaRicordo memory={memory} />
                   </div>
                 </>
@@ -429,41 +437,13 @@ export default function DetailMemory() {
         onSave={handleUpdateMemory}
       />
 
-      {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <IoTrashOutline className="w-6 h-6 text-red-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Elimina Ricordo
-              </h3>
-            </div>
-
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Sei sicuro di voler eliminare questo ricordo? Questa azione non può essere annullata.
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {isDeleting ? 'Eliminazione...' : 'Elimina'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Modal */}
+      <DeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onDelete={handleDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 } 

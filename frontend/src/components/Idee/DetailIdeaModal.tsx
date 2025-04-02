@@ -4,6 +4,7 @@ import type { Idea } from '../../api/ideas';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { deleteIdea, updateIdea } from '../../api/ideas';
+import { createPortal } from 'react-dom';
 
 interface DetailIdeaModalProps {
   idea: Idea | null;
@@ -119,9 +120,31 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999]"
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        height: '100vh',
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-[90vw] sm:w-[30vw] max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          margin: 'auto',
+          maxHeight: '90vh'
+        }}
+      >
         <div className="p-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
@@ -150,7 +173,7 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
                     <button
                       onClick={handleSave}
                       disabled={updateMutation.isPending}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors focus:outline-none disabled:opacity-50"
+                      className="flex items-center gap-2 px-4 py-2 ms-4 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors focus:outline-none disabled:opacity-50"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -223,4 +246,6 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 } 

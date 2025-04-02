@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createIdea } from '../../api/ideas';
 import type { IdeaType } from '../../api/ideas';
+import { createPortal } from 'react-dom';
 
 interface IdeaUploadModalProps {
   isOpen: boolean;
@@ -64,9 +65,31 @@ export default function IdeaUploadModal({ isOpen, onClose, onSuccess }: IdeaUplo
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999]"
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        height: '100vh',
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      onClick={handleClose}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-[90vw] sm:w-[30vw] max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          margin: 'auto',
+          maxHeight: '90vh'
+        }}
+      >
         <div className="p-6">
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -149,4 +172,6 @@ export default function IdeaUploadModal({ isOpen, onClose, onSuccess }: IdeaUplo
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 } 

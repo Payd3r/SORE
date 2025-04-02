@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMap, Popup, useMapEvents } from 'react-leaflet';
+import { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, useMap, Popup } from 'react-leaflet';
 import { getImageUrl } from '../../api/images';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -57,38 +57,6 @@ const cleanCoordinates = (lat: number | string, lon: number | string): [number, 
 // Funzione per creare l'icona del cluster personalizzata
 const createClusterCustomIcon = (cluster: any) => {
   const count = cluster.getChildCount();
-  
-  // Per cluster grandi (più di 50 immagini)
-  if (count > 50) {
-    const markers = cluster.getAllChildMarkers();
-    // Prendi 4 marker casuali
-    const randomMarkers = markers
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 4);
-    
-    const previewsHtml = randomMarkers.map((marker: any, index: number) => {
-      const image = marker.options.image as ImageLocation;
-      return `
-        <div class="cluster-preview-image" style="grid-area: img${index + 1}">
-          <img src="${getImageUrl(image.thumb_small_path)}" alt="preview" />
-        </div>
-      `;
-    }).join('');
-
-    return new L.DivIcon({
-      html: `
-        <div class="cluster-icon-grid">
-          ${previewsHtml}
-          <div class="cluster-counter">+${count}</div>
-        </div>
-      `,
-      className: 'custom-cluster-icon',
-      iconSize: L.point(80, 80),
-      iconAnchor: L.point(40, 40)
-    });
-  }
-  
-  // Per cluster più piccoli, usa lo stile normale
   const size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
   
   return new L.DivIcon({
@@ -116,226 +84,28 @@ const createCustomIcon = (image: ImageLocation) => {
   });
 };
 
-// Componente per gestire i popup
-function PopupManager() {
-  useEffect(() => {
-    // Aggiungi stili CSS personalizzati per il popup e marker oscurato
-    const style = document.createElement('style');
-    style.textContent = `
-      .custom-popup .leaflet-popup-content-wrapper {
-        background: transparent;
-        box-shadow: none;
-        padding: 0;
-      }
-      .custom-popup .leaflet-popup-content {
-        margin: 0;
-        border: none;
-        background: transparent;
-      }
-      .custom-popup .leaflet-popup-tip-container {
-        display: none;
-      }
-      .custom-popup .leaflet-popup-close-button {
-        display: none;
-      }
-      .custom-popup-image {
-        max-width: 300px;
-        max-height: 400px;
-        width: auto;
-        height: auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        transition: transform 0.2s ease;
-      }
-      .custom-popup-image:hover {
-        transform: scale(1.02);
-      }
-      .dark .custom-popup-image {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
-      }
-      .marker-dimmed img {
-        opacity: 0.3;
-        transition: opacity 0.3s ease;
-      }
-      .leaflet-control-attribution {
-        display: none;
-      }
-      .leaflet-container {
-        z-index: 1 !important;
-      }
-      .leaflet-control-zoom {
-        border: none !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-        margin-left: 16px !important;
-        margin-bottom: 16px !important;
-        z-index: 1 !important;
-      }
-      .leaflet-control-zoom-in,
-      .leaflet-control-zoom-out {
-        width: 36px !important;
-        height: 36px !important;
-        line-height: 36px !important;
-        background-color: white !important;
-        border: none !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
-        color: #4B5563 !important;
-        transition: all 0.2s ease !important;
-      }
-      .leaflet-control-zoom-in:hover,
-      .leaflet-control-zoom-out:hover {
-        background-color: #F3F4F6 !important;
-        color: #1F2937 !important;
-      }
-      .leaflet-control-zoom-in {
-        border-top-left-radius: 8px !important;
-        border-top-right-radius: 8px !important;
-      }
-      .leaflet-control-zoom-out {
-        border-bottom-left-radius: 8px !important;
-        border-bottom-right-radius: 8px !important;
-      }
-      .dark .leaflet-control-zoom-in,
-      .dark .leaflet-control-zoom-out {
-        background-color: #374151 !important;
-        color: #D1D5DB !important;
-      }
-      .dark .leaflet-control-zoom-in:hover,
-      .dark .leaflet-control-zoom-out:hover {
-        background-color: #4B5563 !important;
-        color: #F9FAFB !important;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  return null;
-}
-
-// Componente per gestire gli eventi della mappa
-function MapEventHandler() {
-  const map = useMap();
-  
-  useMapEvents({
-    click: () => {
-      map.closePopup();
-    },
-  });
-
-  return null;
-}
-
-// Componente per gestire i marker sulla mappa
-function Markers({ images }: { images: ImageLocation[] }) {  
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => {
-      window.removeEventListener('resize', checkMobile);
-    };
-  }, []);
-
-  // Filtra le immagini con coordinate valide
-  const validImages = images.filter(img => {
-    const coords = cleanCoordinates(img.lat, img.lon);
-    return coords !== null;
-  });
-
-  return (
-    <MarkerClusterGroup
-      chunkedLoading
-      iconCreateFunction={createClusterCustomIcon}
-      spiderfyOnMaxZoom={true}
-      showCoverageOnHover={false}
-      zoomToBoundsOnClick={true}
-      disableClusteringAtZoom={isMobile ? 16 : 18}
-      spiderLegPolylineOptions={{
-        weight: 1.5,
-        color: '#222',
-        opacity: 0.5,
-        className: 'dark:!stroke-gray-200'
-      }}
-      spiderfyDistanceMultiplier={isMobile ? 2 : 1.5}
-      maxClusterRadius={(zoom: number) => {
-        const baseFactor = isMobile ? 1.25 : 1;
-        if (zoom <= 10) return 120 * baseFactor;
-        if (zoom <= 13) return 100 * baseFactor;
-        if (zoom <= 15) return 80 * baseFactor;
-        if (zoom <= 16) return 60 * baseFactor;
-        if (zoom <= 17) return 40 * baseFactor;
-        return 20 * baseFactor;
-      }}
-      animate={true}
-      animateAddingMarkers={true}
-      removeOutsideVisibleBounds={true}
-      polygonOptions={{
-        fillColor: '#3B82F6',
-        color: '#2563EB',
-        weight: 2,
-        opacity: 0.5
-      }}
-      chunkInterval={100}
-      chunkDelay={50}
-      chunkProgress={(processed: number, total: number) => {
-        if (processed === total && total > 500) {
-          console.log('Rendering completato: ', processed, ' marker su ', total);
-        }
-      }}
-      singleMarkerMode={false}
-    >
-      {validImages.map((image) => {
-        const coords = cleanCoordinates(image.lat, image.lon);
-        if (!coords) return null;
-        const [lat, lon] = coords;
-
-        return (
-          <Marker
-            key={image.id}
-            position={[lat, lon]}
-            icon={createCustomIcon(image)}
-          >
-            <Popup 
-              className="custom-popup"
-              maxWidth={isMobile ? 250 : 300}
-              minWidth={isMobile ? 150 : 200}
-              autoPanPadding={isMobile ? [50, 50] : [100, 100]}
-            >
-              <div className="relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
-                <img
-                  src={getImageUrl(image.thumb_big_path)}
-                  alt="Location"
-                  className="custom-popup-image"
-                  loading="lazy"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png';
-                  }}
-                />
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-    </MarkerClusterGroup>
-  );
-}
-
 // Componente per gestire il bounds della mappa
-function BoundsHandler({ images }: { images: ImageLocation[] }) {
+function BoundsHandler({ images, bounds }: { images: ImageLocation[], bounds?: MapProps['bounds'] }) {
   const map = useMap();
 
   useEffect(() => {
-    // Filtra le immagini con coordinate valide
+    // Se abbiamo bounds specifici, usiamoli
+    if (bounds) {
+      const latLngBounds = L.latLngBounds(
+        [[bounds.south, bounds.west], [bounds.north, bounds.east]]
+      );
+      
+      const isMobile = window.innerWidth < 768;
+      map.fitBounds(latLngBounds, { 
+        padding: isMobile ? [50, 50] : [100, 100],
+        maxZoom: isMobile ? 13 : 15,
+        animate: true,
+        duration: 1
+      });
+      return;
+    }
+
+    // Altrimenti, calcola i bounds dalle immagini
     const validImages = images.filter(img => {
       const coords = cleanCoordinates(img.lat, img.lon);
       return coords !== null;
@@ -349,17 +119,15 @@ function BoundsHandler({ images }: { images: ImageLocation[] }) {
         })
       );
       
-      // Aggiungi un padding più grande e una durata di animazione più lunga
-      // Aumentato il padding per essere più mobile-friendly
       const isMobile = window.innerWidth < 768;
       map.fitBounds(bounds, { 
         padding: isMobile ? [50, 50] : [100, 100],
-        maxZoom: isMobile ? 13 : 15,  // Zoom più limitato su mobile
+        maxZoom: isMobile ? 13 : 15,
         animate: true,
         duration: 1
       });
     }
-  }, [images, map]);
+  }, [images, map, bounds]);
 
   // Adatta la vista quando cambia la dimensione della finestra
   useEffect(() => {
@@ -408,6 +176,12 @@ interface MapProps {
     imagePath?: string;
     focusedImage?: boolean;
   };
+  bounds?: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
 }
 
 // Componente per gestire la posizione iniziale della mappa
@@ -451,14 +225,40 @@ function InitialLocationHandler({ initialLocation }: { initialLocation?: MapProp
   return null;
 }
 
-const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
-  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(initialLocation?.imageId || null);
+const Map = ({ images, isLoading, error, initialLocation, bounds }: MapProps) => {
+  const mapRef = useRef<L.Map | null>(null);
+  const [isMapReady, setIsMapReady] = useState(false);
 
+  // Gestione della pulizia della mappa
   useEffect(() => {
-    if (initialLocation?.imageId) {
-      setSelectedMarkerId(initialLocation.imageId);
-    }
-  }, [initialLocation]);
+    return () => {
+      if (mapRef.current) {
+        try {
+          // Rimuoviamo tutti i layer
+          mapRef.current.eachLayer((layer: L.Layer) => {
+            if (layer && typeof layer.remove === 'function') {
+              layer.remove();
+            }
+          });
+
+          // Chiudiamo tutti i popup aperti
+          mapRef.current.closePopup();
+
+          // Rimuoviamo la mappa
+          if (typeof mapRef.current.remove === 'function') {
+            mapRef.current.remove();
+          }
+        } catch (error) {
+          console.error('Errore durante la pulizia della mappa:', error);
+        }
+      }
+    };
+  }, []);
+
+  // Gestione del caricamento della mappa
+  const handleMapReady = () => {
+    setIsMapReady(true);
+  };
 
   // URL delle tile per tema chiaro e scuro
   const lightTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -469,25 +269,65 @@ const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
     return document.documentElement.classList.contains('dark') ? darkTileUrl : lightTileUrl;
   };
 
+  // Funzione per renderizzare il contenuto della mappa
+  const renderMapContent = () => (
+    <>
+      <InitialLocationHandler initialLocation={initialLocation} />
+      <TileLayer url={getTileUrl()} />
+      <BoundsHandler images={images} bounds={bounds} />
+      <MarkerClusterGroup
+        chunkedLoading
+        maxClusterRadius={50}
+        spiderfyOnMaxZoom={true}
+        showCoverageOnHover={false}
+        zoomToBoundsOnClick={true}
+        iconCreateFunction={createClusterCustomIcon}
+        spiderfyDistanceMultiplier={2}
+        disableClusteringAtZoom={19}
+      >
+        {images.map((image) => {
+          const coords = cleanCoordinates(image.lat, image.lon);
+          if (!coords) return null;
+
+          const customIcon = createCustomIcon(image);
+
+          return (
+            <Marker
+              key={image.id}
+              position={coords}
+              icon={customIcon}
+            >
+              <Popup className="custom-popup">
+                <img
+                  src={getImageUrl(image.thumb_big_path)}
+                  alt={`Location ${image.id}`}
+                  className="custom-popup-image"
+                />
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MarkerClusterGroup>
+    </>
+  );
+
+  const mapContainer = (
+    <MapContainer
+      center={[41.9028, 12.4964]}
+      zoom={6}
+      className="w-full h-full"
+      zoomControl={true}
+      ref={mapRef}
+      whenReady={handleMapReady}
+    >
+      {isMapReady && renderMapContent()}
+    </MapContainer>
+  );
+
   if (isLoading) {
     return (
       <div className="relative w-full h-full">
-        <MapContainer
-          center={[0, 0]}
-          zoom={2}
-          className="w-full h-full"
-          attributionControl={false}
-        >
-          <TileLayer
-            url={getTileUrl()}
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <PopupManager />
-          <InitialLocationHandler initialLocation={initialLocation} />
-          <Markers images={images} />
-          <BoundsHandler images={images} />
-          <MapEventHandler />
-        </MapContainer>
+        {mapContainer}
         <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
@@ -498,22 +338,7 @@ const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
   if (error) {
     return (
       <div className="relative w-full h-full">
-        <MapContainer
-          center={[0, 0]}
-          zoom={2}
-          className="w-full h-full"
-          attributionControl={false}
-        >
-          <TileLayer
-            url={getTileUrl()}
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <PopupManager />
-          <InitialLocationHandler initialLocation={initialLocation} />
-          <Markers images={images} />
-          <BoundsHandler images={images} />
-          <MapEventHandler />
-        </MapContainer>
+        {mapContainer}
         <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50">
           <div className="text-red-500 dark:text-red-400">{error}</div>
         </div>
@@ -524,22 +349,7 @@ const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
   if (!images || images.length === 0) {
     return (
       <div className="relative w-full h-full">
-        <MapContainer
-          center={[0, 0]}
-          zoom={2}
-          className="w-full h-full"
-          attributionControl={false}
-        >
-          <TileLayer
-            url={getTileUrl()}
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <PopupManager />
-          <InitialLocationHandler initialLocation={initialLocation} />
-          <Markers images={images} />
-          <BoundsHandler images={images} />
-          <MapEventHandler />
-        </MapContainer>
+        {mapContainer}
         <div className="absolute inset-0 flex items-center justify-center text-gray-500 dark:text-gray-400">
           Nessuna immagine con coordinate geografiche
         </div>
@@ -549,48 +359,7 @@ const Map = ({ images, isLoading, error, initialLocation }: MapProps) => {
 
   return (
     <div className="relative w-full h-full">
-      <MapContainer
-        center={[41.9028, 12.4964]}
-        zoom={6}
-        className="w-full h-full"
-        zoomControl={true}
-      >
-        <InitialLocationHandler initialLocation={initialLocation} />
-        <TileLayer url={getTileUrl()} />
-        <MarkerClusterGroup
-          chunkedLoading
-          maxClusterRadius={50}
-          spiderfyOnMaxZoom={true}
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick={true}
-          iconCreateFunction={createClusterCustomIcon}
-          spiderfyDistanceMultiplier={2}
-          disableClusteringAtZoom={19}
-        >
-          {images.map((image) => {
-            const coords = cleanCoordinates(image.lat, image.lon);
-            if (!coords) return null;
-
-            const customIcon = createCustomIcon(image);
-
-            return (
-              <Marker
-                key={image.id}
-                position={coords}
-                icon={customIcon}
-              >
-                <Popup className="custom-popup">
-                  <img
-                    src={getImageUrl(image.thumb_big_path)}
-                    alt={`Location ${image.id}`}
-                    className="custom-popup-image"
-                  />
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MarkerClusterGroup>
-      </MapContainer>
+      {mapContainer}
     </div>
   );
 };

@@ -12,11 +12,26 @@ export interface HomeStats {
       title: string;
       data_inizio: string;
       data_fine: string | null;
+      image: string;
     }>;
     Images: Array<{
       id: number;
       created_at: string;
       image: string;
+    }>;
+    Ideas: Array<{
+      id: number;
+      title: string;
+      description: string;
+      created_at: string;
+      completed_at: string | null;
+    }>;
+    Songs: Array<{
+      id: number;
+      title: string;
+      artist: string;
+      album: string;
+      created_at: string;
     }>;
   };
 }

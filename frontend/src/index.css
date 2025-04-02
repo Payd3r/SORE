@@ -95,30 +95,33 @@
   /* Mobile-optimized components */
   .mobile-action-button {
     @apply w-full sm:w-auto flex items-center justify-center gap-2
-    px-4 py-2.5 text-sm font-medium rounded-xl
-    transition-all duration-200;
+      px-4 py-3 sm:py-2.5 text-sm font-medium rounded-xl
+      min-h-[44px] sm:min-h-[38px]
+      touch-manipulation select-none
+      active:scale-[0.97]
+      transition-all duration-200;
   }
 
   .mobile-bottom-bar {
     @apply fixed bottom-0 left-0 right-0 
-    bg-white dark:bg-gray-800 
-    border-t border-gray-200 dark:border-gray-700
-    px-4 py-3
-    flex items-center justify-between
-    sm:hidden;
+      bg-white dark:bg-gray-800 
+      border-t border-gray-200 dark:border-gray-700
+      px-4 py-3
+      flex items-center justify-between
+      sm:hidden;
   }
 
   .mobile-menu {
     @apply fixed inset-0 z-50 
-    bg-white dark:bg-gray-900 
-    transform transition-transform duration-300 ease-in-out
-    sm:hidden;
+      bg-white dark:bg-gray-900 
+      transform transition-transform duration-300 ease-in-out
+      sm:hidden;
   }
 
   .mobile-menu-header {
     @apply flex items-center justify-between 
-    px-4 py-3 
-    border-b border-gray-200 dark:border-gray-800;
+      px-4 py-3 
+      border-b border-gray-200 dark:border-gray-800;
   }
 
   .mobile-menu-content {
@@ -137,9 +140,9 @@
   /* Card styles */
   .card-base {
     @apply bg-white dark:bg-gray-800 
-    rounded-xl border border-gray-200 dark:border-gray-700
-    overflow-hidden transition-all duration-200
-    hover:shadow-md;
+      rounded-xl border border-gray-200 dark:border-gray-700
+      overflow-hidden transition-all duration-200
+      hover:shadow-md;
   }
 
   .card-header {
@@ -152,8 +155,8 @@
 
   .card-footer {
     @apply p-4 bg-gray-50 dark:bg-gray-800/50 
-    border-t border-gray-200 dark:border-gray-700
-    flex items-center justify-between;
+      border-t border-gray-200 dark:border-gray-700
+      flex items-center justify-between;
   }
 
   /* Form Layout */
@@ -163,7 +166,7 @@
 
   .form-section {
     @apply space-y-4 pb-6 border-b border-gray-200 dark:border-gray-700 
-    last:border-0 last:pb-0;
+      last:border-0 last:pb-0;
   }
 
   .form-row {
@@ -172,13 +175,14 @@
 
   /* Input styles */
   .input-base {
-    @apply w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-200 outline-none
-    bg-white dark:bg-gray-800 
-    text-gray-900 dark:text-white 
-    border border-gray-200 dark:border-gray-700
-    placeholder:text-gray-400 dark:placeholder:text-gray-500
-    focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
-    dark:focus:border-blue-400 dark:focus:ring-blue-400/20;
+    @apply w-full px-4 py-3 sm:py-2.5 rounded-xl text-sm transition-all duration-200 outline-none
+      min-h-[44px] sm:min-h-[38px]
+      bg-white dark:bg-gray-800 
+      text-gray-900 dark:text-white 
+      border border-gray-200 dark:border-gray-700
+      placeholder:text-gray-400 dark:placeholder:text-gray-500
+      focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+      dark:focus:border-blue-400 dark:focus:ring-blue-400/20;
   }
 
   .input-search {
@@ -187,31 +191,34 @@
 
   /* Button styles */
   .btn-base {
-    @apply px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-    focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-3 sm:py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+      min-h-[44px] sm:min-h-[38px] min-w-[44px] sm:min-w-[38px]
+      touch-manipulation select-none
+      active:scale-[0.97]
+      focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
   }
 
   .btn-primary {
     @apply btn-base
-    bg-blue-500 text-white
-    hover:bg-blue-600
-    dark:bg-blue-600 dark:hover:bg-blue-700;
+      bg-blue-500 text-white
+      hover:bg-blue-600 active:bg-blue-700
+      dark:bg-blue-600 dark:hover:bg-blue-700 dark:active:bg-blue-800;
   }
 
   .btn-secondary {
     @apply btn-base
-    bg-gray-100 text-gray-700
-    hover:bg-gray-200
-    focus:ring-gray-500/20
-    dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:focus:ring-gray-400/20;
+      bg-gray-100 text-gray-700
+      hover:bg-gray-200 active:bg-gray-300
+      focus:ring-gray-500/20
+      dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:active:bg-gray-500;
   }
 
   .btn-danger {
     @apply btn-base
-    bg-red-500 text-white
-    hover:bg-red-600
-    focus:ring-red-500/20
-    dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-400/20;
+      bg-red-500 text-white
+      hover:bg-red-600 active:bg-red-700
+      focus:ring-red-500/20
+      dark:bg-red-600 dark:hover:bg-red-700 dark:active:bg-red-800;
   }
 
   /* Toggle/Checkbox styles */
@@ -270,7 +277,7 @@
   /* Tab Menu styles */
   .tab-menu {
     @apply flex p-0.5 rounded-xl bg-gray-50 dark:bg-gray-800 
-    border border-gray-200 dark:border-gray-700 relative;
+      border border-gray-200 dark:border-gray-700 relative;
   }
 
   .tab-menu-item {
@@ -295,9 +302,14 @@
 
   /* Tab Menu Button styles */
   .tab-menu-button {
-    @apply flex items-center justify-center gap-1.5 sm:gap-2 flex-1 py-2 px-3 sm:px-4 
-    rounded-lg font-medium text-sm transition-all duration-300 ease-in-out focus:outline-none
-    relative z-10;
+    @apply flex items-center justify-center gap-1.5 sm:gap-2 flex-1 
+      py-3 sm:py-2.5 px-4 sm:px-4 
+      min-h-[44px] sm:min-h-[38px]
+      rounded-lg font-medium text-sm 
+      transition-all duration-300 ease-in-out 
+      touch-manipulation select-none
+      active:scale-[0.97]
+      focus:outline-none;
   }
 
   .tab-menu-button svg {
@@ -305,13 +317,15 @@
   }
 
   .tab-menu-button-active {
-    @apply bg-white dark:bg-gray-900 text-blue-500 shadow-sm
-    scale-[1.00] transform transition-all duration-300 ease-in-out;
+    @apply bg-white dark:bg-gray-900 
+      text-blue-600 dark:text-blue-400 
+      shadow-sm;
   }
 
   .tab-menu-button-inactive {
-    @apply text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 bg-transparent
-    hover:scale-[1.00] transform transition-all duration-300 ease-in-out;
+    @apply text-gray-600 dark:text-gray-400 
+      hover:bg-white/50 dark:hover:bg-gray-900/50
+      bg-transparent;
   }
 
   /* Touch-friendly button styles */
@@ -351,6 +365,52 @@
   .btn-danger:active:not(:disabled) {
     @apply bg-red-700;
   }
+
+  /* Dropdown buttons */
+  button[role="combobox"],
+  button[role="listbox"] {
+    @apply min-h-[44px] sm:min-h-[38px] touch-manipulation select-none;
+  }
+
+  /* DatePicker buttons */
+  .react-datepicker__day {
+    @apply text-gray-900 dark:text-gray-100
+      text-sm
+      h-10 sm:h-8 w-10 sm:w-8
+      flex items-center justify-center
+      hover:bg-gray-50 dark:hover:bg-gray-700
+      rounded-md
+      transition-colors
+      cursor-pointer
+      touch-manipulation select-none
+      outline-none;
+  }
+
+  .react-datepicker__navigation button {
+    @apply min-h-[44px] sm:min-h-[38px] min-w-[44px] sm:min-w-[38px] 
+      touch-manipulation select-none;
+  }
+}
+
+@layer utilities {
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
 }
 
 :root {
@@ -366,6 +426,9 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --vh: 100vh;
+  --vw: 100vw;
 }
 
 a {
@@ -437,7 +500,7 @@ button:focus-visible {
   @apply font-sans bg-white dark:bg-gray-800 
     border border-gray-200 dark:border-gray-700 
     rounded-lg shadow-lg 
-    w-[250px];
+    w-[280px] sm:w-[250px];
 }
 
 .react-datepicker button {
@@ -454,8 +517,8 @@ button:focus-visible {
 }
 
 .react-datepicker__header {
-  @apply bg-transparent
-    border-0
+  @apply bg-gray-50 dark:bg-gray-800/50
+    border-b border-gray-200 dark:border-gray-700
     px-2 pt-1 pb-3;
 }
 
@@ -473,7 +536,7 @@ button:focus-visible {
   @apply text-gray-500 dark:text-gray-400 
     text-xs font-medium 
     flex items-center justify-center 
-    h-7 w-full;
+    h-8 sm:h-7 w-full;
 }
 
 .react-datepicker__month {
@@ -487,7 +550,7 @@ button:focus-visible {
 .react-datepicker__day {
   @apply text-gray-900 dark:text-gray-100
     text-sm
-    h-7 w-full
+    h-8 sm:h-7 w-full
     flex items-center justify-center
     hover:bg-gray-50 dark:hover:bg-gray-700
     rounded-md
@@ -663,4 +726,24 @@ button:focus-visible {
   height: 100%;
   background-color: #2196F3;
   transition: width 0.3s ease;
+}
+
+/* Disabilita selezione testo */
+* {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version */
+}
+
+/* Permetti la selezione del testo negli input e textarea */
+input, textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  -khtml-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }

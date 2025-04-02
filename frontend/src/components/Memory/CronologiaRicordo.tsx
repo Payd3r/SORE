@@ -88,17 +88,17 @@ export default function CronologiaRicordo({ memory }: CronologiaRicordoProps) {
   return (
     <div className="relative py-4">
       {/* Timeline line */}
-      <div className="absolute left-6 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"></div>
+      <div className="absolute left-3 sm:left-6 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"></div>
 
       {/* Timeline groups */}
-      <div className="space-y-8">
+      <div className="space-y-2 sm:space-y-8">
         {timelineGroups.map((group) => (
           <div key={group.timestamp.toISOString()} className="relative flex gap-6">
             {/* Timeline dot */}
-            <div className="absolute left-6 w-3 h-3 -translate-x-1.5 mt-2 rounded-full border-2 border-blue-500 bg-white dark:bg-gray-800"></div>
+            <div className="absolute left-3 sm:left-6 w-3 h-3 -translate-x-1.5 mt-2 rounded-full border-2 border-blue-500 bg-white dark:bg-gray-800"></div>
 
             {/* Content */}
-            <div className="ml-16 flex-grow">
+            <div className="ml-8 sm:ml-16 flex-grow">
               {/* Timestamp */}
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
