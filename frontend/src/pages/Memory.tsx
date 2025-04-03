@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import MemoryUploadModal from '../components/Memories/MemoryUploadModal';
 import MemoryCard from '../components/Memories/MemoryCard';
 import { useAuth } from '../contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
 import UploadStatus from '../components/Images/UploadStatus';
 import { useUpload } from '../contexts/UploadContext';
@@ -27,7 +26,6 @@ interface MemoryWithImages extends Memory {
 
 export default function Memory() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const location = useLocation();
   const { isAuthenticated } = useAuth();
   const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
