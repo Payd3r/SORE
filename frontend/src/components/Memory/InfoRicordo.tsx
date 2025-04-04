@@ -116,7 +116,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
         image: image.thumb_big_path,
         thumb_big_path: image.thumb_big_path,
         created_at: image.created_at || new Date().toISOString(),
-        webp_path: undefined
+        jpg_path: undefined
       });
       setIsDetailModalOpen(true);
     } catch (error) {

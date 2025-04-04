@@ -169,7 +169,7 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
           <div className={`grid gap-0.5 h-full ${
             isViaggio ? 'grid-cols-3 grid-rows-2 min-h-[280px]' :
             isEvento ? 'grid-cols-4 grid-rows-1 min-h-[140px]' :
-            'grid-cols-1 grid-rows-1 min-h-[150px] sm:min-h-[280px]'
+            'grid-cols-1 grid-rows-1 min-h-[280px]'
           }`}>
             {optimizedImages.map((image, index) => (
               <div

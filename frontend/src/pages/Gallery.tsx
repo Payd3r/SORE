@@ -235,7 +235,6 @@ export default function Gallery() {
       newSet.add(type);
     }
     setSelectedTypes(newSet);
-    setIsTypeMenuOpen(false);
   };
 
   const handleImageClick = (image: ImageType) => {
@@ -705,7 +704,7 @@ export default function Gallery() {
                                   transform: `translateY(${virtualRow.start}px)`,
                                   gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
                                 }}
-                                className="grid gap-1.5 sm:gap-2 md:gap-3"
+                                className="grid gap-1 sm:gap-2"
                               >
                                 {rowImages.map((image) => (
                                   <div

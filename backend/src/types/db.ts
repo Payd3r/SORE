@@ -68,7 +68,7 @@ export interface Image extends DbRow {
   url: string;
   original_format: string;
   original_path: string;
-  webp_path: string;
+  jpg_path: string;
   thumb_big_path: string;
   thumb_small_path: string;
   taken_at: Date;

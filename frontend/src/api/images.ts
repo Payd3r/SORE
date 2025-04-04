@@ -12,7 +12,7 @@ export interface ImageType {
   created_by_name: string | null;
   image: string;
   thumb_big_path: string;
-  webp_path?: string;  // Il percorso dell'immagine in alta risoluzione
+  jpg_path?: string;  // Il percorso dell'immagine in alta risoluzione
 }
 
 export interface ImageResponse {

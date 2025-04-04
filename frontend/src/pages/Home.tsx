@@ -236,6 +236,7 @@ const Home = () => {
       </div>
     );
   }
+  console.log(homeData);
   return (
     <div className="w-full min-h-screen pb-[30px] sm:pb-[150px] overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 h-[100px] sm:h-[200px] bg-gradient-to-b from-blue-600/10 dark:bg-gray-900 pointer-events-none z-0" />
@@ -271,7 +272,7 @@ const Home = () => {
                                 ? handleNewIdeaClick
                                 : undefined
                         }
-                        className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white dark:bg-gray-700 sm:bg-white/90 sm:dark:bg-gray-700/90 sm:hover:bg-white dark:sm:hover:bg-gray-600 transition-all duration-300 sm:hover:scale-105 sm:hover:shadow-lg text-xs sm:text-sm flex-1 sm:flex-initial justify-center shadow-sm"
+                        className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white dark:bg-gray-700 sm:bg-white/90 sm:dark:bg-gray-700/90 hover:bg-white dark:hover:bg-gray-600 transition-all duration-300 hover:scale-105 hover:shadow-lg text-xs sm:text-sm flex-1 sm:flex-initial justify-center shadow-sm"
                       >
                         <action.icon className={`w-5 h-5 sm:w-5 sm:h-5 ${action.color}`} />
                         <span className="text-gray-800 dark:text-gray-200">
@@ -297,10 +298,10 @@ const Home = () => {
                     <Link
                       key={item.name}
                       to={item.link}
-                      className="group block p-2 sm:p-5 rounded-xl bg-white/80 dark:bg-transparent border-2 border-gray-200/80 dark:border-white/10 sm:hover:bg-white/5 dark:sm:hover:bg-white/5 transition-all duration-300 sm:hover:scale-[1.02] sm:hover:shadow-xl"
+                      className="group block p-2 sm:p-5 rounded-xl bg-white/80 dark:bg-transparent border-2 border-gray-200/80 dark:border-white/10 hover:bg-white/5 dark:hover:bg-white/5 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
                     >
                       <div className="flex flex-col items-center sm:items-start gap-2 sm:gap-3">
-                        <div className={`w-12 h-12 sm:w-10 sm:h-10 rounded-xl sm:rounded-lg flex items-center justify-center transition-all duration-300 sm:group-hover:scale-110 sm:group-hover:rotate-3`}>
+                        <div className={`w-12 h-12 sm:w-10 sm:h-10 rounded-xl sm:rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
                           <item.icon className={`w-8 h-8 sm:w-8 sm:h-8 ${item.name === 'Ricordi' ? 'text-blue-400 dark:text-blue-400' :
                             item.name === 'Galleria' ? 'text-purple-400 dark:text-purple-400' :
                               item.name === 'Idee' ? 'text-yellow-400 dark:text-yellow-400' :
@@ -338,9 +339,9 @@ const Home = () => {
                           <div
                             key={ricordo.id}
                             onClick={() => handleRicordoClick(ricordo.id)}
-                            className="flex items-center gap-3 sm:p-2 p-0  rounded-lg bg-gray-200/10 dark:bg-white/5 sm:hover:bg-white/10 dark:sm:hover:bg-white/10 transition-all duration-300 cursor-pointer sm:hover:translate-y-[-2px]"
+                            className="flex items-center gap-3 p-2 sm:p-0 rounded-lg bg-gray-200/10 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 cursor-pointer hover:translate-y-[-2px]"
                           >
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden">
+                            <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden">
                               <img
                                 src={getImageUrl(ricordo.image)}
                                 alt={ricordo.title}
@@ -370,7 +371,7 @@ const Home = () => {
                         {stats.map((stat) => (
                           <div
                             key={stat.label}
-                            className={`p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center sm:hover:scale-105 transition-all duration-300 cursor-pointer ${stat.label === 'Ricordi' ? 'bg-blue-50 dark:bg-blue-950/50' :
+                            className={`p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center hover:scale-105 transition-all duration-300 cursor-pointer ${stat.label === 'Ricordi' ? 'bg-blue-50 dark:bg-blue-950/50' :
                               stat.label === 'Foto' ? 'bg-purple-50 dark:bg-[#2D1B69]/50' :
                                 stat.label === 'Idee' ? 'bg-yellow-50 dark:bg-[#392C1B]/50' :
                                   'bg-green-50 dark:bg-[#1B392C]/50'
@@ -408,7 +409,7 @@ const Home = () => {
                           return (
                             <div
                               key={song.title}
-                              className="flex items-center gap-3 p-2 sm:p-3 rounded-lg bg-gray-200/10 dark:bg-white/5 sm:hover:bg-white/10 dark:sm:hover:bg-white/10 transition-all duration-300 cursor-pointer sm:hover:translate-x-1"
+                              className="flex items-center gap-3 p-2 sm:p-3 rounded-lg bg-gray-200/10 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 cursor-pointer hover:translate-x-1"
                             >
                               <div className="flex-shrink-0">
                                 {trackDetails ? (
@@ -468,7 +469,7 @@ const Home = () => {
                         {ideas.map((idea: any) => (
                           <div
                             key={idea.id}
-                            className="flex flex-col p-2 sm:p-3 rounded-lg bg-gray-200/10 dark:bg-white/5 sm:hover:bg-white/10 dark:sm:hover:bg-white/10 transition-all duration-300 cursor-pointer sm:hover:translate-y-[-2px]"
+                            className="flex flex-col p-2 sm:p-3 rounded-lg bg-gray-200/10 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 cursor-pointer hover:translate-y-[-2px]"
                           >
                             <div className="flex items-start gap-2 mb-2">
                               <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${idea.completed_at

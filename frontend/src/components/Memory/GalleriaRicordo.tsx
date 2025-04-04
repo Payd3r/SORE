@@ -25,7 +25,7 @@ type MemoryImage = {
   longitude?: number;
   created_by_user_id?: number;
   created_by_name?: string;
-  webp_path?: string;
+  jpg_path?: string;
 };
 
 export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRicordoProps) {
@@ -90,8 +90,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
     } else {
       newSet.add(type);
     }
-    setSelectedTypes(newSet);    
-    setIsTypeMenuOpen(false);
+    setSelectedTypes(newSet);
   };
 
   // Chiudi il dropdown quando si clicca fuori
@@ -119,7 +118,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
         image: image.thumb_big_path,
         thumb_big_path: image.thumb_big_path,
         created_at: image.created_at || new Date().toISOString(),
-        webp_path: image.webp_path
+        jpg_path: image.jpg_path
       });
       setIsDetailModalOpen(true);
     } catch (error) {
@@ -218,13 +217,13 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
         {/* Filtri e Toggle */}
         <div className="flex items-center gap-2">
           {/* Type Filter Dropdown */}
-          <div className="relative type-menu ">
+          <div className="relative type-menu">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsTypeMenuOpen(!isTypeMenuOpen);
               }}
-              className="flex h-[46px] items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -241,7 +240,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
             </button>
 
             {isTypeMenuOpen && (
-              <div className="absolute left-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10 ">
+              <div className="absolute left-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
                 {['COPPIA', 'PAESAGGIO', 'SINGOLO', 'CIBO'].map((type) => (
                   <button
                     key={type}
@@ -278,7 +277,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
           {/* Grid Toggle */}
           <button
             onClick={() => setIsCompactGrid(prev => !prev)}
-            className="flex items-center h-[46px] gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
             title={isCompactGrid ? "Mostra meno immagini per riga" : "Mostra più immagini per riga"}
           >
             {isCompactGrid ? (

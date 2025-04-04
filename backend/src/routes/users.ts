@@ -182,17 +182,18 @@ router.put('/profile', auth, async (req: any, res) => {
     if (req.body) {
       if (req.body.name) updateData.name = req.body.name;
       if (req.body.email) updateData.email = req.body.email;
-      if (req.body.theme_preference) updateData.theme_preference = req.body.theme_preference;
+      if (req.body.themePreference) updateData.theme_preference = req.body.themePreference;
     }
 
     // Se non ci sono dati da aggiornare, restituisci un errore
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'Nessun dato da aggiornare' });
     }
-    console.log(updateData);
+
     // Costruisci la query di aggiornamento dinamicamente
     const updateFields = [];
     const updateValues = [];
+
     if (updateData.name !== undefined) {
       updateFields.push('name = ?');
       updateValues.push(updateData.name);
@@ -283,7 +284,6 @@ router.get('/:userId', auth, async (req: any, res) => {
       data: {
         ...user,
         profile_picture_url: user.profile_picture_url,
-        theme_preference: user.theme_preference,
         created_at: user.created_at
       }
     });
