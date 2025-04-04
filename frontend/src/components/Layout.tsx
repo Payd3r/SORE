@@ -98,7 +98,7 @@ const Layout = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white dark:bg-gray-900" style={{
+    <div className="fixed inset-0 flex flex-col bg-white dark:bg-gray-900 transition-transform duration-300 ease-in-out" style={{
       height: 'var(--vh)',
       position: 'fixed',
       top: 0,

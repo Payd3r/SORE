@@ -1,7 +1,6 @@
 import { API_URLS } from './config';
 import { ApiResponse } from './types';
 import axios from 'axios';
-import { format } from 'date-fns';
 import type { CarouselImage } from '../pages/DetailMemory';
 
 export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
@@ -45,6 +44,18 @@ export interface MemoryResponse {
 
 export interface CarouselResponse {
   data: CarouselImage[];
+}
+
+export interface MemoryImage {
+  id: number;
+  thumb_big_path: string;
+  created_at: string;
+  width: number;
+  height: number;
+}
+
+export interface MemoryWithImages extends Memory {
+  images: MemoryImage[];
 }
 
 const getAuthHeaders = () => {

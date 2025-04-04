@@ -75,7 +75,7 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
 
   return (
     <div
-      className={`group bg-white dark:bg-gray-800 rounded-lg border-2 ${typeStyle.border} ${typeStyle.hover} ${typeStyle.shadow} overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5`}
+      className={`group bg-white dark:bg-gray-800 rounded-lg border-2 ${typeStyle.border} sm:${typeStyle.hover} ${typeStyle.shadow} overflow-hidden cursor-pointer transition-all duration-300 sm:hover:shadow-lg sm:hover:-translate-y-0.5`}
       onClick={handleClick}
     >
       <div className="flex items-center gap-4 p-3">
@@ -85,7 +85,7 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
             <img
               src={getImageUrl(firstImage.thumb_big_path)}
               alt={memory.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-300 sm:group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">

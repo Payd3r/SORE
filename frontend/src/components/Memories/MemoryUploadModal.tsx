@@ -1,8 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
 import { createMemory } from '../../api/memory';
 import { uploadImages, pollImageStatus, ImageStatusResponse } from '../../api/images';
 import { debounce } from 'lodash';

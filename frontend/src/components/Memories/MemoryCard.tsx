@@ -160,7 +160,7 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
 
   return (
     <div
-      className={`group bg-white dark:bg-gray-800 rounded-xl border-2 ${typeStyle.border} ${typeStyle.hover} ${typeStyle.shadow} overflow-hidden cursor-pointer transition-all duration-300 h-full hover:shadow-lg hover:-translate-y-0.5`}
+      className={`group bg-white dark:bg-gray-800 rounded-xl border-2 ${typeStyle.border} sm:${typeStyle.hover} ${typeStyle.shadow} overflow-hidden cursor-pointer transition-all duration-300 h-full sm:hover:shadow-lg sm:hover:-translate-y-0.5`}
       onClick={handleClick}
     >
       <div className="relative h-full flex flex-col">
@@ -184,7 +184,7 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
                 <img
                   src={getImageUrl(image.thumb_big_path)}
                   alt={`${memory.title} - ${index + 1}`}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 sm:group-hover:scale-105"
                 />
                 {((isViaggio && index === 4) || (isEvento && index === 3) || (!isViaggio && !isEvento && index === 0)) && 
                   memory.tot_img > (isViaggio ? 5 : isEvento ? 4 : 1) && (
