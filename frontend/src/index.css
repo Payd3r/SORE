@@ -747,3 +747,23 @@ input, textarea {
   -ms-user-select: text;
   user-select: text;
 }
+
+/* DatePicker Mobile Styles */
+@media (max-width: 768px) {
+  .react-datepicker-popper {
+    transform: translate3d(0, 0, 0) !important;
+    left: 15% !important;    
+    position: fixed !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 9999;
+  }
+
+  .react-datepicker-wrapper {
+    position: static !important;
+  }
+
+  .react-datepicker__input-container {
+    position: static !important;
+  }
+}

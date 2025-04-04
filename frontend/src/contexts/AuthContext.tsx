@@ -56,6 +56,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(response.token);
     setUser(response.user);
     setIsAuthenticated(true);
+
+    // Applica il tema preferito dell'utente
+    if (response.user.theme_preference === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (response.user.theme_preference === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else if (response.user.theme_preference === 'system') {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
   };
 
   const logout = () => {

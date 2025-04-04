@@ -28,8 +28,6 @@ export interface Memory {
 export interface CreateMemoryRequest {
   title: string;
   type: MemoryType;
-  startDate: string;
-  endDate?: string | null;
   song?: string | null;
   location?: string | null;
 }
@@ -83,15 +81,7 @@ export const getMemories = async (): Promise<Memory[]> => {
 export const createMemory = async (data: CreateMemoryRequest): Promise<CreateMemoryResponse> => {
   try {
     const headers = getAuthHeaders();
-    
-    // Formatta le date nel formato YYYY-MM-DD
-    const formattedData = {
-      ...data,
-      start_date: format(new Date(data.startDate), 'yyyy-MM-dd'),
-      end_date: data.endDate ? format(new Date(data.endDate), 'yyyy-MM-dd') : null
-    };
-
-    const response = await axios.post(`${API_URLS.base}/api/memories/`, formattedData, {
+    const response = await axios.post(`${API_URLS.base}/api/memories/`, data, {
       headers
     });
     return response.data;

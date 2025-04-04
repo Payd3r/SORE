@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { PhotoIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { updateUserInfo } from '../../api/profile';
@@ -6,6 +6,7 @@ import { uploadProfilePicture } from '../../api/profile';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../api/images';
+
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,7 +23,8 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: user?.name || '',
-    email: user?.email || ''
+    email: user?.email || '',
+    theme_preference: user?.theme_preference || 'system'
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,15 +56,32 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
       await updateUserInfo({
         name: formData.name,
         email: formData.email,
-        profile_picture_url: profilePictureUrl
+        profile_picture_url: profilePictureUrl,
+        theme_preference: formData.theme_preference
       });
 
-      updateUser({
+      // Aggiorna l'utente nel contesto di autenticazione
+      const updatedUser = {
         ...user!,
         name: formData.name,
         email: formData.email,
-        profile_picture_url: profilePictureUrl
-      });
+        profile_picture_url: profilePictureUrl,
+        theme_preference: formData.theme_preference
+      };
+      updateUser(updatedUser);
+
+      // Applica il nuovo tema
+      if (formData.theme_preference === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (formData.theme_preference === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else if (formData.theme_preference === 'system') {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
       
       // Invalida la cache per forzare un aggiornamento dei dati
       if (user?.id) {
@@ -79,6 +98,21 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
       setIsSubmitting(false);
     }
   };
+
+  // Reset del form quando il modal viene chiuso
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        name: user?.name || '',
+        email: user?.email || '',
+        theme_preference: user?.theme_preference || 'system'
+      });
+      setSuccess(null);
+      setError(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    }
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
@@ -169,6 +203,22 @@ export default function EditProfileModal({ isOpen, onClose }: EditProfileModalPr
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   required
                 />
+              </div>
+
+              <div>
+                <label htmlFor="theme_preference" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tema preferito
+                </label>
+                <select
+                  id="theme_preference"
+                  value={formData.theme_preference}
+                  onChange={(e) => setFormData({ ...formData, theme_preference: e.target.value as 'light' | 'dark' | 'system' })}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="system">Sistema</option>
+                  <option value="light">Chiaro</option>
+                  <option value="dark">Scuro</option>
+                </select>
               </div>
 
               {error && (

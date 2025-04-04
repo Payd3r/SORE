@@ -123,7 +123,7 @@ app.use((req: express.Request, res: express.Response) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`Access the API at http://101.58.39.17:${PORT}`);
+  console.log(`Access the API at http://localhost:${PORT}`);
   console.log('Available routes:');
   console.log('- /media/*');
   console.log('- /api/auth/*');

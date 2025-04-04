@@ -44,6 +44,25 @@ export interface RecapConfronto {
     };
 }
 
+export interface RecapAttivita {
+    data: {
+        images: Array<{
+            id: number;
+            thumb_big_path: string;
+            type: 'coppia' | 'singolo' | 'paesaggio';
+            created_by_user_name: string;
+        }>;
+        memories: Array<{
+            id: number;
+            type: 'viaggio' | 'evento' | 'semplice';
+            start_date: string;
+            end_date: string | null;
+            thumb_big_path: string;
+            created_by_user_name: string;
+        }>;
+    };
+}
+
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -78,6 +97,25 @@ export const getRecapConfronto = async (): Promise<RecapConfronto> => {
     try {
         const headers = getAuthHeaders();
         const response = await fetch(`${API_URLS.base}/api/recap/confronto`, {
+            headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch recap confronto data');
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching recap confronto data:', error);
+        throw error;
+    }
+};
+
+export const getRecapAttivita = async (): Promise<RecapAttivita> => {
+    try {
+        const headers = getAuthHeaders();
+        const response = await fetch(`${API_URLS.base}/api/recap/attivita`, {
             headers
         });
 

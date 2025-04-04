@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import MemoryUploadModal from '../components/Memories/MemoryUploadModal';
 import MemoryCard from '../components/Memories/MemoryCard';
+import MemoryCardList from '../components/Memories/MemoryCardList';
 import { useAuth } from '../contexts/AuthContext';
 import { useInView } from 'react-intersection-observer';
 import UploadStatus from '../components/Images/UploadStatus';
@@ -34,15 +35,15 @@ export default function Memory() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [visibleMemories, setVisibleMemories] = useState<number>(12);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Ripristina lo stato dell'upload dal localStorage
   useEffect(() => {
     const savedUploadingFiles = localStorage.getItem('uploadingFiles');
     const isUploading = localStorage.getItem('isUploading');
-    
+
     if (savedUploadingFiles && isUploading) {
       setUploadingFiles(JSON.parse(savedUploadingFiles));
-      setShowUploadStatus(true);
     }
   }, []);
 
@@ -63,6 +64,25 @@ export default function Memory() {
     },
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
+
+  // Ripristina la posizione dello scroll quando si torna alla pagina
+  useEffect(() => {
+    const savedScrollPosition = sessionStorage.getItem('memoryScrollPosition');
+    const savedMemoryId = sessionStorage.getItem('lastViewedMemoryId');
+    
+    if (savedScrollPosition && savedMemoryId) {
+      // Aspetta che il contenuto sia renderizzato
+      setTimeout(() => {
+        const memoryElement = document.getElementById(`memory-${savedMemoryId}`);
+        if (memoryElement) {
+          memoryElement.scrollIntoView({ behavior: 'instant', block: 'center' });
+          // Pulisci il sessionStorage dopo il ripristino
+          sessionStorage.removeItem('memoryScrollPosition');
+          sessionStorage.removeItem('lastViewedMemoryId');
+        }
+      }, 100);
+    }
+  }, [memories]);
 
   // Funzione per ottimizzare il layout della griglia
   const optimizeGridLayout = useMemo(() => {
@@ -190,7 +210,16 @@ export default function Memory() {
       });
     }
 
-    // Applica l'ottimizzazione del layout con ordinamento intelligente
+    // Su mobile, ordina solo per data
+    if (windowWidth < 640) {
+      return filtered.sort((a, b) => {
+        const dateA = a.end_date || a.start_date || a.created_at;
+        const dateB = b.end_date || b.start_date || b.created_at;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+    }
+
+    // Su desktop, applica l'ottimizzazione del layout con ordinamento intelligente
     const memoriesWithImages = filtered.map((memory: MemoryWithImages) => ({
       ...memory,
       images: memory.images.map((img: MemoryImage) => ({
@@ -200,7 +229,7 @@ export default function Memory() {
       }))
     }));
     return optimizeGridLayout(memoriesWithImages);
-  }, [memories, searchQuery, selectedTypes, optimizeGridLayout]);
+  }, [memories, searchQuery, selectedTypes, optimizeGridLayout, windowWidth]);
 
   // Funzione per caricare più ricordi
   const loadMore = useCallback(() => {
@@ -252,7 +281,7 @@ export default function Memory() {
       }
       return newTypes;
     });
-    setIsTypeMenuOpen(false);
+    setIsTypeMenuOpen(false);    
   };
 
   // Ottieni il testo del pulsante del filtro
@@ -314,7 +343,7 @@ export default function Memory() {
                     Gestisci e organizza i tuoi ricordi speciali
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {hasActiveUploads && (
                     <button
                       onClick={() => {
@@ -330,9 +359,9 @@ export default function Memory() {
                   )}
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
+                    className="btn btn-primary flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     <span className="hidden sm:inline">Carica</span>
@@ -360,6 +389,9 @@ export default function Memory() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
+
+                {/* View Toggle */}
+
 
                 {/* Type Filter Dropdown */}
                 <div className="relative type-menu">
@@ -448,28 +480,68 @@ export default function Memory() {
                       </button>
                     </div>
                   )}
+
                 </div>
+                <button
+                  onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                  className="flex items-center gap-2 h-[46px] px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
+                  title={viewMode === 'grid' ? "Visualizza come lista" : "Visualizza come griglia"}
+                >
+                  {viewMode === 'grid' ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
 
             {/* Memories Grid */}
             <div className="w-full pb-8 lg:pt-6 pt-4">
               <div className="max-w-[2000px] mx-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6">
-                  {filteredAndSortedMemories.slice(0, visibleMemories).map((memory) => (
-                    <div
-                      key={memory.id}
-                      className={`${memory.type.toLowerCase() === 'viaggio'
-                        ? 'sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2'
-                        : memory.type.toLowerCase() === 'evento'
-                          ? 'sm:col-span-2 lg:col-span-2'
-                          : ''
-                        }`}
-                    >
-                      <MemoryCard memory={memory} />
-                    </div>
-                  ))}
-                </div>
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6">
+                    {filteredAndSortedMemories.slice(0, visibleMemories).map((memory) => (
+                      <div
+                        key={memory.id}
+                        id={`memory-${memory.id}`}
+                        className={`${memory.type.toLowerCase() === 'viaggio'
+                          ? 'sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2'
+                          : memory.type.toLowerCase() === 'evento'
+                            ? 'sm:col-span-2 lg:col-span-2'
+                            : ''
+                          }`}
+                        onClick={() => {
+                          // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
+                          sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
+                          sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
+                        }}
+                      >
+                        <MemoryCard memory={memory} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {filteredAndSortedMemories.slice(0, visibleMemories).map((memory) => (
+                      <div
+                        key={memory.id}
+                        id={`memory-${memory.id}`}
+                        onClick={() => {
+                          // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
+                          sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
+                          sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
+                        }}
+                      >
+                        <MemoryCardList memory={memory} />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Loading indicator */}
                 {hasMore && filteredAndSortedMemories.length > visibleMemories && (

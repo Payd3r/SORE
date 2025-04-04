@@ -33,6 +33,7 @@ export interface AuthResponse {
     name: string;
     email: string;
     profile_picture_url?: string | null;
+    theme_preference: 'light' | 'dark' | 'system';
   };
 }
 
