@@ -45,8 +45,9 @@ const getCacheStrategy = (request: Request): string => {
       url.pathname.endsWith('.css') || 
       url.pathname.endsWith('.js') || 
       url.pathname.endsWith('.png') || 
-      url.pathname.endsWith('.jpg') || 
+      url.pathname.endsWith('.webp') || 
       url.pathname.endsWith('.svg') ||
+      url.pathname.endsWith('.jpg') ||
       url.pathname.endsWith('.ico')) {
     return CACHE_STRATEGIES.STATIC;
   }

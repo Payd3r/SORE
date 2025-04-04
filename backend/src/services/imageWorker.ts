@@ -6,12 +6,13 @@ import path from 'path';
 import imageQueue from '../config/bull';
 import sharp from 'sharp';
 import { classifyImage } from './imageClassifier';
+import { updateMemoryDates } from './memoryDateUpdater';
 
 interface ProcessedImage {
   id: string;
   original_format: string;
   original_path: string;
-  jpg_path: string;
+  webp_path: string;
   thumb_big_path: string;
   thumb_small_path: string;
   metadata: ImageMetadata;
@@ -108,7 +109,7 @@ export async function processImageJob(job: ImageJob) {
     const [result] = await pool.promise().query<ResultSetHeader>(
       `INSERT INTO images (
         original_path,
-        jpg_path,
+        webp_path,
         thumb_big_path,
         thumb_small_path,
         latitude,
@@ -122,7 +123,7 @@ export async function processImageJob(job: ImageJob) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, NOW()), ?, ?)`,
       [
         processedImage.original_path,
-        processedImage.jpg_path,
+        processedImage.webp_path,
         processedImage.thumb_big_path,
         processedImage.thumb_small_path,
         metadata.latitude || null,
@@ -142,6 +143,15 @@ export async function processImageJob(job: ImageJob) {
     // Elimina il file temporaneo
     if (fs.existsSync(job.filePath)) {
       fs.unlinkSync(job.filePath);
+    }
+
+    // Se c'è un memory_id, aggiorna le date del memory
+    if (job.memoryId) {
+      try {
+        await updateMemoryDates(job.memoryId);
+      } catch (error) {
+        console.error(`[Worker] Error updating memory dates for memory ${job.memoryId}:`, error);
+      }
     }
 
     // Aggiorna lo stato finale

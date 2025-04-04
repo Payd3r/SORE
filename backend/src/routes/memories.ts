@@ -2,8 +2,10 @@ import express from 'express';
 import { auth } from '../middleware/auth';
 import pool from '../config/db';
 import { Memory, ResultSetHeader, Image } from '../types/db';
+import { RowDataPacket } from 'mysql2';
 import fs from 'fs';
 import path from 'path';
+import { updateMemoryDates } from '../services/memoryDateUpdater';
 
 const router = express.Router();
 
@@ -160,55 +162,41 @@ router.get('/:memoryId', auth, async (req: any, res) => {
 // Create a new memory
 router.post('/', auth, async (req: any, res) => {
   try {
-    const { title, description, type, start_date, end_date, location, song } = req.body;
+    const { title, type, location, song } = req.body;
     const coupleId = req.user.coupleId;
 
-    // Validazione e formattazione delle date
-    let formattedStartDate = null;
-    let formattedEndDate = null;
-
-    if (start_date) {
-      const startDateObj = new Date(start_date);
-      if (!isNaN(startDateObj.getTime())) {
-        formattedStartDate = startDateObj.toISOString().split('T')[0];
-      }
+    // Validazione campi obbligatori
+    if (!title || !type) {
+      return res.status(400).json({ error: 'Titolo e tipo sono obbligatori' });
     }
 
-    if (end_date) {
-      const endDateObj = new Date(end_date);
-      if (!isNaN(endDateObj.getTime())) {
-        formattedEndDate = endDateObj.toISOString().split('T')[0];
-      }
-    }
-
-    console.log(`[Memory] Creating new memory for couple ${coupleId}`);
+    console.log(`[Memory] Creating new memory for couple ${coupleId}`, {
+      title,
+      type,
+      hasLocation: !!location,
+      hasSong: !!song
+    });
 
     // Start a transaction
     const connection = await pool.promise().getConnection();
     try {
       await connection.beginTransaction();
 
-      // Create memory
+      // Create memory with required and optional fields
       const [memoryResult] = await connection.query<ResultSetHeader>(
         `INSERT INTO memories (
           title,
-          description,
           type,
           couple_id,
           created_by_user_id,
-          start_date,
-          end_date,
           location,
           song
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
         [
           title,
-          description,
           type,
           coupleId,
           req.user.id,
-          formattedStartDate,
-          formattedEndDate,
           location || null,
           song || null
         ]
@@ -316,7 +304,7 @@ router.delete('/:memoryId', auth, async (req: any, res) => {
 
       // Get all image paths associated with this memory
       const [imagesResult] = await connection.query<Image[]>(
-        'SELECT original_path, jpg_path, thumb_big_path, thumb_small_path FROM images WHERE memory_id = ?',
+        'SELECT original_path, webp_path, thumb_big_path, thumb_small_path FROM images WHERE memory_id = ?',
         [memoryId]
       );
 
@@ -324,7 +312,7 @@ router.delete('/:memoryId', auth, async (req: any, res) => {
       for (const image of imagesResult) {
         const paths = [
           image.original_path,
-          image.jpg_path,
+          image.webp_path,
           image.thumb_big_path,
           image.thumb_small_path
         ];
@@ -398,7 +386,7 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
     // Recupera 5 immagini casuali
     const [imageRows] = await pool.promise().query<Image[]>(
       `SELECT 
-        jpg_path,
+        webp_path,
         latitude,
         longitude,
         created_at
@@ -412,7 +400,7 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
     const carouselImages = await Promise.all(
       imageRows.map(async (img: Image) => {
         return {
-          image: img.jpg_path,
+          image: img.webp_path,
           latitude: img.latitude,
           longitude: img.longitude,
           created_at: img.created_at
@@ -425,6 +413,31 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
   } catch (error) {
     console.error('[Carousel] Error fetching images:', error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({ error: 'Failed to fetch carousel images' });
+  }
+});
+
+// Update memory dates based on associated images
+router.put('/:memoryId/update-dates', auth, async (req: any, res) => {
+  try {
+    const memoryId = req.params.memoryId;
+    const coupleId = req.user.coupleId;
+
+    // Verifica che il memory esista e appartenga alla coppia
+    const [memoryResult] = await pool.promise().query<Memory[]>(
+      'SELECT id FROM memories WHERE id = ? AND couple_id = ?',
+      [memoryId, coupleId]
+    );
+
+    if (!memoryResult || memoryResult.length === 0) {
+      return res.status(404).json({ error: 'Memory not found' });
+    }
+
+    await updateMemoryDates(memoryId);
+    res.json({ message: 'Memory dates updated successfully' });
+
+  } catch (error) {
+    console.error('[Memory] Error updating dates:', error instanceof Error ? error.message : 'Unknown error');
+    res.status(500).json({ error: 'Failed to update memory dates' });
   }
 });
 

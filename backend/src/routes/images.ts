@@ -71,7 +71,7 @@ router.get('/:imageId', auth, async (req: any, res) => {
     const [rows] = await pool.promise().query<Image[]>((
       `SELECT 
         i.id,
-        i.jpg_path,
+        i.webp_path,
         i.latitude,
         i.longitude,
         i.created_by_user_id,

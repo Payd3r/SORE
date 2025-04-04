@@ -20,7 +20,6 @@ interface ImageDetailModalProps {
 const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetailModalProps) => {
   const navigate = useNavigate();
   const [fullImageData, setFullImageData] = useState<ImageResponse | null>(null);
-  const [isImageLoading, setIsImageLoading] = useState(true);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -48,16 +47,16 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
 
   useEffect(() => {
     if (isOpen && image?.id) {
-      setIsImageLoading(true);
+      // Non mostriamo il loading iniziale perché usiamo la thumbnail
       setImageError(null);
       
       const imageId = parseInt(image.id, 10);
       if (isNaN(imageId)) {
         setImageError('ID immagine non valido');
-        setIsImageLoading(false);
         return;
       }
 
+      // Carichiamo l'immagine originale in background
       getOriginalImage(imageId)
         .then(response => {
           setFullImageData(response);
@@ -65,16 +64,12 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
         })
         .catch(error => {
           console.error('Errore nel caricamento dell\'immagine originale:', error);
-          setImageError('Impossibile caricare l\'immagine originale');
-        })
-        .finally(() => {
-          setIsImageLoading(false);
+          // Non mostriamo l'errore all'utente perché abbiamo già la thumbnail
         });
     }
   }, [isOpen, image?.id]);
 
   const handleImageLoad = () => {
-    setIsImageLoading(false);
     if (imageRef.current) {
       setImageSize({
         width: imageRef.current.naturalWidth,
@@ -144,6 +139,11 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
       if (image) {
         image.type = editData.type;
         image.created_at = date.toISOString();
+        // Aggiorna anche fullImageData se esiste
+        if (fullImageData?.data) {
+          fullImageData.data.type = editData.type;
+          fullImageData.data.created_at = date.toISOString();
+        }
       }
       
       setIsEditing(false);
@@ -156,8 +156,9 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
 
   if (!isOpen || !image) return null;
 
-  const imageUrl = fullImageData?.data?.jpg_path
-    ? getImageUrl(fullImageData.data.jpg_path)
+  // Usiamo prima la thumbnail, poi l'immagine originale quando disponibile
+  const imageUrl = fullImageData?.data?.webp_path
+    ? getImageUrl(fullImageData.data.webp_path)
     : getImageUrl(image.thumb_big_path);
 
   const displayImage = fullImageData?.data || image;
@@ -217,32 +218,26 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
       >
         {/* Immagine */}
         <div className="relative flex-1 bg-black/20">
-            {imageError ? (
-              <div className="absolute inset-0 flex items-center justify-center text-red-500 p-4">
+          {imageError ? (
+            <div className="absolute inset-0 flex items-center justify-center text-red-500 p-4">
               {imageError}
-              </div>
-            ) : (
-              <img
+            </div>
+          ) : (
+            <img
               ref={imageRef}
-                src={imageUrl}
-                alt={`Immagine ${image.id}`}
-                className="w-full h-full object-contain"
+              src={imageUrl}
+              alt={`Immagine ${image.id}`}
+              className="w-full h-full object-contain"
               onLoad={handleImageLoad}
-                onError={() => {
-                  setImageError('Errore nel caricamento dell\'immagine');
-                  setIsImageLoading(false);
-                }}
+              onError={() => {
+                setImageError('Errore nel caricamento dell\'immagine');
+              }}
               style={{
                 maxHeight: `${modalDimensions.height}px`
-                }}
-              />
-            )}
-            {isImageLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300/20 border-t-blue-500" />
-              </div>
-            )}
-          </div>
+              }}
+            />
+          )}          
+        </div>
 
         {/* Dettagli Desktop */}
         <div className="hidden lg:block w-[280px] overflow-y-auto border-l border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -366,7 +361,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                     onClick={() => {
                       const link = document.createElement('a');
                       link.href = imageUrl;
-                      link.download = `immagine-${image.id}.jpg`;
+                      link.download = `immagine-${image.id}.webp`;
                       link.click();
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -446,10 +441,12 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                       locale={it}
                       className="text-right text-xs text-gray-500 dark:text-gray-400 bg-transparent border-none p-0"
                       onCalendarOpen={() => {
-                        // Forza la chiusura della tastiera su mobile
-                        if (document.activeElement instanceof HTMLElement) {
-                          document.activeElement.blur();
-                        }
+                        // Forza la chiusura della tastiera su mobile con un piccolo ritardo
+                        setTimeout(() => {
+                          if (document.activeElement instanceof HTMLElement) {
+                            document.activeElement.blur();
+                          }
+                        }, 100);
                       }}
                     />
                   ) : (
@@ -524,7 +521,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 onClick={() => {
                   const link = document.createElement('a');
                   link.href = imageUrl;
-                  link.download = `immagine-${image.id}.jpg`;
+                  link.download = `immagine-${image.id}.webp`;
                   link.click();
                 }}
                       className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"

@@ -51,8 +51,6 @@ export default function MemoryUploadModal({
 }: MemoryUploadModalProps) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<MemoryType>('SEMPLICE');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
   const [song, setSong] = useState('');
   const [location, setLocation] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -64,14 +62,13 @@ export default function MemoryUploadModal({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Reset dei campi quando il modal viene chiuso
   useEffect(() => {
     if (!isOpen) {
       setTitle('');
       setType('SEMPLICE');
-      setStartDate(null);
-      setEndDate(null);
       setSong('');
       setLocation('');
       setSelectedFiles([]);
@@ -130,8 +127,6 @@ export default function MemoryUploadModal({
   const resetForm = () => {
     setTitle('');
     setType('SEMPLICE');
-    setStartDate(null);
-    setEndDate(null);
     setSong('');
     setLocation('');
     setSelectedFiles([]);
@@ -146,6 +141,10 @@ export default function MemoryUploadModal({
   const validateForm = (): boolean => {
     if (!title.trim()) {
       setError('Inserisci un titolo');
+      return false;
+    }
+    if (selectedFiles.length === 0) {
+      setError('Seleziona almeno un\'immagine');
       return false;
     }
     setError(null);
@@ -163,8 +162,6 @@ export default function MemoryUploadModal({
       const memoryData = {
         title: title.trim(),
         type,
-        startDate: startDate ? format(startDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-        endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
         song: song.trim() || undefined,
         location: location.trim() || undefined,
       };
@@ -378,124 +375,167 @@ export default function MemoryUploadModal({
             </div>
           </div>
 
-          {/* Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Data Inizio */}
-            <div>
-              <label htmlFor="startDate" className="form-label">
-                Data Inizio <span className="text-red-500">*</span>
-              </label>
-              <div className="date-picker-container">
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  dateFormat="dd/MM/yyyy"
-                  locale={it}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
-                  placeholderText="Seleziona una data"
-                  onCalendarOpen={() => {
-                    // Forza la chiusura della tastiera su mobile
-                    if (document.activeElement instanceof HTMLElement) {
-                      document.activeElement.blur();
-                    }
-                  }}
-                />
-              </div>
-            </div>
+          {/* Versione mobile con accordion */}
+          <div className="sm:hidden">
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <button
+                type="button"
+                className="w-full px-4 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+              >
+                <div className="flex items-center justify-between">
+                  <span>Dettagli</span>
+                  <svg
+                    className={`w-5 h-5 transform transition-transform ${isDetailsOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </button>
+              <div className={`${isDetailsOpen ? 'block' : 'hidden'} px-4 py-2 space-y-4`}>
+                {/* Canzone (solo per Viaggio e Evento) */}
+                {(type === 'VIAGGIO' || type === 'EVENTO') && (
+                  <div className="relative">
+                    <label htmlFor="song" className="form-label">
+                      Canzone
+                    </label>
+                    <input
+                      type="text"
+                      id="song"
+                      value={song}
+                      onChange={handleSongInputChange}
+                      className="input-base"
+                      placeholder="Cerca una canzone..."
+                    />
+                    {showSuggestions && (song.length >= 2) && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-2xl max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700"
+                      >
+                        {isLoadingSongs ? (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            <div className="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                            Ricerca in corso...
+                          </div>
+                        ) : songSuggestions.length > 0 ? (
+                          <ul className="py-1">
+                            {songSuggestions.map((track) => (
+                              <li
+                                key={track.id}
+                                onClick={() => handleSongSelect(track)}
+                                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
+                              >
+                                <div>
+                                  <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400">
+                                    {track.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                                    {track.artists[0].name} • {track.album.name}
+                                  </div>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            Nessun risultato trovato
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-            {/* Data Fine (solo per Viaggio e Evento) */}
-            {(type === 'VIAGGIO' || type === 'EVENTO') && (
-              <div>                
-                <div className="flex flex-col space-y-2">
-                  <label htmlFor="endDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Data fine
+                {/* Posizione */}
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Posizione
                   </label>
-                  <DatePicker
-                    selected={endDate}
-                    onChange={(date) => setEndDate(date)}
-                    dateFormat="dd/MM/yyyy"
-                    locale={it}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
-                    placeholderText="Seleziona una data"
-                    onCalendarOpen={() => {
-                      // Forza la chiusura della tastiera su mobile
-                      if (document.activeElement instanceof HTMLElement) {
-                        document.activeElement.blur();
-                      }
-                    }}
+                  <input
+                    type="text"
+                    id="location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
+                    placeholder="Dove è successo?"
                   />
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Canzone (solo per Viaggio e Evento) */}
-          {(type === 'VIAGGIO' || type === 'EVENTO') && (
-            <div className="relative">
-              <label htmlFor="song" className="form-label">
-                Canzone
+          {/* Versione desktop - mantiene il layout originale */}
+          <div className="hidden sm:block space-y-4">
+            {/* Canzone (solo per Viaggio e Evento) */}
+            {(type === 'VIAGGIO' || type === 'EVENTO') && (
+              <div className="relative">
+                <label htmlFor="song" className="form-label">
+                  Canzone
+                </label>
+                <input
+                  type="text"
+                  id="song"
+                  value={song}
+                  onChange={handleSongInputChange}
+                  className="input-base"
+                  placeholder="Cerca una canzone..."
+                />
+                {showSuggestions && (song.length >= 2) && (
+                  <div
+                    ref={suggestionsRef}
+                    className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-2xl max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700"
+                  >
+                    {isLoadingSongs ? (
+                      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                        <div className="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+                        Ricerca in corso...
+                      </div>
+                    ) : songSuggestions.length > 0 ? (
+                      <ul className="py-1">
+                        {songSuggestions.map((track) => (
+                          <li
+                            key={track.id}
+                            onClick={() => handleSongSelect(track)}
+                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
+                          >
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400">
+                                {track.name}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {track.artists[0].name} • {track.album.name}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                        Nessun risultato trovato
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Posizione */}
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Posizione
               </label>
               <input
                 type="text"
-                id="song"
-                value={song}
-                onChange={handleSongInputChange}
-                className="input-base"
-                placeholder="Cerca una canzone..."
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
+                placeholder="Dove è successo?"
               />
-              {showSuggestions && (song.length >= 2) && (
-                <div
-                  ref={suggestionsRef}
-                  className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-2xl max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700"
-                >
-                  {isLoadingSongs ? (
-                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                      <div className="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-                      Ricerca in corso...
-                    </div>
-                  ) : songSuggestions.length > 0 ? (
-                    <ul className="py-1">
-                      {songSuggestions.map((track) => (
-                        <li
-                          key={track.id}
-                          onClick={() => handleSongSelect(track)}
-                          className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
-                        >
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400">
-                              {track.name}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {track.artists[0].name} • {track.album.name}
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                      Nessun risultato trovato
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
-          )}
-
-          {/* Posizione */}
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Posizione <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
-              placeholder="Dove è successo?"
-              required
-            />
           </div>
 
           {/* Upload Immagini */}

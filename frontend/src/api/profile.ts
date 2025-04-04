@@ -71,7 +71,8 @@ export const uploadProfilePicture = async (file: File): Promise<AuthResponse['us
       id: data.data.id.toString(),
       name: data.data.name,
       email: data.data.email,
-      profile_picture_url: data.data.profile_picture_url
+      profile_picture_url: data.data.profile_picture_url,
+      theme_preference: data.data.theme_preference
     };
   } catch (error) {
     throw error;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Tab } from '@headlessui/react';
-import { getRecapData, getRecapConfronto, RecapStats, RecapConfronto } from '../api/recap';
+import { getRecapData, getRecapConfronto, getRecapAttivita, RecapStats, RecapConfronto, RecapAttivita } from '../api/recap';
 import { getTrackDetails, SpotifyTrack } from '../api/spotify';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -11,6 +11,7 @@ import {
     MusicalNoteIcon,
     ChartBarIcon
 } from '@heroicons/react/24/outline';
+import { getImageUrl } from '../api/images';
 
 const Recap: React.FC = () => {
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -47,7 +48,14 @@ const Recap: React.FC = () => {
         staleTime: 5 * 60 * 1000, // 5 minuti
     });
 
-    const isLoading = isLoadingRecap || isLoadingConfronto;
+    // React Query per il fetching dei dati dell'attività
+    const { data: attivitaData, isLoading: isLoadingAttivita } = useQuery<RecapAttivita>({
+        queryKey: ['recap-attivita'],
+        queryFn: getRecapAttivita,
+        staleTime: 5 * 60 * 1000, // 5 minuti
+    });
+
+    const isLoading = isLoadingRecap || isLoadingConfronto || isLoadingAttivita;
     const error = !recapData || !confrontoData ? 'Errore nel caricamento dei dati' : null;
 
     // Imposta l'utente selezionato di default al primo utente quando i dati sono disponibili
@@ -117,7 +125,7 @@ const Recap: React.FC = () => {
             bgColor: 'bg-green-500/10 dark:bg-green-500/20'
         }
     ];
-
+    console.log(attivitaData);
     return (
         <div className="min-h-screen bg-transparent">
             <div className="relative max-w-7xl mx-auto">
@@ -316,8 +324,89 @@ const Recap: React.FC = () => {
 
                                 <Tab.Panel className="focus:outline-none focus:ring-0">
                                     {/* Contenuto Attività */}
-                                    <div className="space-y-6">
-                                        {/* Contenuto da aggiungere */}
+                                    <div className="space-y-4 sm:space-y-6">
+                                        {/* Sezione Immagini Recenti */}
+                                        <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-2 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+                                            <h3 className="text-sm sm:text-lg font-semibold mb-2 sm:mb-4 flex items-center gap-2">
+                                                <PhotoIcon className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                                                Immagini Recenti
+                                            </h3>
+                                            <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 sm:gap-4">
+                                                {attivitaData?.data.images.map((image) => (
+                                                    <div
+                                                        key={image.id}
+                                                        className="aspect-square rounded-lg overflow-hidden group relative"
+                                                    >
+                                                        <img
+                                                            src={getImageUrl(image.thumb_big_path)}
+                                                            alt={`Immagine ${image.id}`}
+                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                            <div className="absolute bottom-1 left-1 right-1">
+                                                                <div className="text-[10px] sm:text-xs text-white">
+                                                                    {image.type === 'coppia' ? 'Coppia' : 
+                                                                     image.type === 'singolo' ? 'Singolo' : 'Paesaggio'}
+                                                                </div>
+                                                                <div className="text-[8px] sm:text-[10px] text-white/80">
+                                                                    di {image.created_by_user_name}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Sezione Ricordi Recenti */}
+                                        <div className="bg-white/80 dark:bg-gray-800/50 rounded-xl p-2 sm:p-6 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700">
+                                            <h3 className="text-sm sm:text-lg font-semibold mb-2 sm:mb-4 flex items-center gap-2">
+                                                <BookOpenIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                                                Ricordi Recenti
+                                            </h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                                                {attivitaData?.data.memories.map((memory) => (
+                                                    <div
+                                                        key={memory.id}
+                                                        className="bg-white/50 dark:bg-gray-700/50 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow duration-300"
+                                                    >
+                                                        <div className="aspect-[30/9] sm:aspect-video relative">
+                                                            <img
+                                                                src={getImageUrl(memory.thumb_big_path)}
+                                                                alt={`Ricordo ${memory.id}`}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                            <div className="absolute top-1 right-1">
+                                                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium
+                                                                    ${memory.type === 'viaggio' ? 'bg-blue-500/90 text-white' :
+                                                                      memory.type === 'evento' ? 'bg-purple-500/90 text-white' :
+                                                                      'bg-green-500/90 text-white'}`}>
+                                                                    {memory.type === 'viaggio' ? 'Viaggio' :
+                                                                     memory.type === 'evento' ? 'Evento' : 'Semplice'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-2">
+                                                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                                                                {memory.start_date && new Date(memory.start_date).toLocaleDateString('it-IT', {
+                                                                    day: 'numeric',
+                                                                    month: 'long',
+                                                                    year: 'numeric'
+                                                                })}
+                                                                {memory.end_date && ` - ${new Date(memory.end_date).toLocaleDateString('it-IT', {
+                                                                    day: 'numeric',
+                                                                    month: 'long',
+                                                                    year: 'numeric'
+                                                                })}`}
+                                                            </div>
+                                                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                                di {memory.created_by_user_name}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </Tab.Panel>
 

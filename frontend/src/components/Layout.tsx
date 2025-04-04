@@ -1,11 +1,101 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+  
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDetailMemory = location.pathname.startsWith('/ricordo/');
+
+  useEffect(() => {
+    // Verifica se l'app è in modalità PWA
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+      const pwaStatus = isStandalone || isFullscreen;
+      setIsPWA(pwaStatus);
+    };
+
+    checkPWA();
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkPWA);
+    return () => window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
+  }, []);
+
+  useEffect(() => {
+    if (!isPWA) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    let isSwiping = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      
+      if (touchStartX < 50) {
+        e.preventDefault();
+        isSwiping = true;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isSwiping) return;
+      
+      e.preventDefault();
+      touchEndX = e.touches[0].clientX;
+      touchEndY = e.touches[0].clientY;
+      
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      
+      if (touchStartX < 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        
+        if (deltaX > 30) {
+          if (isDetailMemory) {
+            navigate(-1); // Torna indietro nella navigazione
+          } else {
+            setIsSidebarOpen(true);
+          }
+        }
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (isSwiping) {
+        e.preventDefault();
+      }
+      isSwiping = false;
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isPWA, isDetailMemory, navigate]);
+
+  // Aggiungiamo anche un meta tag per disabilitare il gesto di navigazione iOS
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    document.head.appendChild(meta);
+    
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white dark:bg-gray-900" style={{
