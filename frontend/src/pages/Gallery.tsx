@@ -703,15 +703,24 @@ export default function Gallery() {
                                   width: '100%',
                                   height: `${virtualRow.size}px`,
                                   transform: `translateY(${virtualRow.start}px)`,
-                                  gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                                  gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                                  display: 'grid',
+                                  gap: '0.375rem',
+                                  padding: '0.375rem',
                                 }}
-                                className="grid gap-1.5 sm:gap-2 md:gap-3"
                               >
                                 {rowImages.map((image) => (
                                   <div
                                     key={image.id}
-                                    className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ${selectedImages.has(image.id) ? 'ring-2 ring-blue-500' : ''
-                                      }`}
+                                    className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ${
+                                      selectedImages.has(image.id) ? 'ring-2 ring-blue-500' : ''
+                                    }`}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      minHeight: '0',
+                                      minWidth: '0',
+                                    }}
                                     onClick={() => handleImageClick(image)}
                                   >
                                     <LazyImage

@@ -11,6 +11,7 @@ const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isDetailMemory = location.pathname.startsWith('/ricordo/');
+  const isWelcomePage = location.pathname === '/welcome';
 
   useEffect(() => {
     // Verifica se l'app è in modalità PWA
@@ -27,7 +28,7 @@ const Layout = () => {
   }, []);
 
   useEffect(() => {
-    if (!isPWA) return;
+    if (!isPWA || isWelcomePage) return;
 
     let touchStartX = 0;
     let touchStartY = 0;

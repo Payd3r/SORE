@@ -110,7 +110,8 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
     }
     try {
       await onSave(dataToSave);
-      queryClient.invalidateQueries({ queryKey: ['memory', memory.id] });
+      queryClient.invalidateQueries({ queryKey: ['memory', memory.id.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['memories'] });
       onClose();
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);

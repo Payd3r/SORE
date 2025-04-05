@@ -167,9 +167,9 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
         {/* Image Grid Section */}
         <div className="relative flex-grow">
           <div className={`grid gap-0.5 h-full ${
-            isViaggio ? 'grid-cols-3 grid-rows-2 min-h-[280px]' :
-            isEvento ? 'grid-cols-4 grid-rows-1 min-h-[140px]' :
-            'grid-cols-1 grid-rows-1 min-h-[150px] sm:min-h-[280px]'
+            isViaggio ? 'grid-cols-3 grid-rows-2 min-h-[200px] sm:min-h-[180px]' :
+            isEvento ? 'grid-cols-4 grid-rows-1 min-h-[160px] sm:min-h-[180px]' :
+            'grid-cols-1 grid-rows-1 min-h-[140px] sm:min-h-[200px]'
           }`}>
             {optimizedImages.map((image, index) => (
               <div

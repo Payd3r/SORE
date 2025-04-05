@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://101.58.39.17:3002';
+const API_BASE_URL = 'http://192.168.0.23:3002';
 
 export const API_URLS = {
   base: API_BASE_URL,

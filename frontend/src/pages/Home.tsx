@@ -399,7 +399,7 @@ const Home = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <MusicalNoteIcon className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
-                          <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Ultime Canzoni</h2>
+                          <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Playlist di Viaggio</h2>
                         </div>
                       </div>
                       <div className="space-y-2 sm:space-y-3">
