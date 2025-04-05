@@ -82,7 +82,6 @@ export const optimizeGridLayout = (memories: MemoryWithImages[], windowWidth: nu
     // Cerca un elemento che bilanci la riga
     for (const memory of memories) {
       const type = memory.type.toLowerCase();
-      const width = getItemWidth(memory);
 
       // Se non c'è spazio per questo elemento, salta
       if (!canAddToRow(memory)) continue;
