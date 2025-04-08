@@ -13,6 +13,7 @@ import CronologiaRicordo from '../components/Memory/CronologiaRicordo';
 import GalleriaRicordo from '../components/Memory/GalleriaRicordo';
 import MemoryEditModal from '../components/Memory/MemoryEditModal';
 import DeleteModal from '../components/Memory/DeleteModal';
+import { useUpload } from '../contexts/UploadContext';
 
 export interface CarouselImage {
   image: string;
@@ -33,6 +34,7 @@ export default function DetailMemory() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { uploadingFiles } = useUpload();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('info');
@@ -70,6 +72,23 @@ export default function DetailMemory() {
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
+
+  // Effetto per verificare se ci sono upload in corso e aggiornare i dati quando necessario
+  useEffect(() => {
+    // Se ci sono upload attivi per questo ricordo, impostiamo un intervallo di polling
+    const hasActiveUploads = Object.keys(uploadingFiles).length > 0;
+    if (hasActiveUploads && id) {
+      // Creiamo un intervallo che verifica se ci sono nuove immagini ogni 3 secondi
+      const pollingInterval = setInterval(() => {
+        // Invalidiamo la cache delle immagini per forzare un nuovo fetch
+        queryClient.invalidateQueries({ queryKey: ['memory', id] });
+        queryClient.invalidateQueries({ queryKey: ['memoryCarousel', id] });
+      }, 3000);
+      
+      // Puliamo l'intervallo quando il componente viene smontato
+      return () => clearInterval(pollingInterval);
+    }
+  }, [id, uploadingFiles, queryClient]);
 
   // Pre-load delle immagini quando cambiano
   useEffect(() => {
@@ -216,6 +235,14 @@ export default function DetailMemory() {
     setActiveTab('galleria');
     // Scroll alla sezione della galleria con animazione smooth
     galleriaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleImagesUploaded = () => {
+    // Quando un'immagine viene caricata con successo, invalidare le query per aggiornare l'UI
+    if (id) {
+      queryClient.invalidateQueries({ queryKey: ['memory', id] });
+      queryClient.invalidateQueries({ queryKey: ['memoryCarousel', id] });
+    }
   };
 
   if (!memory) return <div className="flex items-center justify-center h-screen">Caricamento...</div>;
@@ -413,7 +440,7 @@ export default function DetailMemory() {
                   <div className="mt-4 sm:mt-6" ref={galleriaRef}>
                     {activeTab === 'info' && <InfoRicordo memory={memory} onVisitGallery={handleVisitGallery} />}
                     {activeTab === 'cronologia' && <CronologiaRicordo memory={memory} />}
-                    {activeTab === 'galleria' && <GalleriaRicordo memory={memory} />}
+                    {activeTab === 'galleria' && <GalleriaRicordo memory={memory} onImagesUploaded={handleImagesUploaded} />}
                   </div>
                 </>
               ) : (

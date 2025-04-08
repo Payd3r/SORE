@@ -4,6 +4,7 @@ import { uploadImages, pollImageStatus, ImageStatusResponse } from '../../api/im
 import { debounce } from 'lodash';
 import { searchTracks } from '../../api/spotify';
 import { createPortal } from 'react-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
 
@@ -59,6 +60,7 @@ export default function MemoryUploadModal({
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Reset dei campi quando il modal viene chiuso
   useEffect(() => {
@@ -188,6 +190,10 @@ export default function MemoryUploadModal({
 
       // Creo il ricordo
       const response = await createMemory(memoryData);
+      
+      // Chiamo onSuccess immediatamente dopo la creazione del ricordo
+      // per aggiornare la UI senza aspettare il completamento degli upload
+      onSuccess?.();
 
       // Se ci sono immagini, avvio l'upload in background
       if (selectedFiles.length > 0) {
@@ -208,6 +214,9 @@ export default function MemoryUploadModal({
             return newState;
           });
 
+          // Invalida subito la cache per mostrare il ricordo vuoto
+          queryClient.invalidateQueries({ queryKey: ['memories'] });
+
           // Avvia il polling per ogni immagine
           uploadResponse.data.forEach(({ jobId, file }) => {
             pollImageStatus(jobId, (status: ImageStatusResponse) => {
@@ -218,7 +227,17 @@ export default function MemoryUploadModal({
                   newState[file].progress = status.progress;
                   newState[file].message = status.status;
                   
+                  // Invalida la cache anche durante il processing quando c'è un progresso significativo
+                  if (status.state === 'processing' && status.progress > 0) {
+                    if (status.progress % 20 === 0 || status.progress === 100) {
+                      queryClient.invalidateQueries({ queryKey: ['memories'] });
+                    }
+                  }
+                  
                   if (status.state === 'completed') {
+                    // Invalida la cache quando un'immagine viene completata
+                    queryClient.invalidateQueries({ queryKey: ['memories'] });
+                    
                     setTimeout(() => {
                       setUploadingFiles(prev => {
                         const newState = { ...prev };
@@ -228,7 +247,6 @@ export default function MemoryUploadModal({
                           setShowUploadStatus(false);
                           localStorage.removeItem('uploadingFiles');
                           localStorage.removeItem('isUploading');
-                          onSuccess?.();
                         }
                         return newState;
                       });
@@ -254,9 +272,6 @@ export default function MemoryUploadModal({
             return newState;
           });
         }
-      } else {
-        // Se non ci sono immagini, chiamo onSuccess
-        onSuccess?.();
       }
     } catch (err) {
       setError('Errore durante il salvataggio del ricordo');

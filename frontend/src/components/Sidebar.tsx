@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../api/images';
+import { useUpload } from '../contexts/UploadContext';
 import {
   HomeIcon,
   BookOpenIcon,
@@ -11,7 +12,8 @@ import {
   ClockIcon,
   UserCircleIcon,
   SunIcon,
-  MoonIcon
+  MoonIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -22,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { hasActiveUploads, setShowUploadStatus } = useUpload();
   const [darkMode, setDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('darkMode');
     return savedTheme ? savedTheme === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -189,7 +192,29 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         </ul>
       </nav>
 
+      {/* Spazio flessibile che spinge il contenuto verso il basso */}
+      <div className="flex-1"></div>
+
       {/* Footer con profilo e tema */}
+      {hasActiveUploads && (
+        <div className="px-6 sm:px-4 pb-4">
+          <button
+            onClick={() => {
+              setShowUploadStatus(true);
+              if (onClose) onClose();
+            }}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-base w-full text-green-600 bg-green-50 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors"
+          >
+            <ArrowUpTrayIcon className="w-5 h-5" />
+            <span>Upload in corso</span>
+            <span className="flex h-3 w-3 ml-auto">
+              <span className="animate-ping absolute h-3 w-3 rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+          </button>
+        </div>
+      )}
+
       <div className="p-6 sm:p-4 border-t border-gray-200 dark:border-gray-800 pb-safe-bottom mb-3 sm:mb-0">
         <Link
           to="/profilo"

@@ -297,4 +297,36 @@ router.get('/status/:jobId', auth, async (req: any, res) => {
   }
 });
 
+// Get queue status
+router.get('/queue/status', auth, async (req: any, res) => {
+  try {
+    // Conta i file nelle diverse directory
+    const processingFiles = fs.readdirSync(path.join(MEDIA_BASE_PATH, '../queue/processing'));
+    const completedFiles = fs.readdirSync(path.join(MEDIA_BASE_PATH, '../queue/completed'));
+    const failedFiles = fs.readdirSync(path.join(MEDIA_BASE_PATH, '../queue/failed'));
+
+    // Conta i file in base al tipo di job
+    const allFiles = [...processingFiles, ...completedFiles, ...failedFiles];
+    
+    // Ottieni informazioni sulla capacità parallela
+    const activeJobsCount = imageQueue.getActiveJobsCount ? imageQueue.getActiveJobsCount() : processingFiles.length;
+    const maxConcurrentJobs = imageQueue.getMaxConcurrentJobs ? imageQueue.getMaxConcurrentJobs() : 1;
+
+    res.json({
+      status: 'ok',
+      queued: processingFiles.length,
+      active: activeJobsCount,
+      completed: completedFiles.length,
+      failed: failedFiles.length,
+      total: allFiles.length,
+      maxConcurrentJobs,
+      utilization: activeJobsCount > 0 ? Math.round((activeJobsCount / maxConcurrentJobs) * 100) : 0
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Queue Status] Error getting queue status:', errorMessage);
+    res.status(500).json({ error: 'Failed to get queue status' });
+  }
+});
+
 export default router;

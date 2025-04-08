@@ -78,9 +78,9 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
       className={`group bg-white dark:bg-gray-800 rounded-lg border-2 ${typeStyle.border} sm:${typeStyle.hover} ${typeStyle.shadow} overflow-hidden cursor-pointer transition-all duration-300 sm:hover:shadow-lg sm:hover:-translate-y-0.5`}
       onClick={handleClick}
     >
-      <div className="flex items-center gap-4 p-3">
+      <div className="flex items-center gap-4 p-0">
         {/* Thumbnail */}
-        <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-md overflow-hidden">
+        <div className="relative w-[70px] h-[80px] sm:w-20 sm:h-20 flex-shrink-0 rounded-md overflow-hidden">
           {firstImage ? (
             <img
               src={getImageUrl(firstImage.thumb_big_path)}
@@ -93,7 +93,7 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
             </div>
           )}
           {memory.tot_img > 1 && (
-            <div className="absolute bottom-1 right-1 bg-black/50 backdrop-blur-sm px-1.5 py-0.5 rounded text-xs text-white font-medium">
+            <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm px-1.5 py-0.5 rounded text-xs text-white font-medium">
               +{memory.tot_img - 1}
             </div>
           )}
@@ -101,7 +101,7 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex  justify-end sm:justify-start gap-2 sm:mb-1 mb-0 me-2 mt-1">
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeStyle.color}`}>
               {typeStyle.text}
             </span>

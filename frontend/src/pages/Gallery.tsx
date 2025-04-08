@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import ImageUploadModal from '../components/Images/ImageUploadModal';
 import ImageDetailModal from '../components/Images/ImageDetailModal';
-import UploadStatus from '../components/Images/UploadStatus';
 import { useLocation } from 'react-router-dom';
 import LazyImage from '../components/Images/LazyImage';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -35,7 +34,7 @@ export default function Gallery() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const location = useLocation();
-  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
+  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus } = useUpload();
 
   // React Query per il fetching delle immagini
   const { data: images = [], isLoading: loading, refetch } = useQuery<ImageType[]>({
@@ -371,22 +370,6 @@ export default function Gallery() {
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Upload Button */}
-                    <div className="flex items-center gap-2">
-                      {hasActiveUploads && (
-                        <button
-                          onClick={() => {
-                            setShowUploadStatus(true);
-                          }}
-                          className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                          </svg>
-                          <span className="hidden sm:inline">Upload</span>
-                        </button>
-                      )}
-                    </div>
                     <button
                       onClick={() => {
                         setIsSelectionMode(prev => !prev);
@@ -817,15 +800,6 @@ export default function Gallery() {
           </div>
         </div>
       </div>
-
-      {/* Upload Status Component */}
-      {showUploadStatus && (
-        <UploadStatus
-          show={showUploadStatus}
-          uploadingFiles={uploadingFiles}
-          onClose={() => setShowUploadStatus(false)}
-        />
-      )}
 
       <ImageUploadModal
         isOpen={isUploadModalOpen}

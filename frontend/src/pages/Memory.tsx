@@ -1,15 +1,13 @@
 import { getMemories } from '../api/memory';
 import type { Memory } from '../api/memory';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MemoryUploadModal from '../components/Memories/MemoryUploadModal';
 import MemoryCard from '../components/Memories/MemoryCard';
 import MemoryCardList from '../components/Memories/MemoryCardList';
 import { useAuth } from '../contexts/AuthContext';
 import { useInView } from 'react-intersection-observer';
-import UploadStatus from '../components/Images/UploadStatus';
 import { useUpload } from '../contexts/UploadContext';
-import { useQueryClient } from '@tanstack/react-query';
 import { optimizeGridLayout } from '../components/Memories/optimizeGridLayout';
 
 type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
@@ -29,7 +27,7 @@ interface MemoryWithImages extends Memory {
 export default function Memory() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const { isAuthenticated } = useAuth();
-  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
+  const { uploadingFiles, setUploadingFiles, setShowUploadStatus } = useUpload();
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +35,7 @@ export default function Memory() {
   const [visibleMemories, setVisibleMemories] = useState<number>(12);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const queryClient = useQueryClient();
 
   // Ripristina lo stato dell'upload dal localStorage
   useEffect(() => {
@@ -47,6 +46,24 @@ export default function Memory() {
       setUploadingFiles(JSON.parse(savedUploadingFiles));
     }
   }, []);
+
+  // Effetto per verificare se ci sono upload in corso e aggiornare i dati quando necessario
+  useEffect(() => {
+    // Se ci sono upload attivi, impostiamo un intervallo di polling
+    const hasActiveUploads = Object.keys(uploadingFiles).length > 0;
+    if (hasActiveUploads) {
+      // Creiamo un intervallo che verifica se ci sono nuove immagini ogni 2 secondi
+      const pollingInterval = setInterval(() => {
+        // Invalidiamo la cache per forzare un nuovo fetch
+        queryClient.invalidateQueries({ queryKey: ['memories'] });
+      }, 2000);
+
+      // Puliamo l'intervallo quando il componente viene smontato o non ci sono più upload attivi
+      return () => {
+        clearInterval(pollingInterval);
+      };
+    }
+  }, [uploadingFiles, queryClient]);
 
   // React Query per il fetching dei ricordi
   const { data: memories = [], isLoading } = useQuery<MemoryWithImages[]>({
@@ -70,14 +87,14 @@ export default function Memory() {
   useEffect(() => {
     const savedScrollPosition = sessionStorage.getItem('memoryScrollPosition');
     const savedMemoryId = sessionStorage.getItem('lastViewedMemoryId');
-    
+
     if (savedScrollPosition && savedMemoryId) {
       // Aspetta che il contenuto sia renderizzato
       requestAnimationFrame(() => {
         const memoryElement = document.getElementById(`memory-${savedMemoryId}`);
         if (memoryElement) {
-          memoryElement.scrollIntoView({ 
-            behavior: 'smooth', 
+          memoryElement.scrollIntoView({
+            behavior: 'smooth',
             block: 'center',
             inline: 'nearest'
           });
@@ -188,7 +205,7 @@ export default function Memory() {
       }
       return newTypes;
     });
-    setIsTypeMenuOpen(false);    
+    setIsTypeMenuOpen(false);
   };
 
   // Ottieni il testo del pulsante del filtro
@@ -207,7 +224,11 @@ export default function Memory() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const queryClient = useQueryClient();
+  // Funzione per gestire il successo della creazione di un nuovo ricordo
+  const handleMemoryCreated = useCallback(() => {
+    // Invalida la cache dei ricordi per forzare un nuovo fetch
+    queryClient.invalidateQueries({ queryKey: ['memories'] });
+  }, [queryClient]);
 
   if (isLoading) {
     return (
@@ -251,19 +272,6 @@ export default function Memory() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {hasActiveUploads && (
-                    <button
-                      onClick={() => {
-                        setShowUploadStatus(true);
-                      }}
-                      className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation sm:hover:bg-blue-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                      <span className="hidden sm:inline">Upload</span>
-                    </button>
-                  )}
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
                     className="btn btn-primary flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation sm:hover:bg-blue-600"
@@ -474,20 +482,11 @@ export default function Memory() {
         </div>
       </div>
 
-      {/* Upload Status Modal */}
-      <UploadStatus
-        show={showUploadStatus}
-        uploadingFiles={uploadingFiles}
-        onClose={() => setShowUploadStatus(false)}
-      />
-
       {/* Memory Upload Modal */}
       <MemoryUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['memories'] });
-        }}
+        onSuccess={handleMemoryCreated}
         setUploadingFiles={setUploadingFiles}
         setShowUploadStatus={setShowUploadStatus}
       />

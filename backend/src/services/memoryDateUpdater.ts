@@ -1,12 +1,21 @@
 import pool from '../config/db';
-import { RowDataPacket } from 'mysql2';
+import { RowDataPacket, PoolConnection } from 'mysql2/promise';
 
-export async function updateMemoryDates(memoryId: number) {
+export async function updateMemoryDates(memoryId: number, connection?: PoolConnection) {
+  let conn: PoolConnection | undefined = connection;
+  let needToRelease = false;
+
   try {
     console.log('\x1b[36m%s\x1b[0m', `[Memory] Starting date update for memory ${memoryId}`);
 
+    // Se non è stata fornita una connessione, ne creiamo una nuova
+    if (!conn) {
+      conn = await pool.promise().getConnection();
+      needToRelease = true;
+    }
+
     // Ottieni tutte le date delle immagini associate
-    const [imagesResult] = await pool.promise().query<(RowDataPacket & { id: number, created_at: Date })[]>(
+    const [imagesResult] = await conn.query<(RowDataPacket & { id: number, created_at: Date })[]>(
       `SELECT id, created_at 
        FROM images 
        WHERE memory_id = ? 
@@ -32,7 +41,7 @@ export async function updateMemoryDates(memoryId: number) {
       const startDate = singleDate;
       const endDate = new Date(singleDate.getTime() + 24 * 60 * 60 * 1000); // Aggiungi 1 giorno
 
-      await pool.promise().query(
+      await conn.query(
         `UPDATE memories 
          SET 
           start_date = ?,
@@ -119,7 +128,7 @@ export async function updateMemoryDates(memoryId: number) {
             startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime())
           );
 
-          await pool.promise().query(
+          await conn.query(
             `UPDATE images 
              SET created_at = ? 
              WHERE id = ?`,
@@ -134,7 +143,7 @@ export async function updateMemoryDates(memoryId: number) {
       }
 
       // Aggiorna le date del memory
-      await pool.promise().query(
+      await conn.query(
         `UPDATE memories 
          SET 
           start_date = ?,
@@ -163,7 +172,7 @@ export async function updateMemoryDates(memoryId: number) {
         console.log('\x1b[33m%s\x1b[0m', '[Memory] Range exceeded 20 days, adjusted end date to:', endDate.toISOString());
       }
 
-      await pool.promise().query(
+      await conn.query(
         `UPDATE memories 
          SET 
           start_date = ?,
@@ -181,5 +190,10 @@ export async function updateMemoryDates(memoryId: number) {
   } catch (error) {
     console.error('\x1b[31m%s\x1b[0m', '[Memory] Error updating dates:', error instanceof Error ? error.message : 'Unknown error');
     throw error;
+  } finally {
+    // Rilascia la connessione solo se l'abbiamo creata noi
+    if (needToRelease && conn) {
+      conn.release();
+    }
   }
 } 

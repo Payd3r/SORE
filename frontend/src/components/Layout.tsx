@@ -3,10 +3,13 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
 import { Bars3Icon } from '@heroicons/react/24/outline';
+import UploadStatus from './Images/UploadStatus';
+import { useUpload } from '../contexts/UploadContext';
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
+  const { uploadingFiles, showUploadStatus, setShowUploadStatus } = useUpload();
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -141,6 +144,15 @@ const Layout = () => {
           </div>
         </main>
       </div>
+
+      {/* Upload Status Component */}
+      {showUploadStatus && (
+        <UploadStatus
+          show={showUploadStatus}
+          uploadingFiles={uploadingFiles}
+          onClose={() => setShowUploadStatus(false)}
+        />
+      )}
 
       {/* Sidebar mobile overlay */}
       {isSidebarOpen && (

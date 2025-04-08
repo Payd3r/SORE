@@ -39,7 +39,15 @@ interface ImageJob {
   id: string;
 }
 
+// Gestore delle connessioni al database per l'elaborazione parallela
+const getPoolConnection = async () => {
+  return await pool.promise().getConnection();
+};
+
 export async function processImageJob(job: ImageJob) {
+  // Ottieni una connessione dal pool per isolare la transazione
+  let conn;
+  
   try {
     console.log(`[Worker] Processing image: ${job.originalName} (Job ID: ${job.id})`);
 
@@ -66,6 +74,11 @@ export async function processImageJob(job: ImageJob) {
     // Conversione formato (se necessario)
     if (job.originalName.toLowerCase().endsWith('.heic') || job.originalName.toLowerCase().endsWith('.heif')) {
       await updateJobProgress(job.id, 40, 'Conversione formato HEIC');
+    }
+
+    // Verifica che il file esista prima di procedere
+    if (!fs.existsSync(processedImage.original_path)) {
+      throw new Error(`File originale non trovato: ${processedImage.original_path}`);
     }
 
     // Leggi il buffer dell'immagine
@@ -106,7 +119,14 @@ export async function processImageJob(job: ImageJob) {
 
     // Aggiorna il database con i percorsi delle immagini processate
     await updateJobProgress(job.id, 80, 'Salvataggio nel database');
-    const [result] = await pool.promise().query<ResultSetHeader>(
+    
+    // Ottieni una connessione dal pool
+    conn = await getPoolConnection();
+    
+    // Inizia la transazione
+    await conn.beginTransaction();
+    
+    const [result] = await conn.query<ResultSetHeader>(
       `INSERT INTO images (
         original_path,
         webp_path,
@@ -136,6 +156,19 @@ export async function processImageJob(job: ImageJob) {
         metadata.country
       ]
     );
+    
+    // Se c'è un memory_id, aggiorna le date del memory
+    if (job.memoryId) {
+      try {
+        await updateMemoryDates(job.memoryId, conn);
+      } catch (error) {
+        console.error(`[Worker] Error updating memory dates for memory ${job.memoryId}:`, error);
+        // Continua comunque senza far fallire l'intero job
+      }
+    }
+    
+    // Commit della transazione
+    await conn.commit();
 
     // Aggiorna lo stato dopo il salvataggio nel database
     await updateJobProgress(job.id, 90, 'Pulizia file temporanei');
@@ -145,15 +178,6 @@ export async function processImageJob(job: ImageJob) {
       fs.unlinkSync(job.filePath);
     }
 
-    // Se c'è un memory_id, aggiorna le date del memory
-    if (job.memoryId) {
-      try {
-        await updateMemoryDates(job.memoryId);
-      } catch (error) {
-        console.error(`[Worker] Error updating memory dates for memory ${job.memoryId}:`, error);
-      }
-    }
-
     // Aggiorna lo stato finale
     await updateJobProgress(job.id, 100, 'Completato');
 
@@ -161,8 +185,21 @@ export async function processImageJob(job: ImageJob) {
     return result.insertId;
   } catch (error) {
     console.error(`[Worker] Error processing image ${job.originalName} (Job ID: ${job.id}):`, error instanceof Error ? error.message : 'Unknown error');
+    
+    // Rollback della transazione se necessario
+    if (conn) {
+      try {
+        await conn.rollback();
+      } catch (rollbackError) {
+        console.error('Error during rollback:', rollbackError);
+      }
+    }
+    
     await updateJobProgress(job.id, 0, `Errore: ${error instanceof Error ? error.message : 'Unknown error'}`);
     throw error;
+  } finally {
+    // Rilascia la connessione
+    if (conn) conn.release();
   }
 }
 

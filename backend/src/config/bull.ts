@@ -1,11 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { processImageJob } from '../services/imageWorker';
+import os from 'os';
 
 const QUEUE_DIR = path.join(__dirname, '../../queue');
 const PROCESSING_DIR = path.join(QUEUE_DIR, 'processing');
 const COMPLETED_DIR = path.join(QUEUE_DIR, 'completed');
 const FAILED_DIR = path.join(QUEUE_DIR, 'failed');
+
+// Numero massimo di job da processare in parallelo (default: numero di CPU - 1)
+const MAX_CONCURRENT_JOBS = Math.max(1, os.cpus().length - 1);
 
 // Tempo di conservazione dei job completati (24 ore)
 const COMPLETED_JOB_RETENTION = 24 * 60 * 60 * 1000;
@@ -28,10 +32,12 @@ interface QueueJob {
 class FileSystemQueue {
   private static instance: FileSystemQueue;
   private processing: boolean = false;
+  private activeJobs: Set<string> = new Set();
 
   private constructor() {
     this.startProcessing();
     this.startCleanup();
+    console.log(`[Queue] Initialized with maximum ${MAX_CONCURRENT_JOBS} concurrent jobs`);
   }
 
   public static getInstance(): FileSystemQueue {
@@ -74,41 +80,63 @@ class FileSystemQueue {
     while (this.processing) {
       try {
         const files = fs.readdirSync(PROCESSING_DIR);
+        const pendingJobs = files.filter(file => !this.activeJobs.has(file));
         
-        for (const file of files) {
-          const filePath = path.join(PROCESSING_DIR, file);
-          const jobData = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as QueueJob;
+        // Se abbiamo spazio per più job e ci sono job in attesa
+        if (this.activeJobs.size < MAX_CONCURRENT_JOBS && pendingJobs.length > 0) {
+          // Prendi i prossimi job fino al raggiungimento del limite di concorrenza
+          const jobsToProcess = pendingJobs.slice(0, MAX_CONCURRENT_JOBS - this.activeJobs.size);
           
-          try {
-            // Aggiungi l'ID del job ai dati
-            jobData.data.id = jobData.id;
+          for (const file of jobsToProcess) {
+            const filePath = path.join(PROCESSING_DIR, file);
+            const jobData = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as QueueJob;
             
-            await processImageJob(jobData.data);
+            // Segna il job come attivo
+            this.activeJobs.add(file);
             
-            // Aggiorna il job con lo stato finale
-            jobData.progress = 100;
-            jobData.status = 'Completato';
-            
-            // Sposta il file nella directory completed
-            fs.writeFileSync(path.join(COMPLETED_DIR, file), JSON.stringify(jobData));
-            fs.unlinkSync(filePath);
-            console.log(`[Queue] Job ${jobData.id} completed successfully`);
-          } catch (error) {
-            console.error(`[Queue] Error processing job ${jobData.id}:`, error);
-            // Aggiorna il job con lo stato di errore
-            jobData.progress = 0;
-            jobData.status = error instanceof Error ? error.message : 'Errore sconosciuto';
-            // Sposta il file nella directory failed
-            fs.writeFileSync(path.join(FAILED_DIR, file), JSON.stringify(jobData));
-            fs.unlinkSync(filePath);
+            // Processa il job in modo asincrono
+            this.processJob(file, jobData).finally(() => {
+              // Rimuovi il job dalla lista dei job attivi quando è completato
+              this.activeJobs.delete(file);
+            });
           }
         }
       } catch (error) {
         console.error('[Queue] Error in queue processing:', error);
       }
 
-      // Aspetta 1 secondo prima di controllare di nuovo
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aspetta 500ms prima di controllare di nuovo
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+
+  private async processJob(file: string, jobData: QueueJob): Promise<void> {
+    const filePath = path.join(PROCESSING_DIR, file);
+    
+    try {
+      console.log(`[Queue] Processing job ${jobData.id}`);
+      
+      // Aggiungi l'ID del job ai dati
+      jobData.data.id = jobData.id;
+      
+      await processImageJob(jobData.data);
+      
+      // Aggiorna il job con lo stato finale
+      jobData.progress = 100;
+      jobData.status = 'Completato';
+      
+      // Sposta il file nella directory completed
+      fs.writeFileSync(path.join(COMPLETED_DIR, file), JSON.stringify(jobData));
+      fs.unlinkSync(filePath);
+      console.log(`[Queue] Job ${jobData.id} completed successfully`);
+    } catch (error) {
+      console.error(`[Queue] Error processing job ${jobData.id}:`, error);
+      // Aggiorna il job con lo stato di errore
+      jobData.progress = 0;
+      jobData.status = error instanceof Error ? error.message : 'Errore sconosciuto';
+      // Sposta il file nella directory failed
+      fs.writeFileSync(path.join(FAILED_DIR, file), JSON.stringify(jobData));
+      fs.unlinkSync(filePath);
     }
   }
 
@@ -215,6 +243,14 @@ class FileSystemQueue {
       }
     }
     console.warn(`[Queue] Could not find job ${job.id} to update`);
+  }
+
+  public getActiveJobsCount(): number {
+    return this.activeJobs.size;
+  }
+
+  public getMaxConcurrentJobs(): number {
+    return MAX_CONCURRENT_JOBS;
   }
 
   public stop() {

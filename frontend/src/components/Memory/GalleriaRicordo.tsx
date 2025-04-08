@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Memory } from '../../api/types';
+import { useState, useEffect, useRef } from 'react';
+import { getImageUrl, uploadImages, pollImageStatus } from '../../api/images';
+import { Memory } from '../../api/memory';
+import { PlusIcon, XMarkIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { IoImagesOutline } from 'react-icons/io5';
-import ImageDetailModal from '../Images/ImageDetailModal';
-import { uploadImages, pollImageStatus, ImageStatusResponse, ImageType } from '../../api/images';
-import { getImageUrl } from '../../api/images';
-import { PlusIcon } from '@heroicons/react/24/outline';
 import ImageUploadModal from '../Images/ImageUploadModal';
-import UploadStatus from '../Images/UploadStatus';
+import ImageDetailModal from '../Images/ImageDetailModal';
 import { useUpload } from '../../contexts/UploadContext';
+import { useQueryClient } from '@tanstack/react-query';
 
+// Tipo per il filtro delle immagini per tipologia
 type ImageTypeFilter = 'all' | 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 
 interface GalleriaRicordoProps {
@@ -16,122 +16,90 @@ interface GalleriaRicordoProps {
   onImagesUploaded?: () => void;
 }
 
-type MemoryImage = {
-  id: number;
-  thumb_big_path: string;
-  created_at?: string;
-  type?: string;
-  latitude?: number;
-  longitude?: number;
-  created_by_user_id?: number;
-  created_by_name?: string;
-  webp_path?: string;
-};
-
 export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRicordoProps) {
-  const [isCompactGrid, setIsCompactGrid] = useState<boolean>(memory.type.toLowerCase() !== 'semplice');
-  const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
+  const [isCompactGrid, setIsCompactGrid] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
-  const [imagesWithType, setImagesWithType] = useState<Map<number, string>>(new Map());
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus, hasActiveUploads } = useUpload();
+  const typeMenuRef = useRef<HTMLDivElement>(null);
+  const { uploadingFiles, setUploadingFiles, setShowUploadStatus } = useUpload();
+  const queryClient = useQueryClient();
 
-  // Carica i tipi delle immagini quando necessario
-  useEffect(() => {
-    const loadImageTypes = async () => {
+  const loadImageTypes = async () => {
+    try {
       if (!memory.images) return;
-      
-      const newImagesWithType = new Map<number, string>();
-      
-      for (const image of memory.images) {
-        try {
-          const imageType = (image.type || 'all').toUpperCase();
-          newImagesWithType.set(image.id, imageType);
-        } catch (error) {
-          console.error('Errore nel caricamento del tipo dell\'immagine:', error);
-        }
-      }
-      
-      setImagesWithType(newImagesWithType);
-    };
 
+      // Controlla se ci sono già delle immagini per popolare i tipi disponibili
+      if (memory.images && memory.images.length > 0) {
+        const uniqueTypes = new Set<ImageTypeFilter>();
+        memory.images.forEach((image: any) => {
+          if (image.type) {
+            uniqueTypes.add(image.type.toUpperCase() as ImageTypeFilter);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading image types:', error);
+    }
+  };
+
+  useEffect(() => {
     loadImageTypes();
   }, [memory.images]);
 
-  // Funzione per filtrare le immagini per tipo
   const getFilteredImages = (images: Memory['images']) => {
     if (!images) return [];
-    // Se non ci sono tipi selezionati, mostra tutte le immagini
-    if (selectedTypes.size === 0) {
-      return images;
-    }
+    if (selectedTypes.size === 0) return images;
 
-    // Filtra le immagini se c'è almeno un tipo selezionato
-    return images.filter(image => {
-      const imageType = (image.type || imagesWithType.get(image.id) || '').toUpperCase();
-      if (!imageType) return false;
-      
-      return selectedTypes.has(imageType as ImageTypeFilter);
+    return images.filter((image: any) => {
+      if (!image.type) return false;
+      const upperCaseType = image.type.toUpperCase() as ImageTypeFilter;
+      const isIncluded = selectedTypes.has(upperCaseType);
+      return isIncluded;
     });
   };
 
-  // Ottieni il testo del pulsante del filtro
+  const filteredImages = getFilteredImages(memory.images || []);
+
   const getFilterButtonText = () => {
-    if (selectedTypes.size === 0) return 'Filtra';
-    return `Filtri (${selectedTypes.size})`;
+    return selectedTypes.size > 0 ? `Filtro (${selectedTypes.size})` : 'Filtro';
   };
 
   const handleTypeClick = (type: ImageTypeFilter) => {
-    const newSet = new Set(selectedTypes);
-    if (newSet.has(type)) {
-      newSet.delete(type);
-    } else {
-      newSet.add(type);
-    }
-    setSelectedTypes(newSet);    
-    setIsTypeMenuOpen(false);
+    setSelectedTypes(prev => {
+      const newTypes = new Set(prev);
+      if (newTypes.has(type)) {
+        newTypes.delete(type);
+      } else {
+        newTypes.add(type);
+      }
+      return newTypes;
+    });
   };
 
-  // Chiudi il dropdown quando si clicca fuori
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.type-menu')) {
+      if (typeMenuRef.current && !typeMenuRef.current.contains(event.target as Node)) {
         setIsTypeMenuOpen(false);
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
-  const handleImageClick = async (image: MemoryImage) => {
-    try {
-      setSelectedImage({
-        id: String(image.id),
-        latitude: image.latitude || 0,
-        longitude: image.longitude || 0,
-        created_by_user_id: image.created_by_user_id || 0,
-        created_by_name: image.created_by_name || '',
-        type: image.type || 'all',
-        image: image.thumb_big_path,
-        thumb_big_path: image.thumb_big_path,
-        created_at: image.created_at || new Date().toISOString(),
-        webp_path: image.webp_path
-      });
-      setIsDetailModalOpen(true);
-    } catch (error) {
-      console.error('Errore nel caricamento dell\'immagine:', error);
-    }
+  const handleImageClick = async (image: any) => {
+    setSelectedImage(image);
+    setIsDetailModalOpen(true);
   };
 
   const handleUpload = async (files: File[]) => {
-    setIsUploadModalOpen(false);
     setShowUploadStatus(true);
-    
-    // Inizializza lo stato di caricamento per ogni file
+
     const initialUploadState = files.reduce((acc, file) => {
       acc[file.name] = {
         fileName: file.name,
@@ -141,13 +109,12 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
       };
       return acc;
     }, {} as typeof uploadingFiles);
-    
+
     setUploadingFiles(initialUploadState);
 
     try {
       const response = await uploadImages(files, memory.id);
 
-      // Aggiorna lo stato per mostrare che i file sono in elaborazione
       setUploadingFiles(prev => {
         const newState = { ...prev };
         response.data.forEach(({ file }) => {
@@ -160,41 +127,52 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
         return newState;
       });
 
-      // Avvia il polling per ogni immagine
       response.data.forEach(({ jobId, file }) => {
-        pollImageStatus(jobId, (status: ImageStatusResponse) => {         
+        pollImageStatus(jobId, (status) => {
           setUploadingFiles(prev => {
             const newState = { ...prev };
             if (newState[file]) {
               newState[file].status = status.state;
-              newState[file].progress = status.progress;
-              newState[file].message = status.status;
+              newState[file].progress = status.progress || 0;
+              newState[file].message = status.status || '';
+
+              // Invalida la cache anche durante il processing per aggiornare la UI più frequentemente
+              if (status.state === 'processing' && status.progress > 0) {
+                // Aggiorna la cache ogni volta che c'è un progresso significativo
+                if (status.progress % 20 === 0 || status.progress === 100) {
+                  queryClient.invalidateQueries({ queryKey: ['memory', memory.id.toString()] });
+                  queryClient.invalidateQueries({ queryKey: ['memoryCarousel', memory.id.toString()] });
+                  queryClient.invalidateQueries({ queryKey: ['memories'] });
+                }
+              }
 
               if (status.state === 'completed') {
-                // Rimuovi il file dallo stato dopo 2 secondi
+                // Invalida la cache per aggiornare immediatamente le immagini
+                queryClient.invalidateQueries({ queryKey: ['memory', memory.id.toString()] });
+                queryClient.invalidateQueries({ queryKey: ['memoryCarousel', memory.id.toString()] });
+                queryClient.invalidateQueries({ queryKey: ['memories'] });
+                
                 setTimeout(() => {
                   setUploadingFiles(prev => {
                     const newState = { ...prev };
                     delete newState[file];
-                    // Se non ci sono più file in caricamento, nascondi il pannello
                     if (Object.keys(newState).length === 0) {
                       setShowUploadStatus(false);
                     }
                     return newState;
                   });
                 }, 2000);
-                // Notifica il componente padre che le immagini sono state caricate
-                onImagesUploaded?.();
-              } else if (status.state === 'failed') {
-                newState[file].message = 'Errore durante il caricamento';
-              } else if (status.state === 'notfound') {
-                newState[file].message = 'File non trovato';
+
+                if (onImagesUploaded) {
+                  onImagesUploaded();
+                }
               }
             }
             return newState;
           });
         });
       });
+
     } catch (error) {
       console.error('Error uploading images:', error);
       setUploadingFiles(prev => {
@@ -209,26 +187,36 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
     }
   };
 
-  const filteredImages = getFilteredImages(memory.images);
-
   return (
-    <div className="pb-4 pt-0 px-1">
-      {/* Header con controlli */}
-      <div className="flex items-center justify-between mb-6">
-        {/* Filtri e Toggle */}
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between w-full">
         <div className="flex items-center gap-2">
-          {/* Type Filter Dropdown */}
-          <div className="relative type-menu ">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Galleria</h2>
+          
+          {/* Tipo di griglia */}
+          <button
+            onClick={() => setIsCompactGrid(!isCompactGrid)}
+            className="p-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            title={isCompactGrid ? "Vista espansa" : "Vista compatta"}
+          >
+            {isCompactGrid ? (
+              <ListBulletIcon className="w-5 h-5" />
+            ) : (
+              <Squares2X2Icon className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Menu per filtro per tipo */}
+          <div ref={typeMenuRef} className="relative">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsTypeMenuOpen(!isTypeMenuOpen);
-              }}
-              className="flex h-[46px] items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
+              onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
+              className={`flex items-center gap-2 py-2 px-4 text-sm font-medium bg-white dark:bg-gray-800 rounded-md border transition-colors ${
+                selectedTypes.size > 0
+                  ? 'text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-600'
+                  : 'text-gray-700 border-gray-200 dark:text-gray-300 dark:border-gray-700'
+              }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
               {getFilterButtonText()}
               <svg
                 className={`w-4 h-4 transition-transform ${isTypeMenuOpen ? 'rotate-180' : ''}`}
@@ -241,80 +229,47 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
             </button>
 
             {isTypeMenuOpen && (
-              <div className="absolute left-0 mt-2 w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10 ">
-                {['COPPIA', 'PAESAGGIO', 'SINGOLO', 'CIBO'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTypeClick(type as ImageTypeFilter);
-                    }}
-                    className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${
-                      selectedTypes.has(type as ImageTypeFilter)
-                        ? 'text-blue-500 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-white'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 border rounded flex items-center justify-center ${
+              <div className="absolute z-10 mt-1 rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 min-w-[160px]">
+                <div className="p-2">
+                  {['COPPIA', 'SINGOLO', 'PAESAGGIO', 'CIBO'].map((type) => (
+                    <button
+                      key={type}
+                      className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md ${
+                        selectedTypes.has(type as ImageTypeFilter)
+                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                      onClick={() => handleTypeClick(type as ImageTypeFilter)}
+                    >
+                      <div className={`w-4 h-4 border rounded flex items-center justify-center ${
                         selectedTypes.has(type as ImageTypeFilter)
                           ? 'bg-blue-500 border-blue-500'
                           : 'border-gray-300 dark:border-gray-600'
-                      }`}
-                    >
-                      {selectedTypes.has(type as ImageTypeFilter) && (
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                    {type.charAt(0) + type.slice(1).toLowerCase()}
-                  </button>
-                ))}
+                      }`}>
+                        {selectedTypes.has(type as ImageTypeFilter) && (
+                          <XMarkIcon className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                      {type === 'COPPIA' ? 'Coppia' :
+                        type === 'SINGOLO' ? 'Semplice' :
+                        type === 'PAESAGGIO' ? 'Paesaggio' :
+                        type === 'CIBO' ? 'Cibo' : type}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-
-          {/* Grid Toggle */}
-          <button
-            onClick={() => setIsCompactGrid(prev => !prev)}
-            className="flex items-center h-[46px] gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
-            title={isCompactGrid ? "Mostra meno immagini per riga" : "Mostra più immagini per riga"}
-          >
-            {isCompactGrid ? (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-              </svg>
-            )}
-          </button>
         </div>
 
         {/* Bottone Carica */}
-        <div className="flex items-center gap-2">
-          {/* Upload Status Button */}
-          {hasActiveUploads && (
-            <button
-              onClick={() => setShowUploadStatus(true)}
-              className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              <span className="hidden sm:inline">Upload</span>
-            </button>
-          )}
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Carica</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsUploadModalOpen(true)}
+          className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
+        >
+          <PlusIcon className="h-5 w-5" />
+          <span className="hidden sm:inline">Carica</span>
+        </button>
       </div>
 
       {/* Gallery Grid */}
@@ -331,7 +286,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
               : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4'
           }`}
         >
-          {filteredImages.map((image) => (
+          {filteredImages.map((image: any) => (
             <div
               key={image.id}
               onClick={() => handleImageClick(image)}
@@ -346,15 +301,6 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
             </div>
           ))}
         </div>
-      )}
-
-      {/* Upload Status Component */}
-      {showUploadStatus && (
-        <UploadStatus
-          show={showUploadStatus}
-          uploadingFiles={uploadingFiles}
-          onClose={() => setShowUploadStatus(false)}
-        />
       )}
 
       <ImageUploadModal
