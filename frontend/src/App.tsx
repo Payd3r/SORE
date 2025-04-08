@@ -6,6 +6,7 @@ import { queryClient } from './lib/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Suspense, lazy, useEffect } from 'react';
 import Layout from './components/Layout';
+import NotificationTest from './components/NotificationTest';
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./pages/WelcomeAuthenticate'));
@@ -124,6 +125,7 @@ function App() {
                       <Route path="/mappa" element={<Mappa />} />
                       <Route path="/recap" element={<Recap />} />
                       <Route path="/profilo" element={<Profile />} />
+                      <Route path="/notifications" element={<NotificationTest />} />
                       <Route path="/logout" element={<div>Logout...</div>} />
                     </Route>
                   </Route>

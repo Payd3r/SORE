@@ -15,6 +15,7 @@ import {
   MoonIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
+import { FiBell, FiCamera, FiCalendar, FiGrid, FiImage, FiLogOut, FiMap, FiUser, FiZap } from 'react-icons/fi';
 
 interface SidebarProps {
   onClose?: () => void;
@@ -57,6 +58,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  const links = [
+    { to: '/', text: 'Home', icon: <FiGrid className="w-6 h-6 transition" /> },
+    { to: '/ricordi', text: 'Ricordi', icon: <FiCalendar className="w-6 h-6 transition" /> },
+    { to: '/galleria', text: 'Galleria', icon: <FiImage className="w-6 h-6 transition" /> },
+    { to: '/idee', text: 'Idee', icon: <LightBulbIcon className="w-5 h-5" /> },
+    { to: '/mappa', text: 'Mappa', icon: <FiMap className="w-6 h-6 transition" /> },
+    { to: '/recap', text: 'Recap', icon: <FiZap className="w-6 h-6 transition" /> },
+    { to: '/notifications', text: 'Notifiche', icon: <FiBell className="w-6 h-6 transition" /> },
+  ];
+
   return (
     <div className="flex flex-col h-screen w-72 sm:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       {/* Header con profilo */}
@@ -111,109 +123,47 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       {/* Menu principale */}
       <nav className="flex-1 p-6 sm:p-4 pb-0 sm:pb-4">
         <ul className="space-y-2">
-          <li>
-            <Link
-              to="/"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive('/')
-                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-            >
-              <HomeIcon className="w-5 h-5" />
-              <span>Home</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/ricordi"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive('/ricordi')
-                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-            >
-              <BookOpenIcon className="w-5 h-5" />
-              <span>Ricordi</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/galleria"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive('/galleria')
-                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-            >
-              <PhotoIcon className="w-5 h-5" />
-              <span>Galleria</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/idee"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive('/idee')
-                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-            >
-              <LightBulbIcon className="w-5 h-5" />
-              <span>Idee</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/mappa"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive('/mappa')
-                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-            >
-              <MapIcon className="w-5 h-5" />
-              <span>Mappa</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/recap"
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive('/recap')
-                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
-            >
-              <ClockIcon className="w-5 h-5" />
-              <span>Recap</span>
-            </Link>
-          </li>
+          {links.map((link) => (
+            <li key={link.to}>
+              <Link
+                to={link.to}
+                onClick={onClose}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-base ${isActive(link.to)
+                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+              >
+                {link.icon}
+                <span>{link.text}</span>
+              </Link>
+            </li>
+          ))}
         </ul>
       </nav>
 
       {/* Spazio flessibile che spinge il contenuto verso il basso */}
       <div className="flex-1"></div>
 
-      {/* Footer con profilo e tema */}
-      {hasActiveUploads && (
-        <div className="px-6 sm:px-4 pb-4">
-          <button
-            onClick={() => {
-              setShowUploadStatus(true);
-              if (onClose) onClose();
-            }}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-base w-full text-green-600 bg-green-50 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors"
-          >
-            <ArrowUpTrayIcon className="w-5 h-5" />
-            <span>Upload in corso</span>
-            <span className="flex h-3 w-3 ml-auto">
-              <span className="animate-ping absolute h-3 w-3 rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-          </button>
-        </div>
-      )}
+      <div className="mt-auto">
+        {hasActiveUploads && (
+          <div className="px-6 sm:px-4 mb-3">
+            <button
+              onClick={() => {
+                setShowUploadStatus(true);
+                if (onClose) onClose();
+              }}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-base w-full text-green-600 bg-green-50 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors"
+            >
+              <ArrowUpTrayIcon className="w-5 h-5" />
+              <span>Upload in corso</span>
+              <span className="flex h-3 w-3 ml-auto">
+                <span className="animate-ping absolute h-3 w-3 rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="p-6 sm:p-4 border-t border-gray-200 dark:border-gray-800 pb-safe-bottom mb-3 sm:mb-0">
         <Link
