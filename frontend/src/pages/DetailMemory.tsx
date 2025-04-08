@@ -213,15 +213,43 @@ export default function DetailMemory() {
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Memorizza la posizione iniziale del tocco
     touchStartX.current = e.touches[0].clientX;
+    
+    // Interrompe la propagazione per evitare conflitti con lo swipe globale quando si è sul carousel
+    e.stopPropagation();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    // Aggiorna la posizione finale del tocco
     touchEndX.current = e.touches[0].clientX;
+    
+    // Calcola la distanza di swipe
+    const swipeDistance = touchEndX.current - touchStartX.current;
+    
+    // Applica un effetto visivo di trascinamento all'immagine
+    if (Math.abs(swipeDistance) > minSwipeDistance / 3) {
+      const element = e.currentTarget as HTMLElement;
+      const direction = swipeDistance > 0 ? 1 : -1;
+      const offset = Math.min(Math.abs(swipeDistance) / 5, 20) * direction;
+      element.style.transform = `translateX(${offset}px)`;
+    }
+    
+    // Previene lo scroll verticale durante lo swipe orizzontale significativo
+    if (Math.abs(swipeDistance) > minSwipeDistance / 2) {
+      e.preventDefault();
+    }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Calcola la distanza di swipe
     const swipeDistance = touchEndX.current - touchStartX.current;
+    
+    // Resetta la trasformazione
+    const element = e.currentTarget as HTMLElement;
+    element.style.transform = '';
+    
+    // Cambia immagine se lo swipe è abbastanza ampio
     if (Math.abs(swipeDistance) > minSwipeDistance) {
       if (swipeDistance > 0) {
         handlePrevImage();

@@ -190,9 +190,10 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between w-full">
+      <div className="flex items-center justify-between w-full">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Galleria</h2>
+          {/* Titolo visibile solo su desktop */}
+          <h2 className="hidden sm:block text-xl font-semibold text-gray-800 dark:text-white">Galleria</h2>
           
           {/* Tipo di griglia */}
           <button
@@ -211,13 +212,14 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
           <div ref={typeMenuRef} className="relative">
             <button
               onClick={() => setIsTypeMenuOpen(!isTypeMenuOpen)}
-              className={`flex items-center gap-2 py-2 px-4 text-sm font-medium bg-white dark:bg-gray-800 rounded-md border transition-colors ${
+              className={`flex items-center gap-2 py-2 px-3 sm:px-4 text-sm font-medium bg-white dark:bg-gray-800 rounded-md border transition-colors ${
                 selectedTypes.size > 0
                   ? 'text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-600'
                   : 'text-gray-700 border-gray-200 dark:text-gray-300 dark:border-gray-700'
               }`}
             >
-              {getFilterButtonText()}
+              <span className="hidden sm:inline">{getFilterButtonText()}</span>
+              <span className="sm:hidden">Filtro</span>
               <svg
                 className={`w-4 h-4 transition-transform ${isTypeMenuOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -265,7 +267,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
         {/* Bottone Carica */}
         <button
           onClick={() => setIsUploadModalOpen(true)}
-          className="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
+          className="btn btn-primary flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors focus:outline-none"
         >
           <PlusIcon className="h-5 w-5" />
           <span className="hidden sm:inline">Carica</span>

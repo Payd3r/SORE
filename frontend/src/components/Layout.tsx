@@ -38,12 +38,17 @@ const Layout = () => {
     let touchEndX = 0;
     let touchEndY = 0;
     let isSwiping = false;
+    let startTime = 0;
+    let touchDistance = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      startTime = Date.now();
       
-      if (touchStartX < 50) {
+      // Abilita lo swipe solo se il tocco inizia dal bordo sinistro (per aprire sidebar)
+      // o se siamo nella pagina di dettaglio (per tornare indietro)
+      if (touchStartX < 50 || isDetailMemory) {
         e.preventDefault();
         isSwiping = true;
       }
@@ -52,29 +57,51 @@ const Layout = () => {
     const handleTouchMove = (e: TouchEvent) => {
       if (!isSwiping) return;
       
-      e.preventDefault();
       touchEndX = e.touches[0].clientX;
       touchEndY = e.touches[0].clientY;
       
       const deltaX = touchEndX - touchStartX;
       const deltaY = touchEndY - touchStartY;
+      touchDistance = Math.abs(deltaX);
       
-      if (touchStartX < 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Se il movimento è più orizzontale che verticale
+      if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        e.preventDefault(); // Previene lo scroll verticale durante lo swipe orizzontale
         
-        if (deltaX > 30) {
-          if (isDetailMemory) {
-            navigate(-1); // Torna indietro nella navigazione
-          } else {
-            setIsSidebarOpen(true);
-          }
+        // Applica un effetto visuale durante lo swipe
+        if (isDetailMemory && deltaX > 0) {
+          // Effetto di trascinamento per il back gesture
+          const percentage = Math.min(deltaX / window.innerWidth, 0.3);
+          document.body.style.setProperty('--swipe-offset', `${percentage * 100}%`);
+        } else if (deltaX > 0 && !isDetailMemory) {
+          // Effetto di apertura sidebar
+          setIsSidebarOpen(deltaX > window.innerWidth * 0.15);
         }
       }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (isSwiping) {
-        e.preventDefault();
+      if (!isSwiping) return;
+      
+      const deltaX = touchEndX - touchStartX;
+      const swipeTime = Date.now() - startTime;
+      const velocity = touchDistance / swipeTime;
+      
+      // Considera sia la distanza che la velocità per determinare se lo swipe è intenzionale
+      const isSignificantSwipe = deltaX > 70 || (deltaX > 30 && velocity > 0.5);
+      
+      if (Math.abs(deltaX) > Math.abs(touchEndY - touchStartY) && deltaX > 0) {
+        if (isDetailMemory && isSignificantSwipe) {
+          document.body.style.setProperty('--swipe-offset', '0');
+          navigate(-1); // Torna indietro nella navigazione
+        } else if (!isDetailMemory && isSignificantSwipe) {
+          setIsSidebarOpen(true);
+        } else if (isDetailMemory) {
+          // Ripristina la posizione se lo swipe non è completo
+          document.body.style.setProperty('--swipe-offset', '0');
+        }
       }
+      
       isSwiping = false;
     };
 
@@ -82,10 +109,25 @@ const Layout = () => {
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd, { passive: false });
 
+    // Aggiungi stile CSS per gestire l'effetto di transizione
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      body {
+        --swipe-offset: 0;
+      }
+      .page-transition-wrapper {
+        transform: translateX(var(--swipe-offset));
+        transition: transform 0.3s ease;
+      }
+    `;
+    document.head.appendChild(styleElement);
+
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.head.removeChild(styleElement);
+      document.body.style.removeProperty('--swipe-offset');
     };
   }, [isPWA, isDetailMemory, navigate]);
 
@@ -139,7 +181,7 @@ const Layout = () => {
           transform: 'translate3d(0,0,0)',
           touchAction: 'pan-y pinch-zoom'
         }}>
-          <div className="min-h-full">
+          <div className="min-h-full page-transition-wrapper">
             <Outlet />
           </div>
         </main>

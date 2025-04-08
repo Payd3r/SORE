@@ -736,6 +736,7 @@ button:focus-visible {
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none; /* Internet Explorer/Edge */
   user-select: none; /* Non-prefixed version */
+  -webkit-tap-highlight-color: transparent; /* Rimuove il flash di highlight su iOS */
 }
 
 /* Permetti la selezione del testo negli input e textarea */
@@ -746,6 +747,60 @@ input, textarea {
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+}
+
+/* Ottimizzazioni per touch su iOS */
+@media (hover: none) and (pointer: coarse) {
+  /* Aumenta le dimensioni minime dei target touch per garantire una migliore accessibilità */
+  button, 
+  a[role="button"],
+  .btn,
+  .touch-target,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Aumenta il padding dei button sui dispositivi touch */
+  button, 
+  .btn,
+  [type="button"],
+  [type="submit"] {
+    padding: 12px !important;
+  }
+  
+  /* Impedisce lo zoom non intenzionale su iOS quando si fa click su input */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Impedisce lo zoom automatico della tastiera su iOS */
+  }
+  
+  /* Aggiunge margine per evitare che elementi adiacenti siano cliccati per errore */
+  .touch-margin > * {
+    margin: 6px;
+  }
+  
+  /* Migliora la gesture dello swipe */
+  .swipe-container {
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ottimizzazioni per overflow scrolling */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
 }
 
 /* DatePicker Mobile Styles */
