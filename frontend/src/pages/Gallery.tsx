@@ -34,7 +34,7 @@ export default function Gallery() {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const location = useLocation();
-  const { uploadingFiles, setUploadingFiles, showUploadStatus, setShowUploadStatus } = useUpload();
+  const { uploadingFiles, setUploadingFiles, setShowUploadStatus } = useUpload();
 
   // React Query per il fetching delle immagini
   const { data: images = [], isLoading: loading, refetch } = useQuery<ImageType[]>({

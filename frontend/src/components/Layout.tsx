@@ -80,7 +80,7 @@ const Layout = () => {
       }
     };
 
-    const handleTouchEnd = (e: TouchEvent) => {
+    const handleTouchEnd = () => {
       if (!isSwiping) return;
       
       const deltaX = touchEndX - touchStartX;

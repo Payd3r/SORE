@@ -4,18 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../api/images';
 import { useUpload } from '../contexts/UploadContext';
 import {
-  HomeIcon,
-  BookOpenIcon,
-  PhotoIcon,
   LightBulbIcon,
-  MapIcon,
-  ClockIcon,
   UserCircleIcon,
   SunIcon,
   MoonIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
-import { FiBell, FiCamera, FiCalendar, FiGrid, FiImage, FiLogOut, FiMap, FiUser, FiZap } from 'react-icons/fi';
+import { FiBell, FiCalendar, FiGrid, FiImage, FiMap, FiZap } from 'react-icons/fi';
 
 interface SidebarProps {
   onClose?: () => void;
