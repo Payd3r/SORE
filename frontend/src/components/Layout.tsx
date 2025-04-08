@@ -42,6 +42,12 @@ const Layout = () => {
     let touchDistance = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
+      // Se il touch è sul carousel o su un elemento con la classe memory-detail, non attivare lo swipe globale
+      if (e.target && ((e.target as HTMLElement).closest('.carousel-container') || 
+          (e.target as HTMLElement).closest('.memory-detail'))) {
+        return;
+      }
+      
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       startTime = Date.now();
@@ -49,13 +55,26 @@ const Layout = () => {
       // Abilita lo swipe solo se il tocco inizia dal bordo sinistro (per aprire sidebar)
       // o se siamo nella pagina di dettaglio (per tornare indietro)
       if (touchStartX < 50 || isDetailMemory) {
-        e.preventDefault();
-        isSwiping = true;
+        // Solo se non siamo all'interno di un elemento carousel o memory-detail
+        if (!e.target || (!(e.target as HTMLElement).closest('.carousel-container') && 
+            !(e.target as HTMLElement).closest('.memory-detail'))) {
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+          isSwiping = true;
+        }
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isSwiping) return;
+      
+      // Se siamo nel contesto di un carousel o memory-detail, non interferire con il loro funzionamento
+      if (e.target && ((e.target as HTMLElement).closest('.carousel-container') || 
+          (e.target as HTMLElement).closest('.memory-detail'))) {
+        isSwiping = false;
+        return;
+      }
       
       touchEndX = e.touches[0].clientX;
       touchEndY = e.touches[0].clientY;
@@ -66,7 +85,9 @@ const Layout = () => {
       
       // Se il movimento è più orizzontale che verticale
       if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-        e.preventDefault(); // Previene lo scroll verticale durante lo swipe orizzontale
+        if (e.cancelable) {
+          e.preventDefault(); // Previene lo scroll verticale durante lo swipe orizzontale
+        }
         
         // Applica un effetto visuale durante lo swipe
         if (isDetailMemory && deltaX > 0) {

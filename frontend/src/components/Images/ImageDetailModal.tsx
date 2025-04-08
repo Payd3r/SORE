@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl } from '../../api/images';
@@ -32,6 +32,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   });
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
+  const infoToggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -154,6 +155,12 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
     }
   };
 
+  // Funzione dedicata per gestire il toggle delle info
+  const handleInfoToggle = (e: MouseEvent) => {
+    e.stopPropagation();
+    setShowInfo(prev => !prev);
+  };
+
   if (!isOpen || !image) return null;
 
   // Usiamo prima la thumbnail, poi l'immagine originale quando disponibile
@@ -205,11 +212,16 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
         alignItems: 'center',
         justifyContent: 'center'
       }}
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div
         className="bg-white dark:bg-gray-900 rounded-lg max-w-[90vw] sm:max-w-[100vw] max-h-[90vh] shadow-xl flex flex-col lg:flex-row overflow-hidden"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
         style={{
           position: 'relative',
           margin: 'auto',
@@ -391,7 +403,8 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
         <div className="lg:hidden">
           {/* Toggle per le info su mobile */}
           <button
-            onClick={() => setShowInfo(!showInfo)}
+            ref={infoToggleRef}
+            onClick={handleInfoToggle}
             className={`w-full py-3 px-4 flex items-center justify-between text-sm font-medium bg-white dark:bg-gray-800  ${showInfo ? 'border-none rounded-none' : 'border-t border-gray-200 dark:border-gray-700 rounded-t-lg'}`}
           >
             <div className="flex items-center gap-2 text-gray-900 dark:text-white">
@@ -405,7 +418,10 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
             </div>
           </button>
 
-          <div className={`w-full overflow-y-auto bg-white dark:bg-gray-800 transition-all duration-300 ${showInfo ? 'max-h-[50vh]' : 'max-h-0'}`}>
+          <div 
+            className={`w-full overflow-y-auto bg-white dark:bg-gray-800 transition-all duration-300 ${showInfo ? 'max-h-[50vh]' : 'max-h-0'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4">
               {/* Info base - Riduci margine inferiore */}
               <div className="flex items-center justify-between mb-4">

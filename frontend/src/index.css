@@ -822,3 +822,29 @@ input, textarea {
     position: static !important;
   }
 }
+
+/* Correzione per il problema di scrolling nella pagina DetailMemory */
+.memory-detail {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+.memory-detail .carousel-container {
+  touch-action: pan-x !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Rendi scrollabile il contenitore principale */
+main {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Assicurati che all'interno di DetailMemory lo scroll funzioni */
+.memory-detail main {
+  overflow-y: auto !important;
+  touch-action: pan-y !important;
+}

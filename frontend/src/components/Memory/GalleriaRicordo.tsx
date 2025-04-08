@@ -314,10 +314,10 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
       <ImageDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => {
-          setSelectedImage(null);
+          setIsDetailModalOpen(false);
           setTimeout(() => {
-            setIsDetailModalOpen(false);
-          }, 0);
+            setSelectedImage(null);
+          }, 100);
         }}
         image={selectedImage}
         onImageDeleted={onImagesUploaded}

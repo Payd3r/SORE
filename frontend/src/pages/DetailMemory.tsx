@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMemory, getMemoryCarousel, updateMemory, deleteMemory } from '../api/memory';
@@ -30,6 +30,25 @@ interface ProcessedCarouselImage extends CarouselImage {
   processedUrl: string;
 }
 
+// Aggiungiamo uno stile globale per le ottimizzazioni
+const CarouselStyle = () => (
+  <style>
+    {`
+      .force-reflow {
+        animation: none !important;
+        transform: translateZ(0);
+        will-change: transform;
+      }
+      
+      @media (prefers-reduced-motion: reduce) {
+        .carousel-container img {
+          transition: opacity 50ms linear !important;
+        }
+      }
+    `}
+  </style>
+);
+
 export default function DetailMemory() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,12 +60,12 @@ export default function DetailMemory() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [isTransitioning, setIsTransitioning] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const minSwipeDistance = 50;
   const galleriaRef = useRef<HTMLDivElement>(null);
+  const loadedImagesRef = useRef<Set<string>>(new Set());
 
   // React Query per il fetching del ricordo
   const { data: memory } = useQuery<ExtendedMemory>({
@@ -78,35 +97,35 @@ export default function DetailMemory() {
     // Se ci sono upload attivi per questo ricordo, impostiamo un intervallo di polling
     const hasActiveUploads = Object.keys(uploadingFiles).length > 0;
     if (hasActiveUploads && id) {
-      // Creiamo un intervallo che verifica se ci sono nuove immagini ogni 3 secondi
+      // Riduciamo la frequenza di polling a 5 secondi invece di 3
       const pollingInterval = setInterval(() => {
         // Invalidiamo la cache delle immagini per forzare un nuovo fetch
         queryClient.invalidateQueries({ queryKey: ['memory', id] });
         queryClient.invalidateQueries({ queryKey: ['memoryCarousel', id] });
-      }, 3000);
+      }, 5000);
       
       // Puliamo l'intervallo quando il componente viene smontato
       return () => clearInterval(pollingInterval);
     }
   }, [id, uploadingFiles, queryClient]);
 
-  // Pre-load delle immagini quando cambiano
+  // Pre-load delle immagini quando cambiano - usiamo un meccanismo più efficiente
   useEffect(() => {
     if (carouselImages.length > 0) {
-      const preloadImages = carouselImages.map(img => {
-        return new Promise((resolve, reject) => {
-          const image = new Image();
-          image.src = img.processedUrl;
-          image.onload = resolve;
-          image.onerror = reject;
-        });
-      });
+      // Carichiamo solo l'immagine corrente e quelle adiacenti, non tutte in una volta
+      const indicesToLoad = [currentImageIndex];
+      if (carouselImages.length > 1) {
+        const prevIndex = currentImageIndex === 0 ? carouselImages.length - 1 : currentImageIndex - 1;
+        const nextIndex = currentImageIndex === carouselImages.length - 1 ? 0 : currentImageIndex + 1;
+        indicesToLoad.push(prevIndex, nextIndex);
+      }
       
-      Promise.all(preloadImages).catch(error => 
-        console.error('Error preloading images:', error)
-      );
+      indicesToLoad.forEach(index => {
+        const img = new Image();
+        img.src = carouselImages[index].processedUrl;
+      });
     }
-  }, [carouselImages]);
+  }, [carouselImages, currentImageIndex]);
 
   const handleUpdateMemory = async (updatedData: Partial<Memory>) => {
     try {
@@ -147,56 +166,59 @@ export default function DetailMemory() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const preloadImage = (url: string) => {
-    if (loadedImages.has(url)) return Promise.resolve();
+  const preloadImage = useCallback((url: string) => {
+    if (loadedImagesRef.current.has(url)) return Promise.resolve();
     
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.src = url;
       img.onload = () => {
-        setLoadedImages(prev => new Set([...prev, url]));
+        loadedImagesRef.current.add(url);
         resolve(undefined);
       };
       img.onerror = reject;
     });
-  };
+  }, []);
 
-  const preloadAdjacentImages = async (currentIndex: number) => {
+  const preloadAdjacentImages = useCallback(async (currentIndex: number) => {
+    if (carouselImages.length === 0) return;
+    
     const prevIndex = currentIndex === 0 ? carouselImages.length - 1 : currentIndex - 1;
     const nextIndex = currentIndex === carouselImages.length - 1 ? 0 : currentIndex + 1;
     
+    // Carica solo l'immagine corrente e quelle adiacenti
     await Promise.all([
-      preloadImage(carouselImages[prevIndex].processedUrl),
       preloadImage(carouselImages[currentIndex].processedUrl),
+      preloadImage(carouselImages[prevIndex].processedUrl),
       preloadImage(carouselImages[nextIndex].processedUrl)
     ]);
-  };
+  }, [carouselImages, preloadImage]);
 
   useEffect(() => {
     if (carouselImages.length > 0) {
       preloadAdjacentImages(currentImageIndex);
     }
-  }, [currentImageIndex, carouselImages]);
+  }, [currentImageIndex, carouselImages.length, preloadAdjacentImages]);
 
-  const handlePrevImage = () => {
-    if (isTransitioning) return;
+  const handlePrevImage = useCallback(() => {
+    if (isTransitioning || carouselImages.length <= 1) return;
     setIsTransitioning(true);
     setCurrentImageIndex((prev) => {
       const newIndex = prev === 0 ? carouselImages.length - 1 : prev - 1;
       return newIndex;
     });
     setTimeout(() => setIsTransitioning(false), 300);
-  };
+  }, [isTransitioning, carouselImages.length]);
 
-  const handleNextImage = () => {
-    if (isTransitioning) return;
+  const handleNextImage = useCallback(() => {
+    if (isTransitioning || carouselImages.length <= 1) return;
     setIsTransitioning(true);
     setCurrentImageIndex((prev) => {
       const newIndex = prev === carouselImages.length - 1 ? 0 : prev + 1;
       return newIndex;
     });
     setTimeout(() => setIsTransitioning(false), 300);
-  };
+  }, [isTransitioning, carouselImages.length]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
@@ -212,23 +234,24 @@ export default function DetailMemory() {
     return format(new Date(dateString), "d MMMM yyyy 'alle' HH:mm", { locale: it });
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     // Memorizza la posizione iniziale del tocco
     touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = e.touches[0].clientX; // Inizializza anche touchEndX
     
-    // Interrompe la propagazione per evitare conflitti con lo swipe globale quando si è sul carousel
+    // Ferma la propagazione per evitare che Layout.tsx catturi l'evento e blocchi lo scroll
     e.stopPropagation();
-  };
+  }, []);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     // Aggiorna la posizione finale del tocco
     touchEndX.current = e.touches[0].clientX;
     
     // Calcola la distanza di swipe
     const swipeDistance = touchEndX.current - touchStartX.current;
     
-    // Applica un effetto visivo di trascinamento all'immagine
-    if (Math.abs(swipeDistance) > minSwipeDistance / 3) {
+    // Applica un effetto visivo di trascinamento all'immagine solo se ci sono più immagini
+    if (carouselImages.length > 1 && Math.abs(swipeDistance) > minSwipeDistance / 3) {
       const element = e.currentTarget as HTMLElement;
       const direction = swipeDistance > 0 ? 1 : -1;
       const offset = Math.min(Math.abs(swipeDistance) / 5, 20) * direction;
@@ -237,11 +260,14 @@ export default function DetailMemory() {
     
     // Previene lo scroll verticale durante lo swipe orizzontale significativo
     if (Math.abs(swipeDistance) > minSwipeDistance / 2) {
+      if (!e.cancelable) return;
       e.preventDefault();
+      // Ferma la propagazione per evitare che Layout.tsx catturi l'evento
+      e.stopPropagation();
     }
-  };
+  }, [carouselImages.length]);
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     // Calcola la distanza di swipe
     const swipeDistance = touchEndX.current - touchStartX.current;
     
@@ -249,15 +275,15 @@ export default function DetailMemory() {
     const element = e.currentTarget as HTMLElement;
     element.style.transform = '';
     
-    // Cambia immagine se lo swipe è abbastanza ampio
-    if (Math.abs(swipeDistance) > minSwipeDistance) {
+    // Cambia immagine se lo swipe è abbastanza ampio e ci sono più immagini
+    if (carouselImages.length > 1 && Math.abs(swipeDistance) > minSwipeDistance) {
       if (swipeDistance > 0) {
         handlePrevImage();
       } else {
         handleNextImage();
       }
     }
-  };
+  }, [carouselImages.length, handleNextImage, handlePrevImage]);
 
   const handleVisitGallery = () => {
     setActiveTab('galleria');
@@ -273,10 +299,92 @@ export default function DetailMemory() {
     }
   };
 
+  // Aggiungiamo un useEffect per gestire gli eventi touch con l'opzione passive
+  useEffect(() => {
+    // Preveniamo il comportamento di default del browser per i movimenti di touch
+    // all'interno del carousel per evitare conflitti
+    const preventDefaultTouchMove = (e: TouchEvent) => {
+      // Preveniamo solo se siamo nel carousel
+      if (e.target && (e.target as HTMLElement).closest('.carousel-container')) {
+        if (!e.cancelable) return;
+        e.preventDefault();
+      }
+    };
+
+    // Aggiungiamo un listener passivo per migliorare le performance di touch
+    document.addEventListener('touchmove', preventDefaultTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchmove', preventDefaultTouchMove);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Assicuriamoci che il main container possa essere scorrevole
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+      mainContainer.classList.add('scroll-touch');
+      mainContainer.setAttribute('style', 'overflow-y: auto !important; touch-action: pan-y !important;');
+    }
+
+    return () => {
+      if (mainContainer) {
+        mainContainer.classList.remove('scroll-touch');
+      }
+    };
+  }, []);
+
+  // Aggiungiamo un handler di resize debounced
+  useEffect(() => {
+    let resizeTimer: number;
+    
+    const handleResize = () => {
+      // Clear la precedente chiamata
+      clearTimeout(resizeTimer);
+      
+      // Imposta un timer debounced per le reazioni al resize
+      resizeTimer = window.setTimeout(() => {
+        // Forza un re-render delle immagini solo se necessario
+        if (carouselImages.length > 0) {
+          // Forza un re-layout
+          const container = document.querySelector('.carousel-container');
+          if (container) {
+            container.classList.add('force-reflow');
+            setTimeout(() => {
+              container.classList.remove('force-reflow');
+            }, 10);
+          }
+        }
+      }, 250); // 250ms di debounce per il resize
+    };
+    
+    window.addEventListener('resize', handleResize, { passive: true });
+    
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [carouselImages.length]);
+
+  // Ottimizziamo anche l'effetto per il keydown
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        handleNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { passive: true });
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePrevImage, handleNextImage]);
+
   if (!memory) return <div className="flex items-center justify-center h-screen">Caricamento...</div>;
 
   return (
-    <div className="w-full min-h-screen bg-transparent pb-[50px] sm:pb-[150px]">
+    <div className="w-full min-h-screen bg-transparent pb-[50px] sm:pb-[150px] memory-detail">
+      <CarouselStyle />
       <div className="relative max-w-7xl mx-auto">
         {/* Safe area per la notch */}
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
@@ -360,26 +468,37 @@ export default function DetailMemory() {
 
           {/* Content */}
           <div className="pb-0 pt-2">
-            {/* Carousel */}
-            <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[700px] bg-gray-100 rounded-lg overflow-hidden mb-4 sm:mb-8">
+            {/* Carousel - aggiungiamo una classe per targeting */}
+            <div className="relative carousel-container w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[700px] bg-gray-100 rounded-lg overflow-hidden mb-4 sm:mb-8">
               {carouselImages.length > 0 && (
                 <>
                   <div 
-                    className="absolute inset-0 w-full h-full"
+                    className="absolute inset-0 w-full h-full touch-pan-y"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    onClick={(e) => e.stopPropagation()}
                   >
+                    {/* Riduciamo il numero di immagini renderizzate per migliorare le performance */}
                     {carouselImages.map((image, index) => (
-                      <img
-                        key={image.processedUrl}
-                        src={image.processedUrl}
-                        alt={`Slide ${index + 1}`}
-                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                          index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                        }`}
-                        style={{ zIndex: 0 }}
-                      />
+                      // Renderizziamo solo l'immagine corrente e quelle adiacenti
+                      (index === currentImageIndex || 
+                       index === (currentImageIndex === 0 ? carouselImages.length - 1 : currentImageIndex - 1) ||
+                       index === (currentImageIndex === carouselImages.length - 1 ? 0 : currentImageIndex + 1)) && (
+                        <img
+                          key={image.processedUrl}
+                          src={image.processedUrl}
+                          alt={`Slide ${index + 1}`}
+                          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                            index === currentImageIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                          }`}
+                          style={{ 
+                            zIndex: index === currentImageIndex ? 1 : 0,
+                            transform: 'translate3d(0,0,0)', // Forziamo l'accelerazione hardware
+                          }}
+                          loading={index === currentImageIndex ? "eager" : "lazy"}
+                        />
+                      )
                     ))}
                   </div>
                   <div className="absolute bottom-4 left-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-md backdrop-blur-sm text-xs sm:text-sm z-20">
