@@ -91,7 +91,6 @@ export default function DetailMemory() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [touchEventsEnabled, setTouchEventsEnabled] = useState(true);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const minSwipeDistance = 50;

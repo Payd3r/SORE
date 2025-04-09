@@ -399,9 +399,10 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 <>
                   <button
                     onClick={handleSave}
+                    disabled={isSaving}
                     className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                   >
-                    Salva
+                    {isSaving ? 'Salvataggio...' : 'Salva'}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
@@ -555,12 +556,13 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 {isEditing ? (
                   <button
                     onClick={handleSave}
+                    disabled={isSaving}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Salva
+                    {isSaving ? 'Salvando...' : 'Salva'}
                   </button>
                 ) : (
                   <>

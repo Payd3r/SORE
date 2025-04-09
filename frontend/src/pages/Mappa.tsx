@@ -1,4 +1,3 @@
-import React, { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Map from '../components/Maps/Map';

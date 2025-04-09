@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import IdeaUploadModal from '../components/Idee/IdeaUploadModal';
 import IdeaCard from '../components/Idee/IdeaCard';
 import DetailIdeaModal from '../components/Idee/DetailIdeaModal';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Loader from '../components/Loader';
 
 type IdeaTypeFilter = 'RISTORANTI' | 'VIAGGI' | 'SFIDE' | 'SEMPLICI';
