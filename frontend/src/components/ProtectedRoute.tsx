@@ -8,11 +8,11 @@ const ProtectedRoute = () => {
   if (isLoading) {
     return (
       <Loader 
-        type="circle" 
+        type="spinner" 
         size="lg" 
         fullScreen 
-        text="Accesso in corso"
-        subText="Verifica delle credenziali..."
+        text="Caricamento in corso..." 
+        subText="Stiamo preparando l'app per te"
       />
     );
   }

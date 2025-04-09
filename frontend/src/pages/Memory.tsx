@@ -301,7 +301,7 @@ export default function Memory() {
   };
 
   if (isLoading) {
-    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando i tuoi ricordi" />;
+    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
   }
 
   if (!isAuthenticated) {

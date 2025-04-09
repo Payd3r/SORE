@@ -405,7 +405,7 @@ export default function Gallery() {
   };
 
   if (authLoading || loading) {
-    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando la tua galleria" />;
+    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
   }
 
   return (

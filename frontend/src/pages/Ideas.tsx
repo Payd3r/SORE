@@ -232,7 +232,7 @@ export default function Ideas() {
 
             {/* Grid delle card */}
             {isLoading ? (
-              <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando le tue idee" />
+              <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />
             ) : filteredIdeas.length === 0 ? (
               <div className="text-center text-gray-500 dark:text-gray-400">Nessuna idea trovata</div>
             ) : (

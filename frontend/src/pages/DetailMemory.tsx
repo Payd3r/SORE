@@ -419,10 +419,12 @@ export default function DetailMemory() {
   }, [handlePrevImage, handleNextImage]);
 
   if (isLoading) {
-    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo recuperando il ricordo" />;
+    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
   }
 
-  if (!memory) return <div className="flex items-center justify-center h-screen">Caricamento...</div>;
+  if (!memory) {
+    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
+  }
 
   return (
     <div className="w-full min-h-screen bg-transparent pb-[50px] sm:pb-[150px] memory-detail">

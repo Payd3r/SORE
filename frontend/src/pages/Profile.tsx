@@ -71,7 +71,7 @@ const Profile: React.FC = () => {
         !userInfoData?.couple_id ? 'Nessuna coppia associata all\'utente' : null;
 
     if (isLoading) {
-        return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo caricando il tuo profilo" />;
+        return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
     }
 
     if (error) {

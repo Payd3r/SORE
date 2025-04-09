@@ -436,6 +436,19 @@ const Layout = () => {
     setSidebarOpen(false);
   };
 
+  // Funzione per scrollare in alto quando si clicca sulla parte superiore dell'app
+  const handleTopBarClick = () => {
+    // Trova l'elemento main che contiene il contenuto scrollabile
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      // Scroll verso l'alto con animazione
+      mainElement.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <div 
       ref={rootRef}
@@ -453,6 +466,16 @@ const Layout = () => {
       }}
     >
       <ScrollToTop />
+      {/* Area cliccabile per scrollare in alto */}
+      <div 
+        className="fixed top-0 right-0 h-12 w-1/2 z-[100]"
+        onClick={handleTopBarClick}
+        style={{ 
+          height: 'calc(env(safe-area-inset-top) + 44px)',
+          touchAction: 'manipulation'
+        }}
+      />
+      
       {/* Gradient globale */}
       <div className="fixed top-0 left-0 right-0 h-[100px] sm:h-[200px] bg-gradient-to-b from-blue-600/10 dark:from-blue-500/10 to-transparent pointer-events-none z-0" />
 

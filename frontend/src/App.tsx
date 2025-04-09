@@ -131,7 +131,15 @@ function App() {
                 overflow: 'hidden',
                 WebkitOverflowScrolling: 'touch'
               }}>
-                <Suspense fallback={<Loader type="spinner" size="lg" fullScreen />}>
+                <Suspense fallback={
+                  <Loader 
+                    type="spinner" 
+                    size="lg" 
+                    fullScreen 
+                    text="Caricamento in corso..." 
+                    subText="Stiamo preparando l'app per te"
+                  />
+                }>
                   <Routes>
                     <Route path="/welcome" element={<WelcomeAuthenticate />} />
                     <Route element={<ProtectedRoute />}>

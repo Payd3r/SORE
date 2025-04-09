@@ -175,7 +175,7 @@ const Home = () => {
   };
 
   if (isLoading) {
-    return <Loader type="spinner" size="lg" fullScreen />;
+    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
   }
 
   if (error) {
