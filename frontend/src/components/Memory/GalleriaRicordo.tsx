@@ -96,6 +96,13 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
     setSelectedImage(image);
     setIsDetailModalOpen(true);
   };
+  
+  const handleCloseImageModal = () => {
+    setIsDetailModalOpen(false);
+    setTimeout(() => {
+      setSelectedImage(null);
+    }, 100);
+  };
 
   const handleUpload = async (files: File[]) => {
     setShowUploadStatus(true);
@@ -236,7 +243,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
                   {['COPPIA', 'SINGOLO', 'PAESAGGIO', 'CIBO'].map((type) => (
                     <button
                       key={type}
-                      className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md ${
+                      className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md bg-transparent ${
                         selectedTypes.has(type as ImageTypeFilter)
                           ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -313,12 +320,7 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
 
       <ImageDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setTimeout(() => {
-            setSelectedImage(null);
-          }, 100);
-        }}
+        onClose={handleCloseImageModal}
         image={selectedImage}
         onImageDeleted={onImagesUploaded}
       />

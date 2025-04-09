@@ -7,6 +7,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { Suspense, lazy, useEffect } from 'react';
 import Layout from './components/Layout';
 import NotificationTest from './components/NotificationTest';
+import { SidebarProvider } from './components/Layout';
+import Loader from './components/Loader';
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./pages/WelcomeAuthenticate'));
@@ -21,6 +23,22 @@ const Mappa = lazy(() => import('./pages/Mappa'));
 
 function App() {
   useEffect(() => {
+    // Assicuriamoci che la sidebar sia nascosta all'avvio
+    const initApp = () => {
+      // Questa funzione aiuta a forzare la sidebar chiusa per risolvere il problema di visualizzazione
+      const sidebarElement = document.querySelector('aside') as HTMLElement;
+      if (sidebarElement) {
+        sidebarElement.style.transform = 'translateX(-100%) translateZ(0)';
+      }
+    };
+    
+    // Esegui subito per forzare la sidebar chiusa
+    initApp();
+    
+    // Esegui anche dopo un breve ritardo per assicurarsi che funzioni dopo il rendering completo
+    setTimeout(initApp, 100);
+    
+    // Forza viewport height
     const forceViewportHeight = () => {
       // Calcola l'altezza reale del viewport su iOS
       const vh = window.screen.height;
@@ -100,40 +118,42 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <UploadProvider>
-          <Router>
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: 'var(--vw)',
-              height: 'var(--vh)',
-              overflow: 'hidden',
-              WebkitOverflowScrolling: 'touch'
-            }}>
-              <Suspense fallback={null}>
-                <Routes>
-                  <Route path="/welcome" element={<WelcomeAuthenticate />} />
-                  <Route element={<ProtectedRoute />}>
-                    <Route element={<Layout />}>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/ricordi" element={<Memory />} />
-                      <Route path="/ricordo/:id" element={<DetailMemory />} />
-                      <Route path="/galleria" element={<Gallery />} />
-                      <Route path="/idee" element={<Ideas />} />
-                      <Route path="/mappa" element={<Mappa />} />
-                      <Route path="/recap" element={<Recap />} />
-                      <Route path="/profilo" element={<Profile />} />
-                      <Route path="/notifications" element={<NotificationTest />} />
-                      <Route path="/logout" element={<div>Logout...</div>} />
+          <SidebarProvider>
+            <Router>
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: 'var(--vw)',
+                height: 'var(--vh)',
+                overflow: 'hidden',
+                WebkitOverflowScrolling: 'touch'
+              }}>
+                <Suspense fallback={<Loader type="spinner" size="lg" fullScreen />}>
+                  <Routes>
+                    <Route path="/welcome" element={<WelcomeAuthenticate />} />
+                    <Route element={<ProtectedRoute />}>
+                      <Route element={<Layout />}>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/ricordi" element={<Memory />} />
+                        <Route path="/ricordo/:id" element={<DetailMemory />} />
+                        <Route path="/galleria" element={<Gallery />} />
+                        <Route path="/idee" element={<Ideas />} />
+                        <Route path="/mappa" element={<Mappa />} />
+                        <Route path="/recap" element={<Recap />} />
+                        <Route path="/profilo" element={<Profile />} />
+                        <Route path="/notifications" element={<NotificationTest />} />
+                        <Route path="/logout" element={<div>Logout...</div>} />
+                      </Route>
                     </Route>
-                  </Route>
-                  <Route path="*" element={<Navigate to="/welcome" replace />} />
-                </Routes>
-              </Suspense>
-            </div>
-          </Router>
+                    <Route path="*" element={<Navigate to="/welcome" replace />} />
+                  </Routes>
+                </Suspense>
+              </div>
+            </Router>
+          </SidebarProvider>
         </UploadProvider>
       </AuthProvider>
     </QueryClientProvider>

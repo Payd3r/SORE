@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef, MouseEvent } from 'react';
+import { useEffect, useState, useRef, MouseEvent, TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl } from '../../api/images';
 import { IoChevronUp } from 'react-icons/io5';
 import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it, Locale } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { updateImageMetadata } from '../../api/images';
@@ -17,6 +17,37 @@ interface ImageDetailModalProps {
   onImageDeleted?: () => void;
 }
 
+// TouchDatePicker: un wrapper per il DatePicker per gestire meglio gli eventi touch
+const TouchDatePicker = ({ selected, onChange, dateFormat, locale }: {
+  selected: Date;
+  onChange: (date: Date | null) => void;
+  dateFormat: string;
+  locale: Locale;
+}) => {
+  const handleWrapperTouch = (e: TouchEvent<HTMLDivElement>) => {
+    // Preveniamo la propagazione dell'evento touch
+    e.stopPropagation();
+    
+    // Quando l'utente tocca il datepicker, rimuoviamo il focus da qualsiasi elemento
+    // per assicurarci che la tastiera mobile si chiuda
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  return (
+    <div onTouchStart={handleWrapperTouch} style={{ touchAction: 'manipulation' }}>
+      <DatePicker
+        selected={selected}
+        onChange={onChange}
+        dateFormat={dateFormat}
+        locale={locale}
+        className="block text-sm font-medium text-gray-900 dark:text-white bg-transparent border-none p-0"
+      />
+    </div>
+  );
+};
+
 const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetailModalProps) => {
   const navigate = useNavigate();
   const [fullImageData, setFullImageData] = useState<ImageResponse | null>(null);
@@ -25,6 +56,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   const [showInfo, setShowInfo] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const imageRef = useRef<HTMLImageElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     type: image?.type || '',
@@ -200,7 +232,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999]"
+      className="fixed inset-0 z-[9999] modal-backdrop"
       style={{
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         height: '100vh',
@@ -210,22 +242,41 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
         left: 0,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        touchAction: 'none'
       }}
       onClick={(e) => {
         e.stopPropagation();
         onClose();
       }}
+      onTouchEnd={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg max-w-[90vw] sm:max-w-[100vw] max-h-[90vh] shadow-xl flex flex-col lg:flex-row overflow-hidden"
+        ref={modalRef}
+        className="bg-white dark:bg-gray-900 rounded-lg max-w-[90vw] sm:max-w-[100vw] max-h-[90vh] shadow-xl flex flex-col lg:flex-row overflow-hidden modal-content"
         onClick={(e) => {
           e.stopPropagation();
+          // Preveniamo anche la propagazione dell'evento
+          if (e.nativeEvent) {
+            e.nativeEvent.stopImmediatePropagation?.();
+          }
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          // Preveniamo anche la propagazione dell'evento
+          if (e.nativeEvent) {
+            e.nativeEvent.stopImmediatePropagation?.();
+          }
         }}
         style={{
           position: 'relative',
           margin: 'auto',
           width: `${modalDimensions.width}px`,
+          touchAction: 'auto',
+          WebkitOverflowScrolling: 'touch'
         }}
       >
         {/* Immagine */}
@@ -239,14 +290,12 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
               ref={imageRef}
               src={imageUrl}
               alt={`Immagine ${image.id}`}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain max-h-[60vh]"
               onLoad={handleImageLoad}
               onError={() => {
                 setImageError('Errore nel caricamento dell\'immagine');
               }}
-              style={{
-                maxHeight: `${modalDimensions.height}px`
-              }}
+              
             />
           )}          
         </div>
@@ -287,12 +336,11 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 </svg>
                 <div>
                   {isEditing ? (
-                    <DatePicker
+                    <TouchDatePicker
                       selected={editData.created_at}
                       onChange={(date) => setEditData({ ...editData, created_at: date || new Date() })}
                       dateFormat="dd/MM/yyyy"
                       locale={it}
-                      className="block text-sm font-medium text-gray-900 dark:text-white bg-transparent border-none p-0"
                     />
                   ) : (
                     <>
@@ -348,25 +396,28 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
             {/* Azioni (fuori dalle card) */}
             <div className="flex flex-col gap-2 mb-auto">
               {isEditing ? (
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {isSaving ? 'Salvataggio...' : 'Salva'}
-                </button>
+                <>
+                  <button
+                    onClick={handleSave}
+                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                  >
+                    Salva
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    type="button"
+                    className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                  >
+                    Annulla
+                  </button>
+                </>
               ) : (
                 <>
                   <button
-                    onClick={handleEdit}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => setIsEditing(true)}
+                    type="button"
+                    className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
                     Modifica
                   </button>
                   <button
@@ -376,7 +427,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                       link.download = `immagine-${image.id}.webp`;
                       link.click();
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors touchable"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -385,8 +436,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                   </button>
                   <button
                     onClick={handleDelete}
-                    disabled={isDeleting}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white rounded-lg transition-colors ${isDeleting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white rounded-lg transition-colors touchable ${isDeleting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -450,20 +500,11 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 )}
                 <div className="text-right">
                   {isEditing ? (
-                    <DatePicker
+                    <TouchDatePicker
                       selected={editData.created_at}
                       onChange={(date) => setEditData({ ...editData, created_at: date || new Date() })}
                       dateFormat="dd/MM/yyyy"
                       locale={it}
-                      className="text-right text-xs text-gray-500 dark:text-gray-400 bg-transparent border-none p-0"
-                      onCalendarOpen={() => {
-                        // Forza la chiusura della tastiera su mobile con un piccolo ritardo
-                        setTimeout(() => {
-                          if (document.activeElement instanceof HTMLElement) {
-                            document.activeElement.blur();
-                          }
-                        }, 100);
-                      }}
                     />
                   ) : (
                     <>
@@ -514,13 +555,12 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 {isEditing ? (
                   <button
                     onClick={handleSave}
-                    disabled={isSaving}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    {isSaving ? 'Salvataggio...' : 'Salva'}
+                    Salva
                   </button>
                 ) : (
                   <>
@@ -533,30 +573,29 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                       </svg>
                       Modifica
                     </button>
-              <button
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = imageUrl;
-                  link.download = `immagine-${image.id}.webp`;
-                  link.click();
-                }}
+                    <button
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = imageUrl;
+                        link.download = `immagine-${image.id}.webp`;
+                        link.click();
+                      }}
                       className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
+                    >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
                       Scarica
-              </button>
-              <button
+                    </button>
+                    <button
                       onClick={handleDelete}
-                disabled={isDeleting}
                       className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-white rounded-lg ${isDeleting ? 'bg-red-400' : 'bg-red-600 hover:bg-red-700'}`}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                       {isDeleting ? '...' : 'Elimina'}
-              </button>
+                    </button>
                   </>
                 )}
               </div>

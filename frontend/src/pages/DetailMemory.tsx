@@ -14,6 +14,7 @@ import GalleriaRicordo from '../components/Memory/GalleriaRicordo';
 import MemoryEditModal from '../components/Memory/MemoryEditModal';
 import DeleteModal from '../components/Memory/DeleteModal';
 import { useUpload } from '../contexts/UploadContext';
+import Loader from '../components/Loader';
 
 export interface CarouselImage {
   image: string;
@@ -23,7 +24,6 @@ export interface CarouselImage {
 interface ExtendedMemory extends Memory {
   created_by_name: string;
   created_by_user_id: number;
-  description: string;
 }
 
 interface ProcessedCarouselImage extends CarouselImage {
@@ -45,9 +45,39 @@ const CarouselStyle = () => (
           transition: opacity 50ms linear !important;
         }
       }
+
+      /* Supporto globale per i modal */
+      .modal-open {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+      }
+      .touchable {
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+        cursor: pointer !important;
+      }
+      .modal-content {
+        touch-action: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        overflow-y: auto !important;
+      }
+      .modal-backdrop {
+        pointer-events: all !important;
+      }
     `}
   </style>
 );
+
+// Aggiungiamo un monitoraggio globale dello stato dei modal
+// const setupModalState = (isOpen: boolean) => {
+//   // Usiamo data-attributes per comunicare lo stato dei modal all'intero sistema
+//   if (isOpen) {
+//     document.body.setAttribute('data-modal-open', 'true');
+//   } else {
+//     document.body.removeAttribute('data-modal-open');
+//   }
+// };
 
 export default function DetailMemory() {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +91,7 @@ export default function DetailMemory() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [touchEventsEnabled, setTouchEventsEnabled] = useState(true);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const minSwipeDistance = 50;
@@ -68,7 +99,7 @@ export default function DetailMemory() {
   const loadedImagesRef = useRef<Set<string>>(new Set());
 
   // React Query per il fetching del ricordo
-  const { data: memory } = useQuery<ExtendedMemory>({
+  const { data: memory, isLoading } = useQuery<ExtendedMemory>({
     queryKey: ['memory', id],
     queryFn: async () => {
       const response = await getMemory(id!);
@@ -127,10 +158,31 @@ export default function DetailMemory() {
     }
   }, [carouselImages, currentImageIndex]);
 
+  // Modifichiamo i gestori dei modal per rimuovere la gestione touch speciale
+  const openEditModal = () => {
+    // Reset dello scroll per garantire che il modal sia sempre accessibile
+    window.scrollTo(0, 0);
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+  };
+
+  const openDeleteModal = () => {
+    // Reset dello scroll per garantire che il modal sia sempre accessibile
+    window.scrollTo(0, 0);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+  };
+
   const handleUpdateMemory = async (updatedData: Partial<Memory>) => {
     try {
       await updateMemory(id!, updatedData);
-      setIsEditModalOpen(false);
+      closeEditModal();
     } catch (error) {
       console.error('Errore durante l\'aggiornamento del ricordo:', error);
       throw error;
@@ -149,7 +201,7 @@ export default function DetailMemory() {
       console.error('Errore durante l\'eliminazione:', error);
     } finally {
       setIsDeleting(false);
-      setIsDeleteModalOpen(false);
+      closeDeleteModal();
     }
   };
 
@@ -299,25 +351,12 @@ export default function DetailMemory() {
     }
   };
 
-  // Aggiungiamo un useEffect per gestire gli eventi touch con l'opzione passive
-  useEffect(() => {
-    // Preveniamo il comportamento di default del browser per i movimenti di touch
-    // all'interno del carousel per evitare conflitti
-    const preventDefaultTouchMove = (e: TouchEvent) => {
-      // Preveniamo solo se siamo nel carousel
-      if (e.target && (e.target as HTMLElement).closest('.carousel-container')) {
-        if (!e.cancelable) return;
-        e.preventDefault();
-      }
-    };
-
-    // Aggiungiamo un listener passivo per migliorare le performance di touch
-    document.addEventListener('touchmove', preventDefaultTouchMove, { passive: false });
-
-    return () => {
-      document.removeEventListener('touchmove', preventDefaultTouchMove);
-    };
-  }, []);
+  // Aggiungiamo un handler per gestire il touch sui button del modal
+  const handleButtonTouch = (callback: () => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    callback();
+  };
 
   useEffect(() => {
     // Assicuriamoci che il main container possa essere scorrevole
@@ -380,6 +419,10 @@ export default function DetailMemory() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePrevImage, handleNextImage]);
 
+  if (isLoading) {
+    return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo recuperando il ricordo" />;
+  }
+
   if (!memory) return <div className="flex items-center justify-center h-screen">Caricamento...</div>;
 
   return (
@@ -417,7 +460,7 @@ export default function DetailMemory() {
 
               <div className="flex items-center space-x-2 sm:space-x-4">
                 <button
-                  onClick={() => setIsEditModalOpen(true)}
+                  onClick={handleButtonTouch(openEditModal)}
                   className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors focus:outline-none flex items-center justify-center"
                   title="Modifica"
                 >
@@ -427,7 +470,7 @@ export default function DetailMemory() {
                   <span className="hidden sm:inline">Modifica</span>
                 </button>
                 <button
-                  onClick={() => setIsDeleteModalOpen(true)}
+                  onClick={handleButtonTouch(openDeleteModal)}
                   className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none flex items-center justify-center"
                   title="Elimina"
                 >
@@ -511,7 +554,7 @@ export default function DetailMemory() {
                   {/* Navigation buttons */}
                   <div className="absolute inset-y-0 left-0 flex items-center z-10">
                     <button
-                      onClick={handlePrevImage}
+                      onClick={handleButtonTouch(handlePrevImage)}
                       className="group h-full px-2 sm:px-4 focus:outline-none focus:ring-0 bg-transparent border-none"
                       disabled={isTransitioning}
                     >
@@ -525,7 +568,7 @@ export default function DetailMemory() {
                   
                   <div className="absolute inset-y-0 right-0 flex items-center z-10">
                     <button
-                      onClick={handleNextImage}
+                      onClick={handleButtonTouch(handleNextImage)}
                       className="group h-full px-2 sm:px-4 focus:outline-none focus:ring-0 bg-transparent  border-none"
                       disabled={isTransitioning}
                     >
@@ -606,7 +649,7 @@ export default function DetailMemory() {
       {/* Edit Modal */}
       <MemoryEditModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={closeEditModal}
         memory={memory}
         onSave={handleUpdateMemory}
       />
@@ -614,7 +657,7 @@ export default function DetailMemory() {
       {/* Delete Modal */}
       <DeleteModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={closeDeleteModal}
         onDelete={handleDelete}
         isDeleting={isDeleting}
       />

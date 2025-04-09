@@ -13,7 +13,6 @@ export interface Memory {
   end_date: string | null;
   location?: string | null;
   song?: string | null;
-  description?: string | null;
   images: {
     id: number;
     thumb_big_path: string;

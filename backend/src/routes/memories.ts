@@ -224,7 +224,7 @@ router.post('/', auth, async (req: any, res) => {
 router.put('/:memoryId', auth, async (req: any, res) => {
   try {
     const { memoryId } = req.params;
-    const { title, description, start_date, end_date, location, song } = req.body;
+    const { title, start_date, end_date, location, song } = req.body;
     const coupleId = req.user.coupleId;
 
     console.log(`[Memory] Updating memory ${memoryId}`);
@@ -252,14 +252,13 @@ router.put('/:memoryId', auth, async (req: any, res) => {
     const [result] = await pool.promise().query<ResultSetHeader>(
       `UPDATE memories
        SET title = IFNULL(?, title),
-           description = IFNULL(?, description),
            start_date = IFNULL(?, start_date),
            end_date = IFNULL(?, end_date),
            location = IFNULL(?, location),
            song = IFNULL(?, song),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [title, description, start_date, end_date, location, song, memoryId]
+      [title, start_date, end_date, location, song, memoryId]
     );
 
     console.log(`[Memory] Updated memory ${memoryId}`);

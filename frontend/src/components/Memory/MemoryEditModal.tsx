@@ -12,7 +12,6 @@ import { useQueryClient } from '@tanstack/react-query';
 interface ExtendedMemory extends Memory {
   created_by_name: string;
   created_by_user_id: number;
-  description: string;
 }
 
 interface MemoryEditModalProps {
@@ -43,21 +42,33 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
     end_date?: string;
     location: string;
     song: string;
-    description: string;
   }>({
     title: memory.title,
     start_date: memory.start_date ? format(new Date(memory.start_date), 'yyyy-MM-dd', { locale: it }) : '',
     end_date: memory.end_date ? format(new Date(memory.end_date), 'yyyy-MM-dd', { locale: it }) : '',
     location: memory.location || '',
     song: memory.song || '',
-    description: memory.description || ''
   });
 
   const [songSuggestions, setSongSuggestions] = useState<SpotifyTrack[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  // Imposta la classe modal-open sul body quando il modal è aperto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -66,9 +77,27 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
         start_date: memory.start_date ? format(new Date(memory.start_date), 'yyyy-MM-dd', { locale: it }) : '',
         end_date: memory.end_date ? format(new Date(memory.end_date), 'yyyy-MM-dd', { locale: it }) : '',
         location: memory.location || '',
-        song: memory.song || '',
-        description: memory.description || ''
+        song: memory.song || ''
       });
+      
+      // Forza un ricalcolo del layout per risolvere eventuali problemi di rendering
+      setTimeout(() => {
+        if (modalRef.current) {
+          modalRef.current.style.display = 'none';
+          // Force reflow
+          void modalRef.current.offsetHeight;
+          modalRef.current.style.display = '';
+          
+          // Focus sul primo campo di input dopo l'apertura del modal
+          const firstInput = modalRef.current.querySelector('input') as HTMLInputElement;
+          if (firstInput) {
+            setTimeout(() => {
+              // Timeout breve prima di dare il focus per garantire che il modal sia pienamente renderizzato
+              setTimeout(() => firstInput.focus(), 300);
+            }, 10);
+          }
+        }
+      }, 10);
     }
   }, [isOpen, memory]);
 
@@ -104,6 +133,10 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Blur qualsiasi elemento attivo per prevenire problemi con tastiera virtuale
+    document.activeElement instanceof HTMLElement && document.activeElement.blur();
+    
     const dataToSave = { ...formData };
     if (!dataToSave.end_date) {
       delete dataToSave.end_date;
@@ -148,8 +181,11 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
       onClick={onClose}
     >
       <div 
+        ref={modalRef}
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[90vw] sm:w-[40vw] max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        onClick={e => {
+          e.stopPropagation();
+        }}
         style={{
           position: 'relative',
           margin: 'auto',
@@ -183,7 +219,7 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
                 <div className="date-picker-container">
                   <DatePicker
                     selected={formData.start_date ? new Date(formData.start_date) : null}
-                    onChange={(date) => setFormData({ ...formData, start_date: date ? format(date, 'yyyy-MM-dd') : '' })}
+                    onChange={(date: Date | null) => setFormData({ ...formData, start_date: date ? format(date, 'yyyy-MM-dd') : '' })}
                     dateFormat="dd/MM/yyyy"
                     locale={it}
                     placeholderText="Seleziona la data di inizio"
@@ -199,14 +235,13 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
                 <div className="date-picker-container">
                   <DatePicker
                     selected={formData.end_date ? new Date(formData.end_date) : null}
-                    onChange={(date) => setFormData({ ...formData, end_date: date ? format(date, 'yyyy-MM-dd') : '' })}
+                    onChange={(date: Date | null) => setFormData({ ...formData, end_date: date ? format(date, 'yyyy-MM-dd') : '' })}
                     dateFormat="dd/MM/yyyy"
                     locale={it}
                     placeholderText="Seleziona la data di fine"
                     minDate={formData.start_date ? new Date(formData.start_date) : undefined}
                     openToDate={formData.start_date ? new Date(formData.start_date) : undefined}
                     calendarStartDay={1}
-                    className="input-base"
                   />
                 </div>
               </div>
@@ -274,30 +309,21 @@ const MemoryEditModal: React.FC<MemoryEditModalProps> = ({ isOpen, onClose, memo
               )}
             </div>
 
-            <div>
-              <label className="form-label">
-                Descrizione
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-                className="input-base"
-                placeholder="Aggiungi una descrizione..."
-              />
-            </div>
-
             <div className="flex justify-end gap-3 mt-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
                 Annulla
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 Salva modifiche
               </button>

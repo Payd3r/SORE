@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useNavigate, } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +22,7 @@ import { it } from 'date-fns/locale';
 import { getImageUrl } from '../api/images';
 import { getTrackDetails, SpotifyTrack } from '../api/spotify';
 import { FaSpotify } from 'react-icons/fa';
+import Loader from '../components/Loader';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -174,49 +176,7 @@ const Home = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="w-full min-h-screen bg-transparent">
-        <div className="relative max-w-7xl mx-auto">
-          <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
-          <div className="px-2 sm:px-6 lg:px-8 py-4 sm:py-6 mt-14 sm:mt-0">
-            <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
-              {/* Quick Actions con skeleton */}
-              <div className="px-4 sm:px-6 py-6">
-                <div className="mb-6 sm:mb-8 relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-lg">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-white to-purple-100 dark:from-blue-950 dark:via-gray-800 dark:to-purple-950" />
-                  <div className="relative p-4 sm:p-8 bg-white dark:bg-gray-800/80 sm:bg-white/50 sm:dark:bg-gray-800/50 backdrop-blur-sm">
-                    <div className="animate-pulse">
-                      <div className="h-8 sm:h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-3/4 mb-4"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
-                      <div className="flex gap-2 sm:gap-4">
-                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex-1"></div>
-                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex-1"></div>
-                        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex-1"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Explore con skeleton */}
-              <div className="px-4 sm:px-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="p-3 sm:p-5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-gray-200/80 dark:border-white/10">
-                      <div className="animate-pulse">
-                        <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-xl mb-4"></div>
-                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-2"></div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <Loader type="spinner" size="lg" fullScreen />;
   }
 
   if (error) {

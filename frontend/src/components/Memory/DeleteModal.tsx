@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import { IoTrashOutline } from 'react-icons/io5';
+import { useEffect, useRef } from 'react';
 
 interface DeleteModalProps {
   isOpen: boolean;
@@ -9,13 +10,51 @@ interface DeleteModalProps {
 }
 
 export default function DeleteModal({ isOpen, onClose, onDelete, isDeleting }: DeleteModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Imposta la classe modal-open sul body quando il modal è aperto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}>
+    <div 
+      className="fixed inset-0 z-[9999]" 
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.75)', 
+        height: '100vh',
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+      onClick={onClose}
+    >
       <div className="fixed inset-0 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="relative w-[90vw] sm:w-[40vw] max-h-[90vh] bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl">
+          <div 
+            ref={modalRef}
+            className="relative w-[90vw] sm:w-[40vw] max-h-[90vh] bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl" 
+            onClick={e => {
+              e.stopPropagation();
+            }}
+            style={{
+              maxHeight: '90vh'
+            }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
                 <IoTrashOutline className="w-6 h-6 text-red-500" />

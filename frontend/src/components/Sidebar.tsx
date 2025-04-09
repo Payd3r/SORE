@@ -55,13 +55,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   };
 
   const links = [
-    { to: '/', text: 'Home', icon: <FiGrid className="w-6 h-6 transition" /> },
-    { to: '/ricordi', text: 'Ricordi', icon: <FiCalendar className="w-6 h-6 transition" /> },
-    { to: '/galleria', text: 'Galleria', icon: <FiImage className="w-6 h-6 transition" /> },
-    { to: '/idee', text: 'Idee', icon: <LightBulbIcon className="w-5 h-5" /> },
-    { to: '/mappa', text: 'Mappa', icon: <FiMap className="w-6 h-6 transition" /> },
-    { to: '/recap', text: 'Recap', icon: <FiZap className="w-6 h-6 transition" /> },
-    { to: '/notifications', text: 'Notifiche', icon: <FiBell className="w-6 h-6 transition" /> },
+    { to: '/', text: 'Home', icon: <FiGrid className="w-6 h-6 text-current stroke-[1.5]" /> },
+    { to: '/ricordi', text: 'Ricordi', icon: <FiCalendar className="w-6 h-6 text-current stroke-[1.5]" /> },
+    { to: '/galleria', text: 'Galleria', icon: <FiImage className="w-6 h-6 text-current stroke-[1.5]" /> },
+    { to: '/idee', text: 'Idee', icon: <LightBulbIcon className="w-6 h-6 text-current stroke-[1.5]" /> },
+    { to: '/mappa', text: 'Mappa', icon: <FiMap className="w-6 h-6 text-current stroke-[1.5]" /> },
+    { to: '/recap', text: 'Recap', icon: <FiZap className="w-6 h-6 text-current stroke-[1.5]" /> },
+    { to: '/notifications', text: 'Notifiche', icon: <FiBell className="w-6 h-6 text-current stroke-[1.5]" /> },
   ];
 
   return (
@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       {/* Header con profilo */}
       <div className="relative">
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-white dark:bg-gray-900"></div>
-        <div className="p-5 sm:p-4 border-b border-gray-200 dark:border-gray-800 mt-14 sm:mt-4">
+        <div className="p-1 sm:p-4 border-b border-gray-200 dark:border-gray-800 mt-14 sm:mt-4">
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-500/20 dark:via-purple-500/20 dark:to-blue-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             
@@ -169,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
         >
-          <UserCircleIcon className="w-5 h-5" />
+          <UserCircleIcon className="w-6 h-6 text-current stroke-[1.5]" />
           <span>Profilo</span>
         </Link>
         <div className="flex items-center gap-2">
@@ -178,10 +178,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               handleLogout();
               onClose?.();
             }}
-            className="flex-1 flex items-center gap-3 px-4 py-2.5 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg bg-transparent outline-none focus:outline-none active:outline-none"
+            className="ms-1 flex-1 flex items-center gap-3 px-4 py-2.5 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg bg-transparent outline-none focus:outline-none active:outline-none"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16 17L21 12M21 12L16 7M21 12H9M9 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V16.2C3 17.8802 3 18.7202 3.32698 19.362C3.6146 19.9265 4.07354 20.3854 4.63803 20.673C5.27976 21 6.11984 21 7.8 21H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg className="w-6 h-6 stroke-[1.5]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 17L21 12M21 12L16 7M21 12H9M9 3H7.8C6.11984 3 5.27976 3 4.63803 3.32698C4.07354 3.6146 3.6146 4.07354 3.32698 4.63803C3 5.27976 3 6.11984 3 7.8V16.2C3 17.8802 3 18.7202 3.32698 19.362C3.6146 19.9265 4.07354 20.3854 4.63803 20.673C5.27976 21 6.11984 21 7.8 21H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span>Logout</span>
           </button>
@@ -190,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             className="p-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg bg-transparent outline-none focus:outline-none active:outline-none"
             aria-label={darkMode ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
           >
-            {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+            {darkMode ? <SunIcon className="w-6 h-6 text-current stroke-[1.5]" /> : <MoonIcon className="w-6 h-6 text-current stroke-[1.5]" />}
           </button>
         </div>
       </div>

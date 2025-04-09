@@ -124,6 +124,11 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
     }
   };
   
+  const handleCloseImageModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedImage(null);
+  };
+  
   return (
     <div className="space-y-4 sm:space-y-6 px-1">
       {/* Prima row - Info e Mappa */}
@@ -307,10 +312,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
       )}
       <ImageDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedImage(null);
-        }}
+        onClose={handleCloseImageModal}
         image={selectedImage}
       />
     </div>

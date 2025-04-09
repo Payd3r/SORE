@@ -76,6 +76,11 @@ export default function CronologiaRicordo({ memory }: CronologiaRicordoProps) {
       console.error('Errore nel caricamento dell\'immagine:', error);
     }
   };
+  
+  const handleCloseImageModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedImage(null);
+  };
 
   if (!memory.images || memory.images.length === 0) {
     return (
@@ -136,10 +141,7 @@ export default function CronologiaRicordo({ memory }: CronologiaRicordoProps) {
       {/* Image Detail Modal */}
       <ImageDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedImage(null);
-        }}
+        onClose={handleCloseImageModal}
         image={selectedImage}
       />
     </div>
