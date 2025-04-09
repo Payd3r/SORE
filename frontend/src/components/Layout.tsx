@@ -409,7 +409,26 @@ const Layout = () => {
     }
   }, []);
 
+  // Aggiungiamo un effetto per aprire automaticamente la sidebar su desktop
+  useEffect(() => {
+    const handleResize = () => {
+      // Se siamo su desktop e non in modalità PWA, apriamo la sidebar
+      if (window.innerWidth >= 1024 && !isPWA) {
+        setSidebarOpen(true);
+      }
+    };
+
+    // Verifica all'avvio
+    handleResize();
+
+    // Aggiungi listener per il resize
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [setSidebarOpen, isPWA]);
+
   const handleCloseSidebar = () => {
+    // Su desktop non chiudiamo la sidebar quando si clicca il pulsante di chiusura
+    if (window.innerWidth >= 1024 && !isPWA) return;
     setSidebarOpen(false);
   };
 
@@ -441,7 +460,7 @@ const Layout = () => {
       <div className="flex flex-1 relative" style={{ height: 'var(--vh)' }}>
         {/* Sidebar */}
         <aside className={`sidebar fixed lg:sticky top-0 inset-y-0 left-0 z-[49] transform transition-all duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] w-70 shrink-0 
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${!isPWA && !isDetailMemory ? 'lg:translate-x-0' : ''}`}
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${!isPWA ? 'lg:translate-x-0' : ''}`}
           style={{
             height: 'var(--vh)',
             overflowY: 'auto',

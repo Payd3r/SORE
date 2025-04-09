@@ -1,6 +1,6 @@
 import { getMemories } from '../api/memory';
 import type { Memory } from '../api/memory';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, TouchEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MemoryUploadModal from '../components/Memories/MemoryUploadModal';
 import MemoryCard from '../components/Memories/MemoryCard';
@@ -37,6 +37,11 @@ export default function Memory() {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const queryClient = useQueryClient();
+  const [isPWA, setIsPWA] = useState(false);
+  const [initialTouchDistance, setInitialTouchDistance] = useState<number | null>(null);
+  const [pinchScale, setPinchScale] = useState<number>(1);
+  const [isPinching, setIsPinching] = useState(false);
+  const lastPinchTimeRef = useRef<number>(0);
 
   // Ripristina lo stato dell'upload dal localStorage
   useEffect(() => {
@@ -181,7 +186,6 @@ export default function Memory() {
     setHasMore(true);
   }, [searchQuery, selectedTypes]);
 
-
   // Chiudi i dropdown quando si clicca fuori
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -231,6 +235,71 @@ export default function Memory() {
     queryClient.invalidateQueries({ queryKey: ['memories'] });
   }, [queryClient]);
 
+  // Verifica se l'app è in modalità PWA
+  useEffect(() => {
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+      setIsPWA(isStandalone || isFullscreen);
+    };
+
+    checkPWA();
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkPWA);
+    return () => window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
+  }, []);
+
+  // Gestione delle gesture di pinch per il cambio di visualizzazione
+  const handleTouchStart = (e: TouchEvent) => {
+    if (!isPWA || e.touches.length !== 2) return;
+    
+    // Calcola la distanza iniziale tra le dita
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const distance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    );
+    
+    setInitialTouchDistance(distance);
+    setIsPinching(true);
+    setPinchScale(1); // Reset dello scale al valore iniziale
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isPWA || e.touches.length !== 2 || initialTouchDistance === null) return;
+    
+    // Calcola la distanza attuale tra le dita
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const currentDistance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    );
+    
+    // Calcola il fattore di scala tra la distanza iniziale e quella attuale
+    const newScale = currentDistance / initialTouchDistance;
+    setPinchScale(newScale);
+    
+    // Throttle il cambio di modalità per evitare cambi troppo rapidi
+    const now = Date.now();
+    if (now - lastPinchTimeRef.current > 300) { // Controllo ogni 300ms
+      // Determina se è pinch in o pinch out - INVERTIAMO LA LOGICA
+      if (newScale < 0.8 && viewMode === 'grid') {
+        setViewMode('list');
+        lastPinchTimeRef.current = now;
+      } else if (newScale > 1.2 && viewMode === 'list') {
+        setViewMode('grid');
+        lastPinchTimeRef.current = now;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setInitialTouchDistance(null);
+    setIsPinching(false);
+    setPinchScale(1); // Reset dello scale
+  };
+
   if (isLoading) {
     return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando i tuoi ricordi" />;
   }
@@ -245,7 +314,13 @@ export default function Memory() {
 
   return (
     <>
-      <div className="relative min-h-screen bg-transparent pb-[50px] sm:pb-[200px]">
+      <div 
+        className="relative min-h-screen bg-transparent pb-[50px] sm:pb-[200px]"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+      >
         {/* Safe area per la notch */}
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
 
@@ -295,8 +370,24 @@ export default function Memory() {
                   </svg>
                 </div>
 
-                {/* View Toggle */}
-
+                {/* View Toggle - nascosto in PWA */}
+                {!isPWA && (
+                  <button
+                    onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                    className="flex items-center gap-2 h-[46px] px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white sm:hover:bg-gray-50 dark:sm:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
+                    title={viewMode === 'grid' ? "Visualizza come lista" : "Visualizza come griglia"}
+                  >
+                    {viewMode === 'grid' ? (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
 
                 {/* Type Filter Dropdown */}
                 <div className="relative type-menu">
@@ -387,27 +478,18 @@ export default function Memory() {
                   )}
 
                 </div>
-                <button
-                  onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
-                  className="flex items-center gap-2 h-[46px] px-4 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white sm:hover:bg-gray-50 dark:sm:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none"
-                  title={viewMode === 'grid' ? "Visualizza come lista" : "Visualizza come griglia"}
-                >
-                  {viewMode === 'grid' ? (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                  )}
-                </button>
               </div>
             </div>
 
             {/* Memories Grid */}
             <div className="w-full pb-8 lg:pt-6 pt-4">
-              <div className="max-w-[2000px] mx-auto">
+              <div 
+                className="max-w-[2000px] mx-auto"
+                style={{
+                  transform: isPinching ? `scale(${pinchScale > 1 ? 1 + (pinchScale - 1) * 0.1 : 1 - (1 - pinchScale) * 0.1})` : 'scale(1)',
+                  transition: isPinching ? 'none' : 'transform 0.3s ease-out',
+                }}
+              >
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6">
                     {filteredAndSortedMemories.slice(0, visibleMemories).map((memory) => (

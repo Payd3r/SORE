@@ -65,13 +65,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="flex flex-col h-screen w-72 sm:w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+    <div className="flex flex-col h-screen w-72 sm:w-[280px] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       {/* Header con profilo */}
       <div className="relative">
         <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-white dark:bg-gray-900"></div>
         <div className="p-1 sm:p-4 border-b border-gray-200 dark:border-gray-800 mt-14 sm:mt-4">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-500/20 dark:via-purple-500/20 dark:to-blue-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 dark:from-blue-500/20 dark:via-purple-500/20 dark:to-blue-500/20 rounded-xl opacity-0"></div>
             
             <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-3 py-2 px-3 rounded-xl transition-all duration-300 hover:shadow-md">
               <div className="relative">

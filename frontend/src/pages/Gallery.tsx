@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, TouchEvent } from 'react';
 import { getGalleryImages, ImageType, uploadImages, getImageUrl, deleteImage, pollImageStatus, ImageStatusResponse } from '../api/images';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -36,6 +36,11 @@ export default function Gallery() {
   const [isDeleting, setIsDeleting] = useState(false);
   const location = useLocation();
   const { uploadingFiles, setUploadingFiles, setShowUploadStatus } = useUpload();
+  const [isPWA, setIsPWA] = useState(false);
+  const [initialTouchDistance, setInitialTouchDistance] = useState<number | null>(null);
+  const [pinchScale, setPinchScale] = useState<number>(1);
+  const [isPinching, setIsPinching] = useState(false);
+  const lastPinchTimeRef = useRef<number>(0);
 
   // React Query per il fetching delle immagini
   const { data: images = [], isLoading: loading, refetch } = useQuery<ImageType[]>({
@@ -334,15 +339,89 @@ export default function Gallery() {
     return sortedAndFilteredImages.slice(startIdx, startIdx + columnCount);
   };
 
+  // Verifica se l'app è in modalità PWA
+  useEffect(() => {
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+      setIsPWA(isStandalone || isFullscreen);
+    };
+
+    checkPWA();
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkPWA);
+    return () => window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
+  }, []);
+
+  // Gestione delle gesture di pinch per lo zoom in/out
+  const handleTouchStart = (e: TouchEvent) => {
+    if (!isPWA || e.touches.length !== 2) return;
+    
+    // Calcola la distanza iniziale tra le dita
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const distance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    );
+    
+    setInitialTouchDistance(distance);
+    setIsPinching(true);
+    setPinchScale(1); // Reset dello scale al valore iniziale
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isPWA || e.touches.length !== 2 || initialTouchDistance === null) return;
+    
+    // Calcola la distanza attuale tra le dita
+    const touch1 = e.touches[0];
+    const touch2 = e.touches[1];
+    const currentDistance = Math.hypot(
+      touch2.clientX - touch1.clientX,
+      touch2.clientY - touch1.clientY
+    );
+    
+    // Calcola il fattore di scala tra la distanza iniziale e quella attuale
+    const newScale = currentDistance / initialTouchDistance;
+    setPinchScale(newScale);
+    
+    // Throttle il cambio di modalità per evitare cambi troppo rapidi
+    const now = Date.now();
+    if (now - lastPinchTimeRef.current > 300) { // Controllo ogni 300ms
+      // Determina se è pinch in o pinch out
+      if (newScale < 0.8 && isCompactGrid === false) {
+        setIsCompactGrid(true);
+        lastPinchTimeRef.current = now;
+      } else if (newScale > 1.2 && isCompactGrid === true) {
+        setIsCompactGrid(false);
+        lastPinchTimeRef.current = now;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setInitialTouchDistance(null);
+    setIsPinching(false);
+    setPinchScale(1); // Reset dello scale
+  };
+
   if (authLoading || loading) {
     return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando la tua galleria" />;
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div 
+      className="h-full flex flex-col"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       <div
         className="flex-1 overflow-y-auto gallery-container"
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          transition: isPinching ? 'none' : 'all 0.3s ease-out'
+        }}
       >
         <div className="w-full min-h-screen bg-transparent sm:mb-[150px]">
           <div className="relative max-w-7xl mx-auto">
@@ -624,21 +703,24 @@ export default function Gallery() {
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={() => setIsCompactGrid(prev => !prev)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none flex-1 sm:flex-none justify-center"
-                      title={isCompactGrid ? "Mostra meno immagini per riga" : "Mostra più immagini per riga"}
-                    >
-                      {isCompactGrid ? (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                        </svg>
-                      )}
-                    </button>
+                    {/* View Toggle - nascondi in PWA */}
+                    {!isPWA && (
+                      <button
+                        onClick={() => setIsCompactGrid(prev => !prev)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors focus:outline-none flex-1 sm:flex-none justify-center"
+                        title={isCompactGrid ? "Mostra meno immagini per riga" : "Mostra più immagini per riga"}
+                      >
+                        {isCompactGrid ? (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -656,6 +738,10 @@ export default function Gallery() {
                         id="gallery-container"
                         ref={parentRef}
                         className="w-full"
+                        style={{
+                          transform: isPinching ? `scale(${pinchScale > 1 ? 1 + (pinchScale - 1) * 0.1 : 1 - (1 - pinchScale) * 0.1})` : 'scale(1)',
+                          transition: isPinching ? 'none' : 'transform 0.3s ease-out',
+                        }}
                       >
                         <div
                           style={{
