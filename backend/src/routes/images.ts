@@ -48,7 +48,8 @@ router.get('/', auth, async (req: any, res) => {
         i.id,       
         i.thumb_big_path,        
         i.created_at,
-        i.type
+        i.type,
+        IFNULL(i.memory_id, -1) as memory_id
       FROM images i      
       WHERE i.couple_id = ?
       ORDER BY i.created_at DESC`,

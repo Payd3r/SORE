@@ -11,7 +11,7 @@ import { useUpload } from '../contexts/UploadContext';
 import Loader from '../components/Loader';
 
 type SortOption = 'newest' | 'oldest' | 'random';
-type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO';
+type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO' | 'NOT_IN_MEMORY';
 
 interface GroupedImages {
   [key: string]: {
@@ -181,9 +181,14 @@ export default function Gallery() {
 
     // Filtra le immagini se c'è almeno un tipo selezionato
     const filteredImages = images.filter(image => {
+      // Caso speciale per le immagini non in ricordo
+      if (selectedTypes.has('NOT_IN_MEMORY') && image.memory_id === -1) {
+        return true;
+      }
+      
+      // Filtro standard per tipo di immagine
       const upperCaseType = image.type.toUpperCase() as ImageTypeFilter;
-      const isIncluded = selectedTypes.has(upperCaseType);
-      return isIncluded;
+      return selectedTypes.has(upperCaseType);
     });
 
     return filteredImages;
@@ -683,6 +688,29 @@ export default function Gallery() {
                               )}
                             </div>
                             Cibo
+                          </button>
+                          
+                          {/* Nuova voce per "Non in ricordo" */}
+                          <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTypeClick('NOT_IN_MEMORY');
+                            }}
+                            className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('NOT_IN_MEMORY') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                              }`}
+                          >
+                            <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('NOT_IN_MEMORY')
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'border-gray-300 dark:border-gray-600'
+                              }`}>
+                              {selectedTypes.has('NOT_IN_MEMORY') && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            Non in ricordo
                           </button>
                         </div>
                       )}

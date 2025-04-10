@@ -13,6 +13,7 @@ export interface ImageType {
   image: string;
   thumb_big_path: string;
   webp_path?: string;  // Il percorso dell'immagine in alta risoluzione
+  memory_id: number | -1; // -1 indica che l'immagine non è associata a nessun ricordo
 }
 
 export interface ImageResponse {
