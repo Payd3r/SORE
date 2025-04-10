@@ -108,6 +108,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
     try {
       setSelectedImage({
         id: String(image.id),
+        memory_id: -1,
         latitude: null,
         longitude: null,
         created_by_user_id: 0,

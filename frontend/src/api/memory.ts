@@ -85,7 +85,6 @@ export const getMemories = async (): Promise<Memory[]> => {
     const data: ApiResponse<Memory[]> = await response.json();
     return data.data;
   } catch (error) {
-    console.error('Errore nel recupero dei ricordi:', error);
     throw error;
   }
 };
@@ -110,7 +109,6 @@ export const getMemory = async (id: string): Promise<MemoryResponse> => {
     });
     return response.data;
   } catch (error) {
-    console.error('Errore nel recupero del ricordo:', error);
     throw error;
   }
 };
@@ -135,7 +133,6 @@ export const getMemoryCarousel = async (id: string): Promise<CarouselResponse> =
 
     return await response.json();
   } catch (error) {
-    console.error('Errore nel recupero delle immagini del carosello:', error);
     throw error;
   }
 };
@@ -148,7 +145,6 @@ export const updateMemory = async (id: string, data: Partial<Memory>): Promise<A
     });
     return response.data;
   } catch (error) {
-    console.error('Errore nell\'aggiornamento del ricordo:', error);
     throw error;
   }
 };
@@ -161,7 +157,6 @@ export const deleteMemory = async (id: string): Promise<void> => {
     });
     return response.data;
   } catch (error) {
-    console.error('Errore nell\'eliminazione del ricordo:', error);
     throw error;
   }
 };

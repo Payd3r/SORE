@@ -38,7 +38,6 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
     
     const isViaggio = memory.type.toLowerCase() === 'viaggio';
     const isEvento = memory.type.toLowerCase() === 'evento';
-    const isSemplice = memory.type.toLowerCase() === 'semplice';
     
     // Ordina le immagini per data di creazione
     const sortedImages = [...memory.images].sort((a, b) => {

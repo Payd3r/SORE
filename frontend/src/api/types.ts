@@ -31,6 +31,7 @@ export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
 export interface Image {
   id: number;
   thumb_big_path: string;
+  webp_path: string | null;
   created_at?: string;
   type?: 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 }

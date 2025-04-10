@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Memory, MemoryImage } from '../../api/memory';
+import { Memory } from '../../api/memory';
 import { getImageUrl } from '../../api/images';
 import { useNavigate } from 'react-router-dom';
 import { IoCalendar, IoLocationOutline, IoMusicalNotesOutline } from 'react-icons/io5';
@@ -13,7 +13,6 @@ interface MemoryCardListProps {
 export default function MemoryCardList({ memory, onClick }: MemoryCardListProps) {
   const navigate = useNavigate();
   const isViaggio = memory.type.toLowerCase() === 'viaggio';
-  const isEvento = memory.type.toLowerCase() === 'evento';
   const isSemplice = memory.type.toLowerCase() === 'semplice';
 
   const handleClick = () => {

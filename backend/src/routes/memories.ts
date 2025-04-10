@@ -146,6 +146,7 @@ router.get('/:memoryId', auth, async (req: any, res) => {
       `SELECT 
         id,
         thumb_big_path,
+        webp_path,
         created_at,
         type
       FROM images 
@@ -163,7 +164,8 @@ router.get('/:memoryId', auth, async (req: any, res) => {
       imageRows.map(async (img: Image) => {
         return {
           id: img.id,
-          thumb_big_path: img.thumb_big_path,
+          thumb_big_path: img.thumb_big_path || null,
+          webp_path: img.webp_path || null,
           created_at: img.created_at,
           type: img.type
         };
