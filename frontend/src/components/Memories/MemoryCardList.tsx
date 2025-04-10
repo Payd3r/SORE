@@ -3,7 +3,7 @@ import { it } from 'date-fns/locale';
 import { Memory } from '../../api/memory';
 import { getImageUrl } from '../../api/images';
 import { useNavigate } from 'react-router-dom';
-import { IoCalendar, IoLocationOutline, IoMusicalNotesOutline } from 'react-icons/io5';
+import { IoCalendar, IoLocationOutline } from 'react-icons/io5';
 
 interface MemoryCardListProps {
   memory: Memory;
@@ -109,11 +109,6 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
               >
                 {typeStyle.text}
               </span>
-              {memory.tot_img > 0 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {memory.tot_img} {memory.tot_img === 1 ? 'foto' : 'foto'}
-                </span>
-              )}
             </div>
 
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
@@ -125,20 +120,11 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
             <div className="flex items-center space-x-1">
               <IoCalendar className="w-3.5 h-3.5" />
               <span>{formatDate(memory.start_date)}</span>
-              {memory.end_date && memory.end_date !== memory.start_date && (
-                <span>→ {formatDate(memory.end_date)}</span>
-              )}
             </div>
             {memory.location && (
               <div className="flex items-center space-x-1 truncate">
                 <IoLocationOutline className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{memory.location}</span>
-              </div>
-            )}
-            {memory.song && isViaggio && (
-              <div className="flex items-center space-x-1 truncate">
-                <IoMusicalNotesOutline className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{memory.song}</span>
               </div>
             )}
           </div>

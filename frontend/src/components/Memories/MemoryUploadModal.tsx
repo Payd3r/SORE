@@ -122,6 +122,13 @@ export default function MemoryUploadModal({
     setSongSuggestions([]);
   };
 
+  // Aggiungo un gestore specifico per gli eventi touch
+  const handleTouchSuggestion = (e: React.TouchEvent, track: SpotifyTrack) => {
+    e.preventDefault(); // Previene il comportamento di default
+    e.stopPropagation(); // Ferma la propagazione dell'evento
+    handleSongSelect(track);
+  };
+
   const resetForm = () => {
     setTitle('');
     setType('SEMPLICE');
@@ -444,6 +451,7 @@ export default function MemoryUploadModal({
                               <li
                                 key={track.id}
                                 onClick={() => handleSongSelect(track)}
+                                onTouchStart={(e) => handleTouchSuggestion(e, track)}
                                 className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
                               >
                                 <div>
@@ -517,6 +525,7 @@ export default function MemoryUploadModal({
                           <li
                             key={track.id}
                             onClick={() => handleSongSelect(track)}
+                            onTouchStart={(e) => handleTouchSuggestion(e, track)}
                             className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
                           >
                             <div>

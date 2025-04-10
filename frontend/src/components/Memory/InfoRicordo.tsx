@@ -41,7 +41,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
           const track = await getTrackDetails(memory.song);
           setTrackInfo(track);
         } catch (error) {
-          // console.error('Errore nel recupero delle informazioni della canzone:', error);
+          console.error('Errore nel recupero delle informazioni della canzone:', error);
         } finally {
           setIsLoadingTrack(false);
         }
@@ -79,7 +79,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
           });
         }
       } catch (error) {
-        // console.error('Errore nel caricamento delle immagini sulla mappa:', error);
+        console.error('Errore nel caricamento delle immagini sulla mappa:', error);
         setMapError('Errore nel caricamento delle immagini sulla mappa');
       } finally {
         setIsLoadingMap(false);
@@ -95,7 +95,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
     try {
       return format(new Date(dateString), 'dd/MM/yyyy', { locale: it });
     } catch (error) {
-      // console.error('Error formatting date:', error);
+      console.error('Error formatting date:', error);
       return '';
     }
   };
@@ -123,7 +123,7 @@ const InfoRicordo: React.FC<InfoRicordoProps> = ({ memory, onVisitGallery }) => 
       });
       setIsDetailModalOpen(true);
     } catch (error) {
-      // console.error('Errore nel caricamento dell\'immagine:', error);
+      console.error('Errore nel caricamento dell\'immagine:', error);
     }
   };
   

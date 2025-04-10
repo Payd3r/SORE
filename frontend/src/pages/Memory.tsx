@@ -460,7 +460,7 @@ export default function Memory() {
                             </svg>
                           )}
                         </div>
-                        Ricordo Semplice
+                        Semplice
                       </button>
                     </div>
                   )}
