@@ -126,7 +126,7 @@ export default function CronologiaRicordo({ memory }: CronologiaRicordoProps) {
                     className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer group"
                   >
                     <img
-                      src={getImageUrl(image.thumb_big_path)}
+                      src={getImageUrl(image.thumb_big_path || '')}
                       alt={`Immagine ${image.id}`}
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
                     />
