@@ -461,20 +461,75 @@ export default function Gallery() {
                     </button>
 
                     {isSelectionMode && (
-                      <button
-                        onClick={handleDeleteSelected}
-                        disabled={isDeleting}
-                        className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none touch-manipulation ${
-                          isDeleting
-                            ? 'bg-red-400 cursor-not-allowed'
-                            : 'btn-danger'
-                        }`}
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span className="hidden sm:inline">{isDeleting ? 'Eliminazione...' : 'Elimina'}</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={handleDeleteSelected}
+                          disabled={isDeleting || selectedImages.size === 0}
+                          className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none touch-manipulation ${
+                            isDeleting || selectedImages.size === 0
+                              ? 'bg-red-400 cursor-not-allowed'
+                              : 'btn-danger'
+                          }`}
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          <span className="hidden sm:inline">{isDeleting ? 'Eliminazione...' : 'Elimina'}</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            // Se ci sono immagini selezionate, avvia il download diretto
+                            if (selectedImages.size > 0) {
+                              const selectedImagesArray = Array.from(selectedImages);
+                              const selectedImagesData = images.filter(img => selectedImagesArray.includes(img.id));
+                              
+                              // Utilizziamo un approccio che forza il download diretto
+                              selectedImagesData.forEach((image, index) => {
+                                setTimeout(() => {
+                                  // Creiamo una fetch per ottenere i dati binari dell'immagine
+                                  fetch(getImageUrl(image.webp_path || image.thumb_big_path))
+                                    .then(response => response.blob())
+                                    .then(blob => {
+                                      // Creiamo un URL per il blob
+                                      const blobUrl = URL.createObjectURL(blob);
+                                      
+                                      // Creiamo un link e impostiamo l'attributo download
+                                      const link = document.createElement('a');
+                                      link.href = blobUrl;
+                                      link.download = `immagine-${image.id}.webp`;
+                                      link.style.display = 'none';
+                                      
+                                      // Aggiungiamo il link al DOM, clicchiamo e rimuoviamo
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      
+                                      // Pulizia: rimuoviamo il link e revochiamo il blobUrl
+                                      setTimeout(() => {
+                                        document.body.removeChild(link);
+                                        URL.revokeObjectURL(blobUrl);
+                                      }, 100);
+                                    })
+                                    .catch(err => {
+                                      console.error('Errore durante il download dell\'immagine:', err);
+                                    });
+                                }, index * 300); // Aumentiamo leggermente il ritardo per gestire meglio le richieste
+                              });
+                            }
+                          }}
+                          disabled={selectedImages.size === 0}
+                          className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation ${
+                            selectedImages.size === 0
+                              ? 'bg-blue-400/70 cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          <span className="hidden sm:inline">Scarica</span>
+                        </button>
+                      </>
                     )}
 
                     {!isSelectionMode && (

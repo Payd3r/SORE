@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/', auth, async (req: any, res) => {
   const imagesQuery = `
       SELECT 
-        id, thumb_big_path, memory_id, created_at
+        id, thumb_big_path, webp_path, memory_id, created_at
       FROM images
       WHERE memory_id IN (?)
       ORDER BY memory_id, created_at DESC
@@ -29,9 +29,9 @@ router.get('/', auth, async (req: any, res) => {
         m.location,
         m.song,
         CASE 
-          WHEN m.type = 'VIAGGIO' THEN 9
-          WHEN m.type = 'EVENTO' THEN 5
-          ELSE 3
+          WHEN m.type = 'VIAGGIO' THEN 4
+          WHEN m.type = 'EVENTO' THEN 4
+          ELSE 1
         END AS img_limit,
         (SELECT COUNT(*) FROM images WHERE memory_id = m.id) as tot_img
       FROM memories m
@@ -62,16 +62,38 @@ router.get('/', auth, async (req: any, res) => {
         .slice(0, memory.img_limit);
 
       const imgagesConParametri = await Promise.all(
-        relatedImages.map(async (img: Image) => {
-          return {
-            id: img.id,
-            thumb_big_path: img.thumb_big_path || null
-          };
+        relatedImages.map(async (img: Image, index: number) => {
+          // Per i ricordi di tipo Viaggio, la prima immagine avrà webp_path
+          if (memory.type.toUpperCase() === 'VIAGGIO' && index === 0) {
+            return {
+              id: img.id,
+              thumb_big_path: null,
+              webp_path: img.webp_path || null
+            };
+          } 
+          // Per i ricordi di tipo Semplice, restituisci solo webp_path
+          else if (memory.type.toUpperCase() === 'SEMPLICE') {
+            return {
+              id: img.id,
+              thumb_big_path: null,
+              webp_path: img.webp_path || null
+            };
+          } 
+          // Per gli eventi o le altre immagini dei viaggi, restituisci thumb_big_path
+          else {
+            return {
+              id: img.id,
+              thumb_big_path: img.thumb_big_path || null,
+              webp_path: null
+            };
+          }
         })
       );
 
-      // Filtra le immagini che non hanno una thumbnail valida
-      const validImages = imgagesConParametri.filter(img => img.thumb_big_path !== null);
+      // Filtra le immagini che non hanno una thumbnail o webp valido
+      const validImages = imgagesConParametri.filter(img => 
+        (img.thumb_big_path !== null || img.webp_path !== null)
+      );
 
       return {
         ...memory,

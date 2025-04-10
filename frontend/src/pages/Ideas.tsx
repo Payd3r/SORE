@@ -65,7 +65,7 @@ export default function Ideas() {
           <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
             <div className="flex justify-between items-center mb-4 sm:mb-8">
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-white">Le Nostre Idee</h1>
+                <h1 className="text-3xl lg:text-4xl font-bold mb-2 dark:text-white">Idee</h1>
                 <p className="hidden sm:block text-gray-600 dark:text-gray-400">Organizza e gestisci le idee per il futuro</p>
               </div>
               <button

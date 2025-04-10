@@ -65,7 +65,7 @@ export default function Mappa() {
           {/* Header Section */}
           <div className="mb-4 sm:mb-8">
             <div className="flex items-center gap-3 mb-2">            
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">Mappa dei Ricordi</h1>
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">Mappa</h1>
             </div>
             <p className="hidden sm:block text-gray-600 dark:text-gray-300">
               Esplora i tuoi momenti speciali attraverso il mondo

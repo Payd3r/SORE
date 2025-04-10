@@ -637,8 +637,8 @@ export default function DetailMemory() {
               ) : (
                 <>
                   <InfoRicordo memory={memory} onVisitGallery={handleVisitGallery} />
-                  <div className="mt-6" ref={galleriaRef}>
-                    <GalleriaRicordo memory={memory} />
+                  <div className="mt-6 mx-1"  ref={galleriaRef}>
+                    <GalleriaRicordo memory={memory}/>
                   </div>
                 </>
               )}

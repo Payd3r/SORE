@@ -10,7 +10,8 @@ import { IoCalendarOutline, IoLocationOutline, IoMusicalNotesOutline } from 'rea
 
 interface MemoryImage {
   id: number;
-  thumb_big_path: string;
+  thumb_big_path: string | null;
+  webp_path: string | null;
   created_at: string;
   width: number;
   height: number;
@@ -37,6 +38,7 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
     
     const isViaggio = memory.type.toLowerCase() === 'viaggio';
     const isEvento = memory.type.toLowerCase() === 'evento';
+    const isSemplice = memory.type.toLowerCase() === 'semplice';
     
     // Ordina le immagini per data di creazione
     const sortedImages = [...memory.images].sort((a, b) => {
@@ -182,7 +184,14 @@ export default function MemoryCard({ memory, onClick }: MemoryCardProps) {
                 }`}
               >
                 <img
-                  src={getImageUrl(image.thumb_big_path)}
+                  src={getImageUrl(
+                    // Utilizziamo webp_path per:
+                    // 1. La prima immagine di un viaggio
+                    // 2. L'unica immagine di un ricordo semplice
+                    ((isViaggio && index === 0 && image.webp_path) || 
+                    (memory.type.toLowerCase() === 'semplice' && image.webp_path) || 
+                    image.thumb_big_path) || ''
+                  )}
                   alt={`${memory.title} - ${index + 1}`}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 sm:group-hover:scale-105"
                 />

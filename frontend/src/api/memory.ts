@@ -15,7 +15,8 @@ export interface Memory {
   song?: string | null;
   images: {
     id: number;
-    thumb_big_path: string;
+    thumb_big_path: string | null;
+    webp_path: string | null;
     created_at: string;
   }[];
   created_at: string;
@@ -47,7 +48,8 @@ export interface CarouselResponse {
 
 export interface MemoryImage {
   id: number;
-  thumb_big_path: string;
+  thumb_big_path: string | null;
+  webp_path: string | null;
   created_at: string;
   width: number;
   height: number;

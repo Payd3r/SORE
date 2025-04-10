@@ -76,7 +76,7 @@ export default function CronologiaRicordo({ memory }: CronologiaRicordoProps) {
       console.error('Errore nel caricamento dell\'immagine:', error);
     }
   };
-  
+
   const handleCloseImageModal = () => {
     setIsDetailModalOpen(false);
     setSelectedImage(null);

@@ -166,8 +166,12 @@ export default function MemoryUploadModal({
 
       // Se ci sono immagini, preparo lo stato iniziale dell'upload
       if (selectedFiles.length > 0) {
-        // Inizializza lo stato per ogni file
-        const initialUploadState = selectedFiles.reduce((acc, file) => {
+        // Ottieni lo stato attuale di upload, se esiste
+        const existingUploadData = localStorage.getItem('uploadingFiles');
+        const existingUploads = existingUploadData ? JSON.parse(existingUploadData) : {};
+        
+        // Aggiungi i nuovi file alla coda di upload esistente
+        const newUploadState = selectedFiles.reduce((acc, file) => {
           acc[file.name] = {
             fileName: file.name,
             status: 'queued' as const,
@@ -175,18 +179,21 @@ export default function MemoryUploadModal({
             message: 'In coda...'
           };
           return acc;
-        }, {} as { [key: string]: UploadingFile });
+        }, existingUploads);
 
-        // Salva lo stato iniziale nel localStorage
-        localStorage.setItem('uploadingFiles', JSON.stringify(initialUploadState));
+        // Salva lo stato aggiornato nel localStorage
+        localStorage.setItem('uploadingFiles', JSON.stringify(newUploadState));
         localStorage.setItem('isUploading', 'true');
 
-        setUploadingFiles(initialUploadState);
+        setUploadingFiles(newUploadState);
         setShowUploadStatus(true);
       }
 
       // Chiudo immediatamente il modal
       handleClose();
+      
+      // Reset dello stato di caricamento per permettere la creazione di un nuovo ricordo
+      setIsLoading(false);
 
       // Creo il ricordo
       const response = await createMemory(memoryData);

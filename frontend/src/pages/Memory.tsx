@@ -1,5 +1,5 @@
 import { getMemories } from '../api/memory';
-import type { Memory } from '../api/memory';
+import type { Memory, MemoryImage, MemoryWithImages } from '../api/memory';
 import { useState, useEffect, useMemo, useCallback, useRef, TouchEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import MemoryUploadModal from '../components/Memories/MemoryUploadModal';
@@ -12,18 +12,6 @@ import { optimizeGridLayout } from '../components/Memories/optimizeGridLayout';
 import Loader from '../components/Loader';
 
 type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
-
-interface MemoryImage {
-  id: number;
-  thumb_big_path: string;
-  created_at: string;
-  width: number;
-  height: number;
-}
-
-interface MemoryWithImages extends Memory {
-  images: MemoryImage[];
-}
 
 export default function Memory() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -83,7 +71,7 @@ export default function Memory() {
           created_at: memory.created_at,
           width: 1920,
           height: 1080
-        }))
+        })) as MemoryImage[]
       }));
     },
     staleTime: 5 * 60 * 1000, // 5 minuti
@@ -154,9 +142,9 @@ export default function Memory() {
       ...memory,
       images: memory.images.map((img: MemoryImage) => ({
         ...img,
-        width: 1920,
-        height: 1080
-      }))
+        width: img.width || 1920,
+        height: img.height || 1080
+      })) as MemoryImage[]
     }));
     return optimizeGridLayout(memoriesWithImages, windowWidth);
   }, [memories, searchQuery, selectedTypes, windowWidth]);
@@ -331,9 +319,9 @@ export default function Memory() {
               {/* Title and Add Button */}
               <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div>
-                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-1">I tuoi Ricordi</h1>
+                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-1">Ricordi</h1>
                   <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">
-                    Gestisci e organizza i tuoi ricordi speciali
+                    Gestisci e organizza i vostri ricordi speciali
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
