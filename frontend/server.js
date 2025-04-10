@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 // Configurazione server
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 
 // Abilita la compressione gzip/deflate per tutte le risposte
 app.use(compression());
