@@ -46,11 +46,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 async function getVapidPublicKey(): Promise<string> {
   console.log('🔑 [CLIENT] Richiesta chiave VAPID pubblica al server');
   try {
-    // Aggiungi l'Authorization header se disponibile nel localStorage
-    const token = localStorage.getItem('token');
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    
-    const response = await axios.get('/api/notifications/vapid-public-key', { headers });
+    const response = await axios.get('/api/notifications/vapid-public-key');
     console.log('🔑 [CLIENT] Chiave VAPID pubblica ricevuta:', response.data.publicKey.substring(0, 10) + '...');
     return response.data.publicKey;
   } catch (error) {
@@ -166,55 +162,17 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
           };
           
           // Invia la sottoscrizione simulata al server
-          console.log('📤 [CLIENT] Invio dati di sottoscrizione al server per Safari iOS');
-          console.log('📤 [CLIENT] URL API:', '/api/notifications/subscribe');
-          console.log('📤 [CLIENT] Dati inviati:', JSON.stringify({
-            subscription: {
-              endpoint: subscriptionData.endpoint.substring(0, 30) + '...',
-              keys: {
-                p256dh: subscriptionData.keys.p256dh.substring(0, 15) + '...',
-                auth: subscriptionData.keys.auth.substring(0, 10) + '...',
-              },
-              isSafariIOSSimulation: true
-            }
-          }));
+          console.log('�� [CLIENT] Invio dati di sottoscrizione al server per Safari iOS');
+          await axios.post('/api/notifications/subscribe', { 
+            subscription: subscriptionData,
+            isSafariIOSSimulation: true
+          });
           
-          try {
-            const response = await axios.post('/api/notifications/subscribe', { 
-              subscription: subscriptionData,
-              isSafariIOSSimulation: true
-            }, {
-              headers: getAuthHeaders()
-            });
-            
-            console.log('✅ [CLIENT] Risposta del server:', {
-              status: response.status,
-              data: response.data
-            });
-            console.log('✅ [CLIENT] Dati di sottoscrizione per Safari iOS salvati sul server');
-          } catch (apiError) {
-            console.error('❌ [CLIENT] Errore nella chiamata API:', apiError);
-            
-            if (axios.isAxiosError(apiError)) {
-              console.error('❌ [CLIENT] Dettagli errore API:', {
-                status: apiError.response?.status,
-                statusText: apiError.response?.statusText,
-                data: apiError.response?.data,
-                url: apiError.config?.url,
-                method: apiError.config?.method,
-                baseURL: apiError.config?.baseURL
-              });
-              
-              // Controlla se è un problema di autenticazione
-              if (apiError.response?.status === 401) {
-                console.error('❌ [CLIENT] Problema di autenticazione. Assicurati di aver effettuato il login.');
-                throw new Error('Devi aver effettuato il login per attivare le notifiche.');
-              }
-            }
-            
-            throw new Error('Errore nella comunicazione con il server. ' + (apiError instanceof Error ? apiError.message : 'Riprova più tardi.'));
-          }
+          console.log('✅ [CLIENT] Dati di sottoscrizione per Safari iOS salvati sul server');
           
+          // Ritorniamo null qui, ma l'app deve considerare l'utente come "iscritto"
+          // anche se tecnicamente non abbiamo una vera oggetto PushSubscription
+          // L'app dovrebbe tenere traccia dello stato di iscrizione separatamente
           return null;
         } catch (iosError) {
           console.error('❌ [CLIENT] Errore durante la gestione delle notifiche per Safari iOS:', iosError);
@@ -325,12 +283,6 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   }
 }
 
-// Funzione helper per ottenere gli headers di autenticazione
-function getAuthHeaders() {
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 /**
  * Salva la sottoscrizione sul server
  */
@@ -361,13 +313,7 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
   };
   
   try {
-    // Aggiungi l'Authorization header
-    const headers = getAuthHeaders();
-    
-    await axios.post('/api/notifications/subscribe', 
-      { subscription: safeSubscription },
-      { headers }
-    );
+    await axios.post('/api/notifications/subscribe', { subscription: safeSubscription });
     console.log('✅ [CLIENT] Sottoscrizione salvata con successo sul server');
   } catch (error) {
     console.error('❌ [CLIENT] Errore durante il salvataggio della sottoscrizione:', error);
@@ -396,8 +342,7 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
     if (subscription) {
       // Elimina la sottoscrizione dal server
       await axios.delete('/api/notifications/unsubscribe', {
-        data: { endpoint: subscription.endpoint },
-        headers: getAuthHeaders()
+        data: { endpoint: subscription.endpoint }
       });
       
       // Annulla la sottoscrizione lato client
@@ -417,9 +362,7 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
  */
 export async function sendTestNotification(): Promise<void> {
   try {
-    await axios.post('/api/notifications/test', {}, {
-      headers: getAuthHeaders()
-    });
+    await axios.post('/api/notifications/test');
   } catch (error) {
     console.error('Errore durante l\'invio della notifica di test:', error);
     throw error;
