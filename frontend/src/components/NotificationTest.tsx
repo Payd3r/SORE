@@ -19,6 +19,7 @@ const NotificationTest: React.FC = () => {
   const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
+  const [apiLogs, setApiLogs] = useState<string[]>([]);
   
   // Log dei passaggi di sottoscrizione
   const [subscriptionSteps, setSubscriptionSteps] = useState<Array<{
@@ -210,6 +211,42 @@ const NotificationTest: React.FC = () => {
     init();
   }, [updateDebugInfo]);
 
+  // Sovrascriviamo console.log e console.error per salvare i messaggi nella UI
+  useEffect(() => {
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+
+    console.log = function(...args) {
+      // Chiamare l'originale per mantenere i log nella console
+      originalConsoleLog.apply(console, args);
+      
+      // Formattare il messaggio per la UI
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      
+      setApiLogs(logs => [...logs, `📋 ${message}`]);
+    };
+
+    console.error = function(...args) {
+      // Chiamare l'originale per mantenere i log nella console
+      originalConsoleError.apply(console, args);
+      
+      // Formattare il messaggio per la UI
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      
+      setApiLogs(logs => [...logs, `❌ ${message}`]);
+    };
+
+    return () => {
+      // Ripristinare le funzioni originali quando il componente viene smontato
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+    };
+  }, []);
+
   const handleSubscribe = async () => {
     setIsLoading(true);
     setStatus('Verifica del supporto per le notifiche...');
@@ -325,11 +362,15 @@ const NotificationTest: React.FC = () => {
     setIsLoading(true);
     setStatus('Invio notifica di test in corso...');
     setStatusType('info');
+    setApiLogs([]); // Pulizia dei log precedenti
+    
+    addSubscriptionStep('send_test', 'pending', 'Invio notifica di test al server');
 
     try {
       await sendTestNotification();
       setStatus('Notifica di test inviata con successo!');
       setStatusType('success');
+      addSubscriptionStep('send_test', 'success', 'Notifica di test inviata con successo');
     } catch (error) {
       console.error('Errore durante l\'invio della notifica di test:', error);
       setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
@@ -338,6 +379,7 @@ const NotificationTest: React.FC = () => {
         ...prev, 
         error: error instanceof Error ? error.message : String(error)
       }));
+      addSubscriptionStep('send_test', 'error', `Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
     } finally {
       setIsLoading(false);
     }
@@ -357,7 +399,7 @@ const NotificationTest: React.FC = () => {
   };
 
   // Stili per i componenti
-  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mt-10";
+  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md pt-14";
   const titleClass = "text-xl font-semibold mb-2 text-gray-800 dark:text-white";
   const descriptionClass = "text-sm text-gray-600 dark:text-gray-400 mb-4";
   const buttonClass = {
@@ -471,6 +513,28 @@ const NotificationTest: React.FC = () => {
         </div>
       )}
       
+      {/* API Logs */}
+      {apiLogs.length > 0 && (
+        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-semibold flex justify-between items-center">
+            <span>Log API</span>
+            <button 
+              className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded"
+              onClick={() => setApiLogs([])}
+            >
+              Pulisci
+            </button>
+          </div>
+          <div className="p-2 max-h-60 overflow-auto font-mono text-xs">
+            {apiLogs.map((log, index) => (
+              <div key={index} className="whitespace-pre-wrap mb-1 border-b border-gray-100 dark:border-gray-700 pb-1">
+                {log}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       {/* Permesso negato */}
       {permission === 'denied' && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
@@ -482,13 +546,7 @@ const NotificationTest: React.FC = () => {
       {/* Avviso per dispositivi iOS */}
       {debugInfo.isIOS && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
-          <strong>Dispositivo iOS rilevato:</strong> Safari su iOS ha un supporto limitato per le notifiche push web.
-          Per una migliore esperienza con le notifiche, ti consigliamo di:
-          <ul className="list-disc pl-5 mt-2">
-            <li>Aggiungere l'app alla schermata home (installare come PWA)</li>
-            <li>Abilitare tutte le autorizzazioni per le notifiche quando richiesto</li>
-            <li>Se continui a riscontrare problemi, prova ad effettuare l'accesso anche su un altro browser o dispositivo</li>
-          </ul>
+          <strong>Dispositivo iOS rilevato</strong>
         </div>
       )}
       
