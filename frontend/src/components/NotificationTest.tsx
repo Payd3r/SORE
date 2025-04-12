@@ -357,7 +357,7 @@ const NotificationTest: React.FC = () => {
   };
 
   // Stili per i componenti
-  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md pt-14";
+  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mt-10";
   const titleClass = "text-xl font-semibold mb-2 text-gray-800 dark:text-white";
   const descriptionClass = "text-sm text-gray-600 dark:text-gray-400 mb-4";
   const buttonClass = {
@@ -482,7 +482,13 @@ const NotificationTest: React.FC = () => {
       {/* Avviso per dispositivi iOS */}
       {debugInfo.isIOS && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
-          <strong>Dispositivo iOS rilevato</strong>
+          <strong>Dispositivo iOS rilevato:</strong> Safari su iOS ha un supporto limitato per le notifiche push web.
+          Per una migliore esperienza con le notifiche, ti consigliamo di:
+          <ul className="list-disc pl-5 mt-2">
+            <li>Aggiungere l'app alla schermata home (installare come PWA)</li>
+            <li>Abilitare tutte le autorizzazioni per le notifiche quando richiesto</li>
+            <li>Se continui a riscontrare problemi, prova ad effettuare l'accesso anche su un altro browser o dispositivo</li>
+          </ul>
         </div>
       )}
       
