@@ -220,10 +220,24 @@ const NotificationTest: React.FC = () => {
       // Chiamare l'originale per mantenere i log nella console
       originalConsoleLog.apply(console, args);
       
-      // Formattare il messaggio per la UI
-      const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
+      // Formattare il messaggio per la UI in modo sicuro per Safari
+      let message;
+      try {
+        message = args.map(arg => {
+          if (arg === null) return "null";
+          if (arg === undefined) return "undefined";
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg);
+            } catch (e) {
+              return "[Oggetto complesso]";
+            }
+          }
+          return String(arg);
+        }).join(' ');
+      } catch (e) {
+        message = "Errore durante la formattazione del log";
+      }
       
       setApiLogs(logs => [...logs, `📋 ${message}`]);
     };
@@ -232,10 +246,24 @@ const NotificationTest: React.FC = () => {
       // Chiamare l'originale per mantenere i log nella console
       originalConsoleError.apply(console, args);
       
-      // Formattare il messaggio per la UI
-      const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
+      // Formattare il messaggio per la UI in modo sicuro per Safari
+      let message;
+      try {
+        message = args.map(arg => {
+          if (arg === null) return "null";
+          if (arg === undefined) return "undefined";
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg);
+            } catch (e) {
+              return "[Oggetto complesso]";
+            }
+          }
+          return String(arg);
+        }).join(' ');
+      } catch (e) {
+        message = "Errore durante la formattazione del log";
+      }
       
       setApiLogs(logs => [...logs, `❌ ${message}`]);
     };
