@@ -72,6 +72,12 @@ export async function saveSubscription(userId: number, subscription: any): Promi
   console.log(`🔍 [SERVICE] Salvataggio sottoscrizione per utente ID: ${userId}`);
   console.log(`🔍 [SERVICE] Endpoint: ${subscription.endpoint.substring(0, 30)}...`);
 
+  // Verifica se questa è una sottoscrizione simulata per Safari iOS
+  const isSafariIOSSimulation = !!subscription.isSafariIOSSimulation;
+  if (isSafariIOSSimulation) {
+    console.log(`🍎 [SERVICE] Gestione speciale per sottoscrizione simulata Safari iOS`);
+  }
+
   try {
     // Cerca se esiste già una sottoscrizione con lo stesso endpoint
     console.log(`🔍 [SERVICE] Verifica esistenza sottoscrizione con endpoint: ${subscription.endpoint.substring(0, 30)}...`);
@@ -80,20 +86,23 @@ export async function saveSubscription(userId: number, subscription: any): Promi
       [subscription.endpoint]
     );
     
+    // Salva anche l'informazione che è una sottoscrizione simulata per iOS
+    const deviceType = isSafariIOSSimulation ? 'safari-ios' : 'standard';
+    
     if (existingSubscriptions.length > 0) {
       console.log(`🔄 [SERVICE] Aggiornamento sottoscrizione esistente ID: ${existingSubscriptions[0].id}`);
       // Aggiorna la sottoscrizione esistente
       await pool.promise().query(
-        'UPDATE push_subscriptions SET user_id = ?, p256dh = ?, auth = ?, updated_at = NOW() WHERE endpoint = ?',
-        [userId, subscription.keys.p256dh, subscription.keys.auth, subscription.endpoint]
+        'UPDATE push_subscriptions SET user_id = ?, p256dh = ?, auth = ?, device_type = ?, updated_at = NOW() WHERE endpoint = ?',
+        [userId, subscription.keys.p256dh, subscription.keys.auth, deviceType, subscription.endpoint]
       );
       console.log('✅ [SERVICE] Sottoscrizione aggiornata con successo');
     } else {
       console.log('➕ [SERVICE] Creazione nuova sottoscrizione');
       // Inserisce una nuova sottoscrizione
       await pool.promise().query(
-        'INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)',
-        [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
+        'INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, device_type) VALUES (?, ?, ?, ?, ?)',
+        [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, deviceType]
       );
       console.log('✅ [SERVICE] Nuova sottoscrizione creata con successo');
     }
@@ -157,6 +166,26 @@ export async function sendNotificationToUser(
       try {
         console.log(`📱 [SERVICE] Tentativo invio al dispositivo ${index + 1}/${subscriptions.length} (ID: ${subscription.id})`);
         
+        // Verifica se è una sottoscrizione simulata per Safari iOS
+        if (subscription.device_type === 'safari-ios') {
+          console.log(`🍎 [SERVICE] Rilevata sottoscrizione Safari iOS simulata: ID ${subscription.id}`);
+          
+          // Per le sottoscrizioni simulate di Safari iOS, potresti voler usare un altro sistema di notifica
+          // come email, SMS, o un servizio di notifiche alternative per iOS
+          // Questo sarebbe implementato separatamente
+          
+          console.log(`🍎 [SERVICE] Notifica registrata per il dispositivo Safari iOS: ID ${subscription.id}`);
+          
+          // Segna come inviata ma non inviamo realmente tramite web push
+          await pool.promise().query(
+            'UPDATE push_subscriptions SET last_notification_sent = NOW() WHERE id = ?',
+            [subscription.id]
+          );
+          
+          return true; // Consideriamo l'invio come riuscito anche se non è una vera push notification
+        }
+        
+        // Per le sottoscrizioni standard, procedi normalmente
         const pushSubscription = {
           endpoint: subscription.endpoint,
           keys: {

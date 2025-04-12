@@ -32,7 +32,7 @@ router.get('/vapid-public-key', async (req, res) => {
 router.post('/subscribe', auth, async (req: any, res) => {
   console.log(`📢 [API] Tentativo di sottoscrizione per l'utente ID: ${req.user.id}`);
   try {
-    const { subscription } = req.body;
+    const { subscription, isSafariIOSSimulation } = req.body;
     const userId = req.user.id;
 
     console.log(`📢 [API] Dati sottoscrizione ricevuti:`, JSON.stringify({
@@ -40,7 +40,8 @@ router.post('/subscribe', auth, async (req: any, res) => {
       keys: subscription?.keys ? {
         p256dh: subscription.keys.p256dh?.substring(0, 10) + '...',
         auth: subscription.keys.auth?.substring(0, 5) + '...'
-      } : 'mancanti'
+      } : 'mancanti',
+      isSafariIOSSimulation: !!isSafariIOSSimulation
     }));
 
     if (!subscription || !subscription.endpoint || !subscription.keys) {
@@ -48,6 +49,26 @@ router.post('/subscribe', auth, async (req: any, res) => {
       return res.status(400).json({ error: 'Dati di sottoscrizione non validi' });
     }
 
+    // Se è una sottoscrizione simulata per Safari iOS, aggiungiamo un'etichetta
+    if (isSafariIOSSimulation) {
+      console.log('🍎 [API] Sottoscrizione simulata per Safari iOS ricevuta');
+      // Qui potresti voler salvare l'informazione che questa è una simulazione
+      // nel database per gestirla in modo diverso quando invii notifiche
+      
+      // Per esempio:
+      await notificationService.saveSubscription(userId, {
+        ...subscription,
+        isSafariIOSSimulation: true
+      });
+      
+      console.log(`✅ [API] Sottoscrizione simulata per iOS salvata con successo per l'utente ID: ${userId}`);
+      return res.status(201).json({ 
+        message: 'Sottoscrizione simulata per Safari iOS salvata con successo',
+        isSafariIOSSimulation: true
+      });
+    }
+    
+    // Sottoscrizione standard
     await notificationService.saveSubscription(userId, subscription);
     console.log(`✅ [API] Sottoscrizione salvata con successo per l'utente ID: ${userId}`);
     res.status(201).json({ message: 'Sottoscrizione salvata con successo' });

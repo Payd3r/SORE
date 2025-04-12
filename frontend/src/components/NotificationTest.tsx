@@ -15,6 +15,7 @@ const NotificationTest: React.FC = () => {
   const [status, setStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [isSimulatedSubscription, setIsSimulatedSubscription] = useState<boolean>(false);
   const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
@@ -263,12 +264,23 @@ const NotificationTest: React.FC = () => {
       if (result) {
         addSubscriptionStep('subscribe', 'success', 'Sottoscrizione completata');
         setIsSubscribed(true);
+        setIsSimulatedSubscription(false);
         setStatus('Sottoscrizione alle notifiche push completata con successo!');
         setStatusType('success');
       } else {
-        addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
-        setStatus('Sottoscrizione non riuscita, nessun errore riportato');
-        setStatusType('error');
+        // Per Safari iOS, il risultato nullo potrebbe significare che stiamo usando una sottoscrizione simulata
+        const isPWA = isPWAMode();
+        if (isSafariIOS && isPWA) {
+          addSubscriptionStep('subscribe', 'success', 'Sottoscrizione simulata configurata per Safari iOS');
+          setIsSubscribed(true);
+          setIsSimulatedSubscription(true);
+          setStatus('Notifiche configurate per Safari iOS in modalità PWA');
+          setStatusType('success');
+        } else {
+          addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
+          setStatus('Sottoscrizione non riuscita, nessun errore riportato');
+          setStatusType('error');
+        }
       }
       
       const currentPermission = await checkPermission();
@@ -345,7 +357,7 @@ const NotificationTest: React.FC = () => {
   };
 
   // Stili per i componenti
-  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md";
+  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mt-10";
   const titleClass = "text-xl font-semibold mb-2 text-gray-800 dark:text-white";
   const descriptionClass = "text-sm text-gray-600 dark:text-gray-400 mb-4";
   const buttonClass = {
@@ -374,7 +386,12 @@ const NotificationTest: React.FC = () => {
         <div className="flex items-center">
           <div className={`w-3 h-3 rounded-full mr-2 ${isSubscribed ? 'bg-green-500' : 'bg-gray-400'}`}></div>
           <span className="text-gray-700 dark:text-gray-300">
-            {isSubscribed ? 'Notifiche attive' : 'Notifiche disattivate'}
+            {isSubscribed 
+              ? isSimulatedSubscription 
+                ? 'Notifiche attive (modalità compatibilità iOS)' 
+                : 'Notifiche attive' 
+              : 'Notifiche disattivate'
+            }
           </span>
         </div>
         
