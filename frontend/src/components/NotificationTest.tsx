@@ -19,6 +19,24 @@ const NotificationTest: React.FC = () => {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
   
+  // Log dei passaggi di sottoscrizione
+  const [subscriptionSteps, setSubscriptionSteps] = useState<Array<{
+    step: string;
+    status: 'pending' | 'success' | 'error' | 'info';
+    message: string;
+    timestamp: Date;
+  }>>([]);
+  
+  // Funzione per aggiungere un passaggio al log
+  const addSubscriptionStep = (step: string, status: 'pending' | 'success' | 'error' | 'info', message: string) => {
+    setSubscriptionSteps(prev => [...prev, {
+      step,
+      status,
+      message,
+      timestamp: new Date()
+    }]);
+  };
+  
   // Stato per le informazioni di debug
   const [debugInfo, setDebugInfo] = useState<{
     serviceWorkerSupported: boolean;
@@ -196,50 +214,69 @@ const NotificationTest: React.FC = () => {
     setStatus('Verifica del supporto per le notifiche...');
     setStatusType('info');
     
-    // Reset degli errori di debug
+    // Reset dei logs e degli errori
+    setSubscriptionSteps([]);
     setDebugInfo(prev => ({...prev, error: null}));
+    
+    addSubscriptionStep('init', 'pending', 'Inizializzazione processo di sottoscrizione');
 
     try {
+      addSubscriptionStep('check_support', 'pending', 'Verifica del supporto per le notifiche');
       await updateDebugInfo('Tentativo di sottoscrizione...');
       
       if (!isPushNotificationSupported()) {
+        addSubscriptionStep('check_support', 'error', 'Il browser non supporta le notifiche push');
         throw new Error('Il browser non supporta le notifiche push');
       }
+      addSubscriptionStep('check_support', 'success', 'Notifiche push supportate');
       
       // Richiedi il permesso per le notifiche
+      addSubscriptionStep('request_permission', 'pending', 'Richiesta permesso notifiche');
       const permissionGranted = await requestNotificationPermission();
       if (!permissionGranted) {
+        addSubscriptionStep('request_permission', 'error', `Permesso negato: ${Notification.permission}`);
         throw new Error(`Permesso negato: ${Notification.permission}`);
       }
+      addSubscriptionStep('request_permission', 'success', 'Permesso concesso');
       
       // Prova a registrare/ottenere il service worker
+      addSubscriptionStep('sw_registration', 'pending', 'Registrazione Service Worker');
       try {
         await registerServiceWorker();
+        addSubscriptionStep('sw_registration', 'success', 'Service Worker registrato');
       } catch (e) {
+        addSubscriptionStep('sw_registration', 'error', `Errore: ${e instanceof Error ? e.message : String(e)}`);
         throw new Error(`Errore service worker: ${e instanceof Error ? e.message : String(e)}`);
       }
       
       // Sottoscrivi alle push notification
+      addSubscriptionStep('get_vapid', 'pending', 'Recupero chiave VAPID');
+      addSubscriptionStep('subscribe', 'pending', 'Sottoscrizione alle notifiche push');
       const result = await subscribeToPushNotifications();
-      setIsSubscribed(!!result);
-      const currentPermission = await checkPermission();
-      setPermission(currentPermission);
       
       if (result) {
+        addSubscriptionStep('subscribe', 'success', 'Sottoscrizione completata');
+        setIsSubscribed(true);
         setStatus('Sottoscrizione alle notifiche push completata con successo!');
         setStatusType('success');
       } else {
+        addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
         setStatus('Sottoscrizione non riuscita, nessun errore riportato');
         setStatusType('error');
       }
       
+      const currentPermission = await checkPermission();
+      setPermission(currentPermission);
       await updateDebugInfo(result ? null : 'Sottoscrizione fallita senza errori');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto';
+      addSubscriptionStep('error', 'error', errorMessage);
       await updateDebugInfo(error instanceof Error ? error.message : 'Errore sconosciuto durante la sottoscrizione');
       console.error('Errore sottoscrizione alle notifiche push:', error);
-      setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
+      setStatus(`Errore: ${errorMessage}`);
       setStatusType('error');
     } finally {
+      addSubscriptionStep('complete', 'info', 'Processo completato');
       setIsLoading(false);
     }
   };
@@ -369,11 +406,65 @@ const NotificationTest: React.FC = () => {
         </div>
       )}
       
+      {/* Log dettagliato del processo di sottoscrizione */}
+      {subscriptionSteps.length > 0 && (
+        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-semibold">
+            Log dettagliato del processo
+          </div>
+          <div className="p-2 max-h-60 overflow-auto">
+            {subscriptionSteps.map((stepLog, index) => {
+              const stepColors = {
+                pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-200",
+                success: "bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-200",
+                error: "bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-200",
+                info: "bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-200"
+              };
+              
+              const stepIcons = {
+                pending: "⏳",
+                success: "✅",
+                error: "❌",
+                info: "ℹ️"
+              };
+              
+              return (
+                <div 
+                  key={index} 
+                  className={`mb-1 p-2 rounded ${stepColors[stepLog.status]} flex items-start`}
+                >
+                  <span className="mr-2 text-lg">{stepIcons[stepLog.status]}</span>
+                  <div className="flex-1">
+                    <div className="font-medium">{stepLog.step}</div>
+                    <div>{stepLog.message}</div>
+                    <div className="text-xs opacity-70">
+                      {stepLog.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit', hour12: false})}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
       {/* Permesso negato */}
       {permission === 'denied' && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
           <strong>Attenzione:</strong> Le notifiche sono bloccate nelle impostazioni del browser. 
           Per riceverle, dovrai consentire l'accesso nelle impostazioni del sito.
+        </div>
+      )}
+      
+      {/* Avviso per dispositivi iOS */}
+      {debugInfo.isIOS && (
+        <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
+          <strong>Dispositivo iOS rilevato:</strong> Safari su iOS ha un supporto limitato per le notifiche push web.
+          Per ricevere notifiche, ti consigliamo di:
+          <ul className="list-disc pl-5 mt-2">
+            <li>Aggiungere l'app alla schermata home (installare come PWA)</li>
+            <li>Utilizzare un browser alternativo come Chrome</li>
+          </ul>
         </div>
       )}
       

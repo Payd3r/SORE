@@ -48,16 +48,19 @@ export async function initializeWebPush(): Promise<void> {
  * Ottiene la chiave pubblica VAPID
  */
 export async function getVapidPublicKey(): Promise<string> {
+  console.log('🔍 [SERVICE] Recupero chiave VAPID pubblica dal database');
   try {
     const [keys] = await pool.promise().query<VapidKey[]>('SELECT public_key FROM vapid_keys LIMIT 1');
     
     if (keys.length === 0) {
+      console.error('❌ [SERVICE] Chiavi VAPID non trovate nel database');
       throw new Error('Chiavi VAPID non trovate. Esegui initializeWebPush() prima.');
     }
     
+    console.log(`🔑 [SERVICE] Chiave VAPID pubblica recuperata: ${keys[0].public_key.substring(0, 10)}...`);
     return keys[0].public_key;
   } catch (error) {
-    console.error('Errore durante il recupero della chiave pubblica VAPID:', error);
+    console.error('❌ [SERVICE] Errore durante il recupero della chiave pubblica VAPID:', error);
     throw error;
   }
 }
@@ -66,28 +69,36 @@ export async function getVapidPublicKey(): Promise<string> {
  * Salva una sottoscrizione push nel database
  */
 export async function saveSubscription(userId: number, subscription: any): Promise<void> {
+  console.log(`🔍 [SERVICE] Salvataggio sottoscrizione per utente ID: ${userId}`);
+  console.log(`🔍 [SERVICE] Endpoint: ${subscription.endpoint.substring(0, 30)}...`);
+
   try {
     // Cerca se esiste già una sottoscrizione con lo stesso endpoint
+    console.log(`🔍 [SERVICE] Verifica esistenza sottoscrizione con endpoint: ${subscription.endpoint.substring(0, 30)}...`);
     const [existingSubscriptions] = await pool.promise().query<PushSubscription[]>(
       'SELECT id FROM push_subscriptions WHERE endpoint = ?',
       [subscription.endpoint]
     );
     
     if (existingSubscriptions.length > 0) {
+      console.log(`🔄 [SERVICE] Aggiornamento sottoscrizione esistente ID: ${existingSubscriptions[0].id}`);
       // Aggiorna la sottoscrizione esistente
       await pool.promise().query(
         'UPDATE push_subscriptions SET user_id = ?, p256dh = ?, auth = ?, updated_at = NOW() WHERE endpoint = ?',
         [userId, subscription.keys.p256dh, subscription.keys.auth, subscription.endpoint]
       );
+      console.log('✅ [SERVICE] Sottoscrizione aggiornata con successo');
     } else {
+      console.log('➕ [SERVICE] Creazione nuova sottoscrizione');
       // Inserisce una nuova sottoscrizione
       await pool.promise().query(
         'INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)',
         [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
       );
+      console.log('✅ [SERVICE] Nuova sottoscrizione creata con successo');
     }
   } catch (error: any) {
-    console.error('Errore durante il salvataggio della sottoscrizione push:', error);
+    console.error('❌ [SERVICE] Errore durante il salvataggio della sottoscrizione push:', error);
     throw error;
   }
 }
@@ -102,25 +113,33 @@ export async function sendNotificationToUser(
   icon: string | null = null, 
   url: string | null = null
 ): Promise<void> {
+  console.log(`🔔 [SERVICE] Invio notifica all'utente ID: ${userId}`);
+  console.log(`🔔 [SERVICE] Dettagli notifica:`, { title, body: body.substring(0, 20) + '...', icon, url });
+  
   try {
     // Recupera tutte le sottoscrizioni dell'utente
+    console.log(`🔍 [SERVICE] Recupero sottoscrizioni per l'utente ID: ${userId}`);
     const [subscriptions] = await pool.promise().query<PushSubscription[]>(
       'SELECT * FROM push_subscriptions WHERE user_id = ?',
       [userId]
     );
     
     if (subscriptions.length === 0) {
-      console.log(`Nessuna sottoscrizione trovata per l'utente ${userId}`);
+      console.log(`⚠️ [SERVICE] Nessuna sottoscrizione trovata per l'utente ${userId}`);
       return;
     }
     
+    console.log(`📊 [SERVICE] Trovate ${subscriptions.length} sottoscrizioni per l'utente ${userId}`);
+    
     // Salva la notifica nel database
+    console.log(`💾 [SERVICE] Salvataggio notifica nel database`);
     const [notificationResult] = await pool.promise().query<any>(
       'INSERT INTO notifications (user_id, title, body, icon, url, status) VALUES (?, ?, ?, ?, ?, ?)',
       [userId, title, body, icon, url, 'pending']
     );
     
     const notificationId = notificationResult.insertId;
+    console.log(`💾 [SERVICE] Notifica salvata con ID: ${notificationId}`);
     
     // Prepara il payload della notifica
     const payload = JSON.stringify({
@@ -131,9 +150,13 @@ export async function sendNotificationToUser(
       timestamp: new Date().getTime()
     });
     
+    console.log(`📤 [SERVICE] Invio notifica a ${subscriptions.length} dispositivi`);
+    
     // Invia la notifica a tutti i dispositivi
-    const sendPromises = subscriptions.map(async (subscription) => {
+    const sendPromises = subscriptions.map(async (subscription, index) => {
       try {
+        console.log(`📱 [SERVICE] Tentativo invio al dispositivo ${index + 1}/${subscriptions.length} (ID: ${subscription.id})`);
+        
         const pushSubscription = {
           endpoint: subscription.endpoint,
           keys: {
@@ -142,6 +165,7 @@ export async function sendNotificationToUser(
           }
         };
         
+        console.log(`📤 [SERVICE] Endpoint: ${subscription.endpoint.substring(0, 30)}...`);
         await webpush.sendNotification(pushSubscription, payload);
         
         // Aggiorna il timestamp dell'ultima notifica inviata
@@ -150,13 +174,15 @@ export async function sendNotificationToUser(
           [subscription.id]
         );
         
+        console.log(`✅ [SERVICE] Notifica inviata con successo al dispositivo ID: ${subscription.id}`);
         return true;
       } catch (error: any) {
-        console.error(`Errore durante l'invio della notifica alla sottoscrizione ${subscription.id}:`, error);
+        console.error(`❌ [SERVICE] Errore invio notifica alla sottoscrizione ${subscription.id}:`, error);
+        console.error(`❌ [SERVICE] Codice errore: ${error.statusCode}, messaggio: ${error.message}`);
         
         // Se riceviamo un errore 410 (Gone), la sottoscrizione non è più valida
         if (error.statusCode === 410) {
-          console.log(`Sottoscrizione ${subscription.id} non più valida, eliminazione...`);
+          console.log(`🗑️ [SERVICE] Sottoscrizione ${subscription.id} non più valida (410 Gone), eliminazione...`);
           await pool.promise().query('DELETE FROM push_subscriptions WHERE id = ?', [subscription.id]);
         }
         
@@ -168,14 +194,15 @@ export async function sendNotificationToUser(
     const successCount = results.filter(Boolean).length;
     
     // Aggiorna lo stato della notifica
+    console.log(`📊 [SERVICE] Risultato: ${successCount}/${subscriptions.length} notifiche inviate con successo`);
     await pool.promise().query(
       'UPDATE notifications SET status = ?, sent_at = NOW() WHERE id = ?',
       [successCount > 0 ? 'sent' : 'failed', notificationId]
     );
     
-    console.log(`Notifica inviata con successo a ${successCount}/${subscriptions.length} dispositivi`);
+    console.log(`✅ [SERVICE] Notifica ID ${notificationId} completata: ${successCount}/${subscriptions.length} dispositivi raggiunti`);
   } catch (error: any) {
-    console.error('Errore durante l\'invio della notifica:', error);
+    console.error('❌ [SERVICE] Errore critico durante l\'invio della notifica:', error);
     throw error;
   }
 }
@@ -184,24 +211,32 @@ export async function sendNotificationToUser(
  * Invia una notifica di test a un utente specifico
  */
 export async function sendTestNotification(userId: number): Promise<void> {
-  return sendNotificationToUser(
-    userId,
-    'Notifica di Test',
-    'Questa è una notifica di test da Memory Grove! 🎉',
-    '/icons/icon-152x152.png',
-    '/'
-  );
+  console.log(`🔔 [SERVICE] Invio notifica di test all'utente ID: ${userId}`);
+  try {
+    await sendNotificationToUser(
+      userId,
+      'Notifica di Test',
+      'Questa è una notifica di test da Memory Grove! 🎉',
+      '/icons/icon-152x152.png',
+      '/'
+    );
+    console.log(`✅ [SERVICE] Notifica di test inviata con successo all'utente ID: ${userId}`);
+  } catch (error) {
+    console.error(`❌ [SERVICE] Errore invio notifica di test all'utente ID: ${userId}:`, error);
+    throw error;
+  }
 }
 
 /**
  * Elimina una sottoscrizione push dal database
  */
 export async function deleteSubscription(endpoint: string): Promise<void> {
+  console.log(`🗑️ [SERVICE] Eliminazione sottoscrizione con endpoint: ${endpoint.substring(0, 30)}...`);
   try {
     await pool.promise().query('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
-    console.log(`Sottoscrizione con endpoint ${endpoint} eliminata`);
+    console.log(`✅ [SERVICE] Sottoscrizione con endpoint ${endpoint.substring(0, 30)}... eliminata`);
   } catch (error) {
-    console.error('Errore durante l\'eliminazione della sottoscrizione push:', error);
+    console.error('❌ [SERVICE] Errore durante l\'eliminazione della sottoscrizione push:', error);
     throw error;
   }
 } 
