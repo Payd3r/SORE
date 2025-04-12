@@ -41,22 +41,9 @@ async function getVapidPublicKey(): Promise<string> {
 }
 
 /**
- * Registra la sottoscrizione push sul server
- */
-export async function registerPushSubscription(subscription: PushSubscription) {
-  try {
-    const response = await axios.post('/api/notifications/register', subscription);
-    return response.data;
-  } catch (error) {
-    console.error('Errore durante la registrazione della sottoscrizione:', error);
-    throw error;
-  }
-}
-
-/**
  * Registra il service worker se non è già registrato
  */
-async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
+export async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
     throw new Error('Service Worker non supportato');
   }
@@ -121,6 +108,32 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
 }
 
 /**
+ * Annulla la sottoscrizione alle notifiche push
+ */
+export async function unsubscribeFromPushNotifications(): Promise<boolean> {
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    
+    if (subscription) {
+      // Elimina la sottoscrizione dal server
+      await axios.delete('/api/notifications/unsubscribe', {
+        data: { endpoint: subscription.endpoint }
+      });
+      
+      // Annulla la sottoscrizione lato client
+      await subscription.unsubscribe();
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Errore durante l\'annullamento della sottoscrizione:', error);
+    throw error;
+  }
+}
+
+/**
  * Invia una notifica di test
  */
 export async function sendTestNotification(): Promise<void> {
@@ -148,4 +161,33 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
-} 
+}
+
+/**
+ * Verifica se il dispositivo è iOS
+ */
+export const isIOSDevice = (): boolean => {
+  const userAgent = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+};
+
+/**
+ * Verifica se l'app è in modalità PWA (Progressive Web App)
+ */
+export const isPWAMode = (): boolean => {
+  return window.matchMedia('(display-mode: standalone)').matches || 
+         window.matchMedia('(display-mode: fullscreen)').matches || 
+         (window.navigator as any).standalone === true;
+};
+
+/**
+ * Controlla lo stato del permesso delle notifiche
+ * @returns Lo stato del permesso come stringa
+ */
+export const checkPermission = async (): Promise<NotificationPermission | null> => {
+  if (!isPushNotificationSupported()) {
+    return null;
+  }
+  
+  return Notification.permission;
+}; 

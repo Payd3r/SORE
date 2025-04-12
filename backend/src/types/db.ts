@@ -133,6 +133,35 @@ export interface ProcessedIdea extends Omit<Idea, 'tasks'> {
   completed_tasks: number;
 }
 
+export interface PushSubscription extends DbRow {
+  id: number;
+  user_id: number;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: Date;
+  updated_at: Date;
+  last_notification_sent: Date | null;
+}
+
+export interface VapidKey extends DbRow {
+  id: number;
+  public_key: string;
+  private_key: string;
+  created_at: Date;
+}
+
+export interface Notification extends DbRow {
+  id: number;
+  user_id: number;
+  title: string;
+  body: string;
+  icon: string | null;
+  url: string | null;
+  sent_at: Date;
+  status: 'pending' | 'sent' | 'failed';
+}
+
 export type ResultSetHeader = MySQLResultSetHeader;
 
 export type QueryResult<T> = [T[], ResultSetHeader]; 

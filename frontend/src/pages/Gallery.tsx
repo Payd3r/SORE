@@ -11,7 +11,9 @@ import { useUpload } from '../contexts/UploadContext';
 import Loader from '../components/Loader';
 
 type SortOption = 'newest' | 'oldest' | 'random';
-type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO' | 'NOT_IN_MEMORY';
+type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO';
+// Filtro separato per le immagini non associate a un ricordo
+type MemoryFilter = 'all' | 'NOT_IN_MEMORY';
 
 interface GroupedImages {
   [key: string]: {
@@ -27,6 +29,7 @@ export default function Gallery() {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
+  const [memoryFilter, setMemoryFilter] = useState<MemoryFilter>('all');
   const { isLoading: authLoading } = useAuth();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
@@ -172,26 +175,27 @@ export default function Gallery() {
     }
   };
 
-  // Funzione per filtrare le immagini per tipo
+  // Funzione per filtrare le immagini per tipo e per associazione ai ricordi
   const getFilteredImages = (images: ImageType[]): ImageType[] => {
+    // Applica prima il filtro di associazione ai ricordi
+    let filteredByMemory = images;
+    if (memoryFilter === 'NOT_IN_MEMORY') {
+      console.log("prima", filteredByMemory);
+      filteredByMemory = images.filter(image => image.memory_id < 1);
+      console.log("dopo", filteredByMemory);
+    }
+
+    // Poi applica il filtro per tipo di immagine
     // Se non ci sono tipi selezionati, mostra tutte le immagini
     if (selectedTypes.size === 0) {
-      return images;
+      return filteredByMemory;
     }
 
     // Filtra le immagini se c'è almeno un tipo selezionato
-    const filteredImages = images.filter(image => {
-      // Caso speciale per le immagini non in ricordo
-      if (selectedTypes.has('NOT_IN_MEMORY') && image.memory_id === -1) {
-        return true;
-      }
-      
-      // Filtro standard per tipo di immagine
+    return filteredByMemory.filter(image => {
       const upperCaseType = image.type.toUpperCase() as ImageTypeFilter;
       return selectedTypes.has(upperCaseType);
     });
-
-    return filteredImages;
   };
 
   // Ottieni il testo del pulsante di ordinamento
@@ -360,7 +364,7 @@ export default function Gallery() {
   // Gestione delle gesture di pinch per lo zoom in/out
   const handleTouchStart = (e: TouchEvent) => {
     if (!isPWA || e.touches.length !== 2) return;
-    
+
     // Calcola la distanza iniziale tra le dita
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
@@ -368,7 +372,7 @@ export default function Gallery() {
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
-    
+
     setInitialTouchDistance(distance);
     setIsPinching(true);
     setPinchScale(1); // Reset dello scale al valore iniziale
@@ -376,7 +380,7 @@ export default function Gallery() {
 
   const handleTouchMove = (e: TouchEvent) => {
     if (!isPWA || e.touches.length !== 2 || initialTouchDistance === null) return;
-    
+
     // Calcola la distanza attuale tra le dita
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
@@ -384,11 +388,11 @@ export default function Gallery() {
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
-    
+
     // Calcola il fattore di scala tra la distanza iniziale e quella attuale
     const newScale = currentDistance / initialTouchDistance;
     setPinchScale(newScale);
-    
+
     // Throttle il cambio di modalità per evitare cambi troppo rapidi
     const now = Date.now();
     if (now - lastPinchTimeRef.current > 300) { // Controllo ogni 300ms
@@ -414,7 +418,7 @@ export default function Gallery() {
   }
 
   return (
-    <div 
+    <div
       className="h-full flex flex-col"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -423,7 +427,7 @@ export default function Gallery() {
     >
       <div
         className="flex-1 overflow-y-auto gallery-container"
-        style={{ 
+        style={{
           WebkitOverflowScrolling: 'touch',
           transition: isPinching ? 'none' : 'all 0.3s ease-out'
         }}
@@ -449,11 +453,10 @@ export default function Gallery() {
                         setIsSelectionMode(prev => !prev);
                         setSelectedImages(new Set());
                       }}
-                      className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation ${
-                        isSelectionMode
-                          ? 'btn-primary'
-                          : 'text-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
+                      className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation ${isSelectionMode
+                        ? 'btn-primary'
+                        : 'text-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         {isSelectionMode ? (
@@ -470,25 +473,24 @@ export default function Gallery() {
                         <button
                           onClick={handleDeleteSelected}
                           disabled={isDeleting || selectedImages.size === 0}
-                          className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none touch-manipulation ${
-                            isDeleting || selectedImages.size === 0
-                              ? 'bg-red-400 cursor-not-allowed'
-                              : 'btn-danger'
-                          }`}
+                          className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none touch-manipulation ${isDeleting || selectedImages.size === 0
+                            ? 'bg-red-400 cursor-not-allowed'
+                            : 'btn-danger'
+                            }`}
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                           <span className="hidden sm:inline">{isDeleting ? 'Eliminazione...' : 'Elimina'}</span>
                         </button>
-                        
+
                         <button
                           onClick={() => {
                             // Se ci sono immagini selezionate, avvia il download diretto
                             if (selectedImages.size > 0) {
                               const selectedImagesArray = Array.from(selectedImages);
                               const selectedImagesData = images.filter(img => selectedImagesArray.includes(img.id));
-                              
+
                               // Utilizziamo un approccio che forza il download diretto
                               selectedImagesData.forEach((image, index) => {
                                 setTimeout(() => {
@@ -498,17 +500,17 @@ export default function Gallery() {
                                     .then(blob => {
                                       // Creiamo un URL per il blob
                                       const blobUrl = URL.createObjectURL(blob);
-                                      
+
                                       // Creiamo un link e impostiamo l'attributo download
                                       const link = document.createElement('a');
                                       link.href = blobUrl;
                                       link.download = `immagine-${image.id}.webp`;
                                       link.style.display = 'none';
-                                      
+
                                       // Aggiungiamo il link al DOM, clicchiamo e rimuoviamo
                                       document.body.appendChild(link);
                                       link.click();
-                                      
+
                                       // Pulizia: rimuoviamo il link e revochiamo il blobUrl
                                       setTimeout(() => {
                                         document.body.removeChild(link);
@@ -523,11 +525,10 @@ export default function Gallery() {
                             }
                           }}
                           disabled={selectedImages.size === 0}
-                          className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation ${
-                            selectedImages.size === 0
-                              ? 'bg-blue-400/70 cursor-not-allowed'
-                              : 'bg-blue-600 hover:bg-blue-700 text-white'
-                          }`}
+                          className={`btn flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-colors focus:outline-none touch-manipulation ${selectedImages.size === 0
+                            ? 'bg-blue-400/70 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -689,22 +690,22 @@ export default function Gallery() {
                             </div>
                             Cibo
                           </button>
-                          
-                          {/* Nuova voce per "Non in ricordo" */}
                           <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleTypeClick('NOT_IN_MEMORY');
+                              // Alterna tra 'all' e 'NOT_IN_MEMORY'
+                              setMemoryFilter(prev => prev === 'all' ? 'NOT_IN_MEMORY' : 'all');
+                              setIsTypeMenuOpen(false);
                             }}
-                            className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('NOT_IN_MEMORY') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                            className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${memoryFilter === 'NOT_IN_MEMORY' ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
                               }`}
                           >
-                            <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('NOT_IN_MEMORY')
+                            <div className={`w-4 h-4 border rounded flex items-center justify-center ${memoryFilter === 'NOT_IN_MEMORY'
                               ? 'bg-blue-500 border-blue-500'
                               : 'border-gray-300 dark:border-gray-600'
                               }`}>
-                              {selectedTypes.has('NOT_IN_MEMORY') && (
+                              {memoryFilter === 'NOT_IN_MEMORY' && (
                                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
@@ -854,9 +855,8 @@ export default function Gallery() {
                                 {rowImages.map((image) => (
                                   <div
                                     key={image.id}
-                                    className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ${
-                                      selectedImages.has(image.id) ? 'ring-2 ring-blue-500' : ''
-                                    }`}
+                                    className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ${selectedImages.has(image.id) ? 'ring-2 ring-blue-500' : ''
+                                      }`}
                                     style={{
                                       width: '100%',
                                       height: '100%',

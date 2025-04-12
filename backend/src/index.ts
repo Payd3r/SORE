@@ -14,6 +14,10 @@ import couplesRoutes from './routes/couples';
 import spotifyRoutes from './routes/spotify';
 import recapRoutes from './routes/recap';
 import mapRoutes from './routes/map';
+import notificationRoutes from './routes/notifications';
+
+// Import servizi
+import { initializeWebPush } from './services/notificationService';
 
 dotenv.config();
 
@@ -101,8 +105,14 @@ app.use('/api/users', usersRoutes);
 app.use('/api/spotify', spotifyRoutes);
 app.use('/api/recap', recapRoutes);
 app.use('/api/map', mapRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 console.log('=== ROUTES MOUNTED ===');
+
+// Inizializza il servizio di web push notifications
+initializeWebPush().catch(err => {
+  console.error('Errore durante l\'inizializzazione di web-push:', err);
+});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -136,5 +146,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('- /api/spotify/*');
   console.log('- /api/recap/*');
   console.log('- /api/map/*');
+  console.log('- /api/notifications/*');
   console.log('=================================');
 });
