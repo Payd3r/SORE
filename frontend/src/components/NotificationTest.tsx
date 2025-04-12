@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   isPushNotificationSupported, 
   requestNotificationPermission, 
-  subscribeToPushNotifications, 
-  sendTestNotification,
+  subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   isIOSDevice,
   isPWAMode,
