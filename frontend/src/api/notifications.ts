@@ -325,19 +325,10 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
   }
 }
 
-/**
- * Ottieni gli header di autenticazione
- */
-export function getAuthHeaders() {
-  console.log('🔐 [CLIENT] Preparazione header di autenticazione');
+// Funzione helper per ottenere gli headers di autenticazione
+function getAuthHeaders() {
   const token = localStorage.getItem('token');
-  if (token) {
-    console.log('🔐 [CLIENT] Token trovato nel localStorage');
-    return { Authorization: `Bearer ${token}` };
-  } else {
-    console.log('⚠️ [CLIENT] Token non trovato nel localStorage');
-    return {};
-  }
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 /**
@@ -398,81 +389,25 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
  * Annulla la sottoscrizione alle notifiche push
  */
 export async function unsubscribeFromPushNotifications(): Promise<boolean> {
-  console.log('🔔 [CLIENT] Avvio processo di annullamento sottoscrizione');
-  
   try {
-    console.log('🔧 [CLIENT] Verifico se il service worker è supportato');
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.error('❌ [CLIENT] Service Worker o Push Manager non supportati');
-      throw new Error('Il browser non supporta le notifiche push');
-    }
-    
-    // Otteniamo la registrazione del service worker
-    console.log('🔧 [CLIENT] Recupero registrazione del service worker');
     const registration = await navigator.serviceWorker.ready;
-    console.log('✅ [CLIENT] Service worker pronto');
-    
-    // Otteniamo la sottoscrizione corrente
-    console.log('🔍 [CLIENT] Verifica esistenza sottoscrizione');
     const subscription = await registration.pushManager.getSubscription();
     
-    if (!subscription) {
-      console.log('ℹ️ [CLIENT] Nessuna sottoscrizione trovata');
-      return false;
-    }
-    
-    console.log('🔍 [CLIENT] Sottoscrizione trovata:', {
-      endpoint: subscription.endpoint.substring(0, 30) + '...'
-    });
-    
-    // Annulla la sottoscrizione lato browser
-    console.log('🔄 [CLIENT] Annullamento sottoscrizione sul browser');
-    const unsubscribeResult = await subscription.unsubscribe();
-    console.log('✅ [CLIENT] Sottoscrizione annullata sul browser:', unsubscribeResult);
-    
-    if (unsubscribeResult) {
-      // Notifica al server per rimuovere la sottoscrizione dal database
-      console.log('🔄 [CLIENT] Notifica al server per rimuovere la sottoscrizione');
-      
-      const headers = getAuthHeaders();
-      console.log('🔔 [CLIENT] Header per la chiamata API:', headers);
-      
-      console.log('🔄 [CLIENT] Invio richiesta DELETE a /api/notifications/unsubscribe');
-      const startTime = performance.now();
-      
-      const response = await axios.delete('/api/notifications/unsubscribe', {
+    if (subscription) {
+      // Elimina la sottoscrizione dal server
+      await axios.delete('/api/notifications/unsubscribe', {
         data: { endpoint: subscription.endpoint },
-        headers
+        headers: getAuthHeaders()
       });
       
-      const endTime = performance.now();
-      const requestTime = Math.round(endTime - startTime);
-      
-      console.log(`✅ [CLIENT] Risposta ricevuta in ${requestTime}ms:`, {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data
-      });
-      
-      console.log('✅ [CLIENT] Sottoscrizione rimossa con successo dal database');
+      // Annulla la sottoscrizione lato client
+      await subscription.unsubscribe();
+      return true;
     }
     
-    return unsubscribeResult;
+    return false;
   } catch (error) {
-    console.error('❌ [CLIENT] Errore durante l\'annullamento della sottoscrizione:');
-    
-    if (axios.isAxiosError(error)) {
-      console.error('❌ [CLIENT] Dettagli errore API:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-        method: error.config?.method
-      });
-    } else {
-      console.error('❌ [CLIENT] Errore:', error instanceof Error ? error.message : String(error));
-    }
-    
+    console.error('Errore durante l\'annullamento della sottoscrizione:', error);
     throw error;
   }
 }
@@ -481,47 +416,12 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
  * Invia una notifica di test
  */
 export async function sendTestNotification(): Promise<void> {
-  console.log('🔔 [CLIENT] Avvio invio notifica di test');
   try {
-    // Ottieni gli header di autenticazione e mostra i dettagli
-    const headers = getAuthHeaders();
-    console.log('🔔 [CLIENT] Header per la chiamata API:', headers);
-    
-    console.log('🔔 [CLIENT] Invio richiesta POST a /api/notifications/test');
-    const startTime = performance.now();
-    
-    const response = await axios.post('/api/notifications/test', {}, { headers });
-    
-    const endTime = performance.now();
-    const requestTime = Math.round(endTime - startTime);
-    
-    console.log(`✅ [CLIENT] Risposta ricevuta in ${requestTime}ms:`, {
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data
+    await axios.post('/api/notifications/test', {}, {
+      headers: getAuthHeaders()
     });
-    
-    console.log('✅ [CLIENT] Notifica di test inviata con successo!');
-    return;
   } catch (error) {
-    console.error('❌ [CLIENT] Errore durante l\'invio della notifica di test:');
-    
-    if (axios.isAxiosError(error)) {
-      console.error('❌ [CLIENT] Dettagli errore API:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-        method: error.config?.method
-      });
-      
-      // Controlla se è un problema di autenticazione
-      if (error.response?.status === 401) {
-        console.error('❌ [CLIENT] Problema di autenticazione. Assicurati di aver effettuato il login.');
-        throw new Error('Devi aver effettuato il login per inviare notifiche di test.');
-      }
-    }
-    
+    console.error('Errore durante l\'invio della notifica di test:', error);
     throw error;
   }
 }

@@ -1,118 +1,384 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  isPushNotificationSupported, 
+  requestNotificationPermission, 
+  subscribeToPushNotifications, 
+  sendTestNotification,
+  unsubscribeFromPushNotifications,
+  isIOSDevice,
+  isPWAMode,
+  checkPermission,
+  registerServiceWorker
+} from '../api/notifications';
 
-// Componente estremamente semplificato per iOS Safari
 const NotificationTest: React.FC = () => {
-  const [status, setStatus] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isIOSDevice, setIsIOSDevice] = useState(false);
-  const [isPWAInstalled, setIsPWAInstalled] = useState(false);
+  const [status, setStatus] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [isSimulatedSubscription, setIsSimulatedSubscription] = useState<boolean>(false);
+  const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
+  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
   
-  // Funzione ultra semplice per rilevare iOS
-  const checkIsIOS = () => {
-    const userAgent = navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-    return isIOS;
+  // Log dei passaggi di sottoscrizione
+  const [subscriptionSteps, setSubscriptionSteps] = useState<Array<{
+    step: string;
+    status: 'pending' | 'success' | 'error' | 'info';
+    message: string;
+    timestamp: Date;
+  }>>([]);
+  
+  // Funzione per aggiungere un passaggio al log
+  const addSubscriptionStep = (step: string, status: 'pending' | 'success' | 'error' | 'info', message: string) => {
+    setSubscriptionSteps(prev => [...prev, {
+      step,
+      status,
+      message,
+      timestamp: new Date()
+    }]);
   };
   
-  // Funzione ultra semplice per controllare se è PWA
-  const checkIsPWA = () => {
-    return window.matchMedia('(display-mode: standalone)').matches || 
-           (window.navigator as any).standalone === true;
-  };
-  
-  // Controlla lo stato iniziale
-  useEffect(() => {
-    const ios = checkIsIOS();
-    const pwa = checkIsPWA();
-    
-    setIsIOSDevice(ios);
-    setIsPWAInstalled(pwa);
-    
-    // Evita completamente il controllo di sottoscrizione su iOS Safari
-    if (ios && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
-      // Su Safari iOS impostiamo un valore fisso
-      setIsSubscribed(pwa);
-      return;
-    }
-    
-    // Per altri browser, controllo base
+  // Stato per le informazioni di debug
+  const [debugInfo, setDebugInfo] = useState<{
+    serviceWorkerSupported: boolean;
+    notificationsSupported: boolean;
+    pushManagerSupported: boolean;
+    permissionState: string;
+    serviceWorkerState: string;
+    serviceWorkerURL: string;
+    isIOS: boolean;
+    isPWA: boolean;
+    userAgent: string;
+    subscriptionDetails: string | null;
+    vapidKey: string | null;
+    pushEndpoint: string | null;
+    swRegistrations: any[];
+    error: string | null;
+  }>({
+    serviceWorkerSupported: false,
+    notificationsSupported: false,
+    pushManagerSupported: false,
+    permissionState: 'unknown',
+    serviceWorkerState: 'unknown',
+    serviceWorkerURL: 'none',
+    isIOS: false,
+    isPWA: false,
+    userAgent: navigator.userAgent,
+    subscriptionDetails: null,
+    vapidKey: null,
+    pushEndpoint: null,
+    swRegistrations: [],
+    error: null,
+  });
+
+  const updateDebugInfo = useCallback(async (error: string | null = null) => {
     try {
-      if ('Notification' in window) {
-        setIsSubscribed(Notification.permission === 'granted');
+      const swSupported = 'serviceWorker' in navigator;
+      const notifSupported = isPushNotificationSupported();
+      const pushSupported = swSupported && 'PushManager' in window;
+      const permState = await checkPermission() || 'unknown';
+      const isIOS = isIOSDevice();
+      const isPWA = isPWAMode();
+      const swRegistrations = [];
+      let swState = 'unknown';
+      let serviceWorkerURL = 'none';
+      let subscriptionDetails = null;
+      let pushEndpoint = null;
+      let vapidKey = null;
+      
+      // Ottieni tutte le registrazioni del service worker
+      if (swSupported) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        
+        for (const reg of registrations) {
+          swRegistrations.push({
+            scope: reg.scope,
+            active: !!reg.active,
+            installing: !!reg.installing,
+            waiting: !!reg.waiting,
+            updateViaCache: reg.updateViaCache
+          });
+          
+          // Dettagli sul push manager
+          if (reg.pushManager) {
+            try {
+              const subscription = await reg.pushManager.getSubscription();
+              if (subscription) {
+                subscriptionDetails = JSON.stringify(subscription, null, 2);
+                pushEndpoint = subscription.endpoint;
+                
+                // Prova ad estrarre la VAPID key
+                try {
+                  const options = subscription.options || {};
+                  if (options.applicationServerKey) {
+                    const keyArr = new Uint8Array(options.applicationServerKey);
+                    vapidKey = Array.from(keyArr).map(b => 
+                      b.toString(16).padStart(2, '0')).join('');
+                  }
+                } catch (e) {
+                  console.error('Errore estrazione VAPID key:', e);
+                }
+              }
+            } catch (e) {
+              console.error('Errore recupero sottoscrizione:', e);
+            }
+          }
+        }
+        
+        // Ottieni la registrazione corrente
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          serviceWorkerURL = registration.active?.scriptURL || 'unknown';
+          swState = registration.active 
+            ? 'active' 
+            : registration.installing 
+              ? 'installing' 
+              : registration.waiting 
+                ? 'waiting' 
+                : 'registered';
+        } else {
+          swState = 'not registered';
+        }
+        
+        // Controlla se il service worker controlla la pagina
+        if (navigator.serviceWorker.controller) {
+          swState += ' (controlling)';
+        }
       }
+
+      setDebugInfo({
+        serviceWorkerSupported: swSupported,
+        notificationsSupported: notifSupported,
+        pushManagerSupported: pushSupported,
+        permissionState: permState,
+        serviceWorkerState: swState,
+        serviceWorkerURL,
+        isIOS,
+        isPWA,
+        userAgent: navigator.userAgent,
+        subscriptionDetails,
+        vapidKey,
+        pushEndpoint,
+        swRegistrations,
+        error,
+      });
     } catch (e) {
-      // Ignora qualsiasi errore
+      setDebugInfo(prev => ({
+        ...prev,
+        error: e instanceof Error ? e.message : 'Unknown error',
+        serviceWorkerState: 'error during check'
+      }));
     }
   }, []);
-  
-  // Versione ultra-semplificata dell'attivazione notifiche
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const currentPermission = await checkPermission();
+        setPermission(currentPermission);
+        
+        // Try to register service worker on component mount
+        if ('serviceWorker' in navigator) {
+          try {
+            await registerServiceWorker();
+            console.log('Service worker registrato con successo');
+          } catch (e) {
+            console.error('Errore nella registrazione del service worker:', e);
+          }
+        }
+
+        // Check subscription status
+        if (currentPermission === 'granted' && 'serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration?.pushManager) {
+              const subscription = await registration.pushManager.getSubscription();
+              setIsSubscribed(!!subscription);
+            }
+          } catch (e) {
+            console.error('Errore controllo sottoscrizione:', e);
+          }
+        }
+        
+        // Update debug info
+        await updateDebugInfo();
+      } catch (error) {
+        await updateDebugInfo(error instanceof Error ? error.message : 'Unknown error');
+      }
+    };
+
+    init();
+  }, [updateDebugInfo]);
+
   const handleSubscribe = async () => {
     setIsLoading(true);
-    setStatus('Attivazione notifiche...');
+    setStatus('Verifica del supporto per le notifiche...');
+    setStatusType('info');
     
+    // Reset dei logs e degli errori
+    setSubscriptionSteps([]);
+    setDebugInfo(prev => ({...prev, error: null}));
+    
+    addSubscriptionStep('init', 'pending', 'Inizializzazione processo di sottoscrizione');
+
+    // Rimuovo il blocco per Safari iOS e sostituisco con un avviso informativo
+    const isSafariIOS = isIOSDevice() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    if (isSafariIOS) {
+      addSubscriptionStep('check_compatibility', 'info', 'Rilevato Safari su iOS - Utilizzo configurazione specifica');
+    }
+
     try {
-      // Per Safari iOS, simula semplicemente il successo se è installato come PWA
-      if (isIOSDevice && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
-        if (isPWAInstalled) {
-          setIsSubscribed(true);
-          setStatus('Notifiche attivate in modalità compatibilità iOS');
-        } else {
-          setStatus('Per iOS, installa l\'app alla Home per attivare le notifiche');
-        }
-        setIsLoading(false);
-        return;
+      addSubscriptionStep('check_support', 'pending', 'Verifica del supporto per le notifiche');
+      await updateDebugInfo('Tentativo di sottoscrizione...');
+      
+      if (!isPushNotificationSupported()) {
+        addSubscriptionStep('check_support', 'error', 'Il browser non supporta le notifiche push');
+        throw new Error('Il browser non supporta le notifiche push');
+      }
+      addSubscriptionStep('check_support', 'success', 'Notifiche push supportate');
+      
+      // Richiedi il permesso per le notifiche
+      addSubscriptionStep('request_permission', 'pending', 'Richiesta permesso notifiche');
+      const permissionGranted = await requestNotificationPermission();
+      if (!permissionGranted) {
+        addSubscriptionStep('request_permission', 'error', `Permesso negato: ${Notification.permission}`);
+        throw new Error(`Permesso negato: ${Notification.permission}`);
+      }
+      addSubscriptionStep('request_permission', 'success', 'Permesso concesso');
+      
+      // Prova a registrare/ottenere il service worker
+      addSubscriptionStep('sw_registration', 'pending', 'Registrazione Service Worker');
+      try {
+        await registerServiceWorker();
+        addSubscriptionStep('sw_registration', 'success', 'Service Worker registrato');
+      } catch (e) {
+        addSubscriptionStep('sw_registration', 'error', `Errore: ${e instanceof Error ? e.message : String(e)}`);
+        throw new Error(`Errore service worker: ${e instanceof Error ? e.message : String(e)}`);
       }
       
-      // Per altri browser, richiedi permesso standard
-      if (!('Notification' in window)) {
-        throw new Error('Il browser non supporta le notifiche');
-      }
+      // Sottoscrivi alle push notification
+      addSubscriptionStep('get_vapid', 'pending', 'Recupero chiave VAPID');
+      addSubscriptionStep('subscribe', 'pending', 'Sottoscrizione alle notifiche push');
+      const result = await subscribeToPushNotifications();
       
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
+      if (result) {
+        addSubscriptionStep('subscribe', 'success', 'Sottoscrizione completata');
         setIsSubscribed(true);
-        setStatus('Notifiche attivate con successo');
+        setIsSimulatedSubscription(false);
+        setStatus('Sottoscrizione alle notifiche push completata con successo!');
+        setStatusType('success');
       } else {
-        setStatus('Permesso negato: ' + permission);
+        // Per Safari iOS, il risultato nullo potrebbe significare che stiamo usando una sottoscrizione simulata
+        const isPWA = isPWAMode();
+        if (isSafariIOS && isPWA) {
+          addSubscriptionStep('subscribe', 'success', 'Sottoscrizione simulata configurata per Safari iOS');
+          setIsSubscribed(true);
+          setIsSimulatedSubscription(true);
+          setStatus('Notifiche configurate per Safari iOS in modalità PWA');
+          setStatusType('success');
+        } else {
+          addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
+          setStatus('Sottoscrizione non riuscita, nessun errore riportato');
+          setStatusType('error');
+        }
       }
+      
+      const currentPermission = await checkPermission();
+      setPermission(currentPermission);
+      await updateDebugInfo(result ? null : 'Sottoscrizione fallita senza errori');
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Errore sconosciuto');
+      const errorMessage = error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto';
+      addSubscriptionStep('error', 'error', errorMessage);
+      await updateDebugInfo(error instanceof Error ? error.message : 'Errore sconosciuto durante la sottoscrizione');
+      console.error('Errore sottoscrizione alle notifiche push:', error);
+      setStatus(`Errore: ${errorMessage}`);
+      setStatusType('error');
+    } finally {
+      addSubscriptionStep('complete', 'info', 'Processo completato');
+      setIsLoading(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    setIsLoading(true);
+    setStatus('Annullamento della sottoscrizione in corso...');
+    setStatusType('info');
+
+    try {
+      await updateDebugInfo('Tentativo di annullamento sottoscrizione...');
+      const result = await unsubscribeFromPushNotifications();
+      setIsSubscribed(!result);
+      setStatus('Sottoscrizione alle notifiche annullata con successo.');
+      setStatusType('success');
+      await updateDebugInfo(result ? null : 'Annullamento sottoscrizione fallito senza errore');
+    } catch (error) {
+      await updateDebugInfo(error instanceof Error ? error.message : 'Errore sconosciuto durante annullamento sottoscrizione');
+      console.error('Errore annullamento sottoscrizione notifiche push:', error);
+      setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
+      setStatusType('error');
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Versione ultra-semplificata della disattivazione
-  const handleUnsubscribe = () => {
+
+  const handleSendTest = async () => {
     setIsLoading(true);
-    setStatus('Disattivazione notifiche...');
-    
-    // Simuliamo la disattivazione senza chiamate API
-    setTimeout(() => {
-      setIsSubscribed(false);
-      setStatus('Notifiche disattivate');
+    setStatus('Invio notifica di test in corso...');
+    setStatusType('info');
+
+    try {
+      await sendTestNotification();
+      setStatus('Notifica di test inviata con successo!');
+      setStatusType('success');
+    } catch (error) {
+      console.error('Errore durante l\'invio della notifica di test:', error);
+      setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
+      setStatusType('error');
+      setDebugInfo(prev => ({
+        ...prev, 
+        error: error instanceof Error ? error.message : String(error)
+      }));
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
+  };
+
+  const handleCheckRegistration = async () => {
+    try {
+      setStatus('Controllo registrazione service worker...');
+      setStatusType('info');
+      await updateDebugInfo();
+      setStatus('Informazioni aggiornate');
+      setStatusType('success');
+    } catch (error) {
+      setStatus(`Errore durante il controllo: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+      setStatusType('error');
+    }
+  };
+
+  // Stili per i componenti
+  const cardClass = "p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md pt-14";
+  const titleClass = "text-xl font-semibold mb-2 text-gray-800 dark:text-white";
+  const descriptionClass = "text-sm text-gray-600 dark:text-gray-400 mb-4";
+  const buttonClass = {
+    primary: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50",
+    success: "px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50",
+    danger: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50",
+    secondary: "px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
   };
   
-  // Versione ultra-semplificata dell'invio test
-  const handleSendTest = () => {
-    setIsLoading(true);
-    setStatus('Invio notifica di test...');
-    
-    // Simuliamo l'invio senza chiamate API reali
-    setTimeout(() => {
-      setStatus('Notifica di test inviata con successo');
-      setIsLoading(false);
-    }, 500);
+  const statusClass = {
+    success: "p-3 rounded-md bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-200",
+    error: "p-3 rounded-md bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-200",
+    info: "p-3 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-200"
   };
-  
+
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md pt-14">
-      <h2 className="text-xl font-semibold mb-2 text-gray-800 dark:text-white">Notifiche Push</h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Ricevi notifiche anche quando non stai utilizzando l'app
+    <div className={cardClass}>
+      {/* Header */}
+      <h2 className={titleClass}>Notifiche Push</h2>
+      <p className={descriptionClass}>
+        Ricevi notifiche per i nuovi messaggi anche quando non stai utilizzando l'app
       </p>
       
       {/* Stato attuale */}
@@ -121,7 +387,9 @@ const NotificationTest: React.FC = () => {
           <div className={`w-3 h-3 rounded-full mr-2 ${isSubscribed ? 'bg-green-500' : 'bg-gray-400'}`}></div>
           <span className="text-gray-700 dark:text-gray-300">
             {isSubscribed 
-              ? (isIOSDevice ? 'Notifiche attive (modalità iOS)' : 'Notifiche attive')
+              ? isSimulatedSubscription 
+                ? 'Notifiche attive (modalità compatibilità iOS)' 
+                : 'Notifiche attive' 
               : 'Notifiche disattivate'
             }
           </span>
@@ -129,11 +397,8 @@ const NotificationTest: React.FC = () => {
         
         <button
           onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
-          disabled={isLoading}
-          className={isSubscribed 
-            ? "px-4 py-2 bg-red-600 text-white rounded-md" 
-            : "px-4 py-2 bg-blue-600 text-white rounded-md"
-          }
+          disabled={isLoading || permission === 'denied'}
+          className={isSubscribed ? buttonClass.danger : buttonClass.primary}
         >
           {isLoading 
             ? 'In elaborazione...' 
@@ -150,7 +415,7 @@ const NotificationTest: React.FC = () => {
           <button
             onClick={handleSendTest}
             disabled={isLoading}
-            className="px-4 py-2 bg-green-600 text-white rounded-md"
+            className={buttonClass.success}
           >
             Invia notifica di test
           </button>
@@ -159,24 +424,159 @@ const NotificationTest: React.FC = () => {
       
       {/* Messaggio di stato */}
       {status && (
-        <div className="mb-4 p-3 rounded-md bg-blue-100 text-blue-800">
+        <div className={`mb-4 ${statusClass[statusType]}`}>
           {status}
         </div>
       )}
       
-      {/* Informazioni di base */}
-      <div className="mt-4 bg-gray-100 p-3 rounded-md border border-gray-200">
-        <h4 className="font-semibold mb-2">Informazioni dispositivo:</h4>
-        <ul className="space-y-1 text-sm">
-          <li><span className="font-medium">Dispositivo iOS:</span> {isIOSDevice ? 'Sì' : 'No'}</li>
-          <li><span className="font-medium">Modalità PWA:</span> {isPWAInstalled ? 'Sì' : 'No'}</li>
-        </ul>
+      {/* Log dettagliato del processo di sottoscrizione */}
+      {subscriptionSteps.length > 0 && (
+        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-semibold">
+            Log dettagliato del processo
+          </div>
+          <div className="p-2 max-h-60 overflow-auto">
+            {subscriptionSteps.map((stepLog, index) => {
+              const stepColors = {
+                pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-200",
+                success: "bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-200",
+                error: "bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-200",
+                info: "bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-200"
+              };
+              
+              const stepIcons = {
+                pending: "⏳",
+                success: "✅",
+                error: "❌",
+                info: "ℹ️"
+              };
+              
+              return (
+                <div 
+                  key={index} 
+                  className={`mb-1 p-2 rounded ${stepColors[stepLog.status]} flex items-start`}
+                >
+                  <span className="mr-2 text-lg">{stepIcons[stepLog.status]}</span>
+                  <div className="flex-1">
+                    <div className="font-medium">{stepLog.step}</div>
+                    <div>{stepLog.message}</div>
+                    <div className="text-xs opacity-70">
+                      {stepLog.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit', hour12: false})}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Permesso negato */}
+      {permission === 'denied' && (
+        <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
+          <strong>Attenzione:</strong> Le notifiche sono bloccate nelle impostazioni del browser. 
+          Per riceverle, dovrai consentire l'accesso nelle impostazioni del sito.
+        </div>
+      )}
+      
+      {/* Avviso per dispositivi iOS */}
+      {debugInfo.isIOS && (
+        <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
+          <strong>Dispositivo iOS rilevato</strong>
+        </div>
+      )}
+      
+      {/* Debug info */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-gray-800 dark:text-white text-lg">Informazioni di debug</h3>
+          <div className="flex gap-2">
+            <button 
+              className={buttonClass.secondary}
+              onClick={handleCheckRegistration}
+            >
+              Aggiorna info
+            </button>
+            <button 
+              className={buttonClass.secondary}
+              onClick={() => setShowAdvancedDebug(!showAdvancedDebug)}
+            >
+              {showAdvancedDebug ? 'Meno dettagli' : 'Più dettagli'}
+            </button>
+          </div>
+        </div>
+        
+        <div className="text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
+          <h4 className="font-semibold mb-2">Stato:</h4>
+          <ul className="space-y-1 mb-4">
+            <li><span className="font-medium">Service Worker:</span> {debugInfo.serviceWorkerSupported ? '✅ Supportato' : '❌ Non supportato'}</li>
+            <li><span className="font-medium">Stato Service Worker:</span> {debugInfo.serviceWorkerState}</li>
+            <li><span className="font-medium">Notifiche:</span> {debugInfo.notificationsSupported ? '✅ Supportate' : '❌ Non supportate'}</li>
+            <li><span className="font-medium">Push Manager:</span> {debugInfo.pushManagerSupported ? '✅ Supportato' : '❌ Non supportato'}</li>
+            <li><span className="font-medium">Stato Permesso:</span> {debugInfo.permissionState}</li>
+            <li><span className="font-medium">Dispositivo iOS:</span> {debugInfo.isIOS ? '✅ Sì' : '❌ No'}</li>
+            <li><span className="font-medium">Modalità PWA:</span> {debugInfo.isPWA ? '✅ Sì' : '❌ No'}</li>
+            {debugInfo.error && (
+              <li className="text-red-500"><span className="font-medium">Errore:</span> {debugInfo.error}</li>
+            )}
+          </ul>
+          
+          {showAdvancedDebug && (
+            <>
+              <h4 className="font-semibold mb-2 mt-4">Dettagli avanzati:</h4>
+              <div className="space-y-4">
+                <div>
+                  <p className="font-medium mb-1">Service Worker URL:</p>
+                  <p className="break-all bg-white dark:bg-gray-900 p-2 rounded text-xs">{debugInfo.serviceWorkerURL}</p>
+                </div>
+                
+                <div>
+                  <p className="font-medium mb-1">User Agent:</p>
+                  <p className="break-all bg-white dark:bg-gray-900 p-2 rounded text-xs">{debugInfo.userAgent}</p>
+                </div>
+                
+                {debugInfo.pushEndpoint && (
+                  <div>
+                    <p className="font-medium mb-1">Push Endpoint:</p>
+                    <p className="break-all bg-white dark:bg-gray-900 p-2 rounded text-xs">{debugInfo.pushEndpoint}</p>
+                  </div>
+                )}
+                
+                {debugInfo.vapidKey && (
+                  <div>
+                    <p className="font-medium mb-1">VAPID Key (estratta):</p>
+                    <p className="break-all bg-white dark:bg-gray-900 p-2 rounded text-xs">{debugInfo.vapidKey}</p>
+                  </div>
+                )}
+                
+                {debugInfo.swRegistrations.length > 0 && (
+                  <div>
+                    <p className="font-medium mb-1">Service Worker Registrations ({debugInfo.swRegistrations.length}):</p>
+                    <div className="bg-white dark:bg-gray-900 p-2 rounded text-xs">
+                      <pre>{JSON.stringify(debugInfo.swRegistrations, null, 2)}</pre>
+                    </div>
+                  </div>
+                )}
+                
+                {debugInfo.subscriptionDetails && (
+                  <div>
+                    <p className="font-medium mb-1">Subscription Details:</p>
+                    <div className="bg-white dark:bg-gray-900 p-2 rounded text-xs overflow-auto max-h-40">
+                      <pre>{debugInfo.subscriptionDetails}</pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
       
       {/* Note */}
-      <div className="mt-4 text-sm text-gray-600">
+      <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
         <p>
-          <strong>Nota:</strong> Su iOS, installa l'app alla schermata Home per utilizzare le notifiche.
+          <strong>Nota:</strong> Per ricevere le notifiche push, il browser deve supportarle e devi concedere il permesso.
+          Non tutte le combinazioni di browser/dispositivi supportano questa funzionalità.
         </p>
       </div>
     </div>
