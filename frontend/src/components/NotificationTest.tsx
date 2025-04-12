@@ -19,6 +19,7 @@ const NotificationTest: React.FC = () => {
   const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
+  const [apiLogs, setApiLogs] = useState<string[]>([]);
   
   // Log dei passaggi di sottoscrizione
   const [subscriptionSteps, setSubscriptionSteps] = useState<Array<{
@@ -210,6 +211,80 @@ const NotificationTest: React.FC = () => {
     init();
   }, [updateDebugInfo]);
 
+  // Sovrascriviamo console.log e console.error per salvare i messaggi nella UI
+  useEffect(() => {
+    // Salviamo gli originali
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+
+    // Usiamo metodi più sicuri per sovrascrivere, compatibili con Safari iOS
+    function safeConsoleLog(...args: any[]) {
+      // Chiamare l'originale per mantenere i log nella console
+      originalConsoleLog.apply(console, args);
+      
+      try {
+        // Formattare il messaggio per la UI in modo sicuro
+        const message = args.map(arg => {
+          if (arg === null) return 'null';
+          if (arg === undefined) return 'undefined';
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg, null, 2);
+            } catch (e) {
+              return String(arg);
+            }
+          }
+          return String(arg);
+        }).join(' ');
+        
+        // Usiamo setTimeout per evitare problemi con Safari iOS
+        setTimeout(() => {
+          setApiLogs(logs => [...logs, `📋 ${message}`]);
+        }, 0);
+      } catch (e) {
+        // Ignora errori di formattazione
+      }
+    }
+
+    function safeConsoleError(...args: any[]) {
+      // Chiamare l'originale per mantenere i log nella console
+      originalConsoleError.apply(console, args);
+      
+      try {
+        // Formattare il messaggio per la UI in modo sicuro
+        const message = args.map(arg => {
+          if (arg === null) return 'null';
+          if (arg === undefined) return 'undefined';
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg, null, 2);
+            } catch (e) {
+              return String(arg);
+            }
+          }
+          return String(arg);
+        }).join(' ');
+        
+        // Usiamo setTimeout per evitare problemi con Safari iOS
+        setTimeout(() => {
+          setApiLogs(logs => [...logs, `❌ ${message}`]);
+        }, 0);
+      } catch (e) {
+        // Ignora errori di formattazione
+      }
+    }
+
+    // Sovrascriviamo in modo sicuro
+    console.log = safeConsoleLog;
+    console.error = safeConsoleError;
+
+    return () => {
+      // Ripristinare le funzioni originali quando il componente viene smontato
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+    };
+  }, []);
+
   const handleSubscribe = async () => {
     setIsLoading(true);
     setStatus('Verifica del supporto per le notifiche...');
@@ -325,11 +400,15 @@ const NotificationTest: React.FC = () => {
     setIsLoading(true);
     setStatus('Invio notifica di test in corso...');
     setStatusType('info');
+    setApiLogs([]); // Pulizia dei log precedenti
+    
+    addSubscriptionStep('send_test', 'pending', 'Invio notifica di test al server');
 
     try {
       await sendTestNotification();
       setStatus('Notifica di test inviata con successo!');
       setStatusType('success');
+      addSubscriptionStep('send_test', 'success', 'Notifica di test inviata con successo');
     } catch (error) {
       console.error('Errore durante l\'invio della notifica di test:', error);
       setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
@@ -338,6 +417,7 @@ const NotificationTest: React.FC = () => {
         ...prev, 
         error: error instanceof Error ? error.message : String(error)
       }));
+      addSubscriptionStep('send_test', 'error', `Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
     } finally {
       setIsLoading(false);
     }
@@ -467,6 +547,28 @@ const NotificationTest: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      
+      {/* API Logs */}
+      {apiLogs.length > 0 && (
+        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-semibold flex justify-between items-center">
+            <span>Log API</span>
+            <button 
+              className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded"
+              onClick={() => setApiLogs([])}
+            >
+              Pulisci
+            </button>
+          </div>
+          <div className="p-2 max-h-60 overflow-auto font-mono text-xs">
+            {apiLogs.map((log, index) => (
+              <div key={index} className="whitespace-pre-wrap mb-1 border-b border-gray-100 dark:border-gray-700 pb-1">
+                {log}
+              </div>
+            ))}
           </div>
         </div>
       )}

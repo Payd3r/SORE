@@ -181,7 +181,7 @@ export default function Gallery() {
     let filteredByMemory = images;
     if (memoryFilter === 'NOT_IN_MEMORY') {
       console.log("prima", filteredByMemory);
-      filteredByMemory = images.filter(image => image.memory_id < 1);
+      filteredByMemory = images.filter(image => image.memory_id === null);
       console.log("dopo", filteredByMemory);
     }
 

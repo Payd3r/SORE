@@ -133,52 +133,53 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        // Clone della richiesta
-        const fetchRequest = event.request.clone();
-        
-        // Fetch dalla rete con gestione errori migliorata per Safari
-        return fetch(fetchRequest)
-          .then((response) => {
-            // Verifica se abbiamo ricevuto una risposta valida
-            if (!response || response.status !== 200) {
-              return response;
-            }
-            
-            // La verifica del tipo 'basic' causa problemi su alcuni browser, verifichiamo in modo più sicuro
-            const isBasicType = response.type === 'basic' || 
-                               response.url.indexOf(self.location.origin) === 0;
-            
-            if (!isBasicType) {
-              return response;
-            }
-
-            // Clone della risposta
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              })
-              .catch(err => console.error('Errore nel salvataggio nella cache:', err));
-
+  // Per migliorare la compatibilità con Safari iOS, utilizziamo try/catch per gestire correttamente gli errori
+  try {
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => {
+          // Cache hit - return response
+          if (response) {
             return response;
-          })
-          .catch(error => {
-            console.error('Errore fetch:', error);
-            // Tenta di recuperare una risposta offline per le pagine HTML
-            if (event.request.mode === 'navigate') {
-              return caches.match('/index.html');
-            }
-            throw error;
-          });
-      })
-  );
+          }
+
+          // Clone della richiesta
+          const fetchRequest = event.request.clone();
+          
+          // Fetch dalla rete con gestione errori migliorata per Safari
+          return fetch(fetchRequest)
+            .then((response) => {
+              // Verifica se abbiamo ricevuto una risposta valida
+              if (!response || response.status !== 200) {
+                return response;
+              }
+              
+              // Verifica più semplice per evitare problemi con Safari
+              if (response.url.indexOf(self.location.origin) === 0) {
+                // Clone della risposta
+                const responseToCache = response.clone();
+
+                caches.open(CACHE_NAME)
+                  .then((cache) => {
+                    cache.put(event.request, responseToCache);
+                  })
+                  .catch(() => {
+                    // Ignoriamo silenziamente gli errori di caching
+                  });
+              }
+
+              return response;
+            })
+            .catch(() => {
+              // Tenta di recuperare una risposta offline per le pagine HTML
+              if (event.request.mode === 'navigate') {
+                return caches.match('/index.html');
+              }
+              throw new Error('Network request failed');
+            });
+        })
+    );
+  } catch (error) {
+    console.error('Errore nel service worker:', error);
+  }
 }); 

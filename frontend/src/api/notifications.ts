@@ -46,7 +46,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
 async function getVapidPublicKey(): Promise<string> {
   console.log('🔑 [CLIENT] Richiesta chiave VAPID pubblica al server');
   try {
-    const response = await axios.get('/api/notifications/vapid-public-key');
+    // Aggiungi l'Authorization header se disponibile nel localStorage
+    const token = localStorage.getItem('token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
+    const response = await axios.get('/api/notifications/vapid-public-key', { headers });
     console.log('🔑 [CLIENT] Chiave VAPID pubblica ricevuta:', response.data.publicKey.substring(0, 10) + '...');
     return response.data.publicKey;
   } catch (error) {
@@ -162,17 +166,55 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
           };
           
           // Invia la sottoscrizione simulata al server
-          console.log('�� [CLIENT] Invio dati di sottoscrizione al server per Safari iOS');
-          await axios.post('/api/notifications/subscribe', { 
-            subscription: subscriptionData,
-            isSafariIOSSimulation: true
-          });
+          console.log('📤 [CLIENT] Invio dati di sottoscrizione al server per Safari iOS');
+          console.log('📤 [CLIENT] URL API:', '/api/notifications/subscribe');
+          console.log('📤 [CLIENT] Dati inviati:', JSON.stringify({
+            subscription: {
+              endpoint: subscriptionData.endpoint.substring(0, 30) + '...',
+              keys: {
+                p256dh: subscriptionData.keys.p256dh.substring(0, 15) + '...',
+                auth: subscriptionData.keys.auth.substring(0, 10) + '...',
+              },
+              isSafariIOSSimulation: true
+            }
+          }));
           
-          console.log('✅ [CLIENT] Dati di sottoscrizione per Safari iOS salvati sul server');
+          try {
+            const response = await axios.post('/api/notifications/subscribe', { 
+              subscription: subscriptionData,
+              isSafariIOSSimulation: true
+            }, {
+              headers: getAuthHeaders()
+            });
+            
+            console.log('✅ [CLIENT] Risposta del server:', {
+              status: response.status,
+              data: response.data
+            });
+            console.log('✅ [CLIENT] Dati di sottoscrizione per Safari iOS salvati sul server');
+          } catch (apiError) {
+            console.error('❌ [CLIENT] Errore nella chiamata API:', apiError);
+            
+            if (axios.isAxiosError(apiError)) {
+              console.error('❌ [CLIENT] Dettagli errore API:', {
+                status: apiError.response?.status,
+                statusText: apiError.response?.statusText,
+                data: apiError.response?.data,
+                url: apiError.config?.url,
+                method: apiError.config?.method,
+                baseURL: apiError.config?.baseURL
+              });
+              
+              // Controlla se è un problema di autenticazione
+              if (apiError.response?.status === 401) {
+                console.error('❌ [CLIENT] Problema di autenticazione. Assicurati di aver effettuato il login.');
+                throw new Error('Devi aver effettuato il login per attivare le notifiche.');
+              }
+            }
+            
+            throw new Error('Errore nella comunicazione con il server. ' + (apiError instanceof Error ? apiError.message : 'Riprova più tardi.'));
+          }
           
-          // Ritorniamo null qui, ma l'app deve considerare l'utente come "iscritto"
-          // anche se tecnicamente non abbiamo una vera oggetto PushSubscription
-          // L'app dovrebbe tenere traccia dello stato di iscrizione separatamente
           return null;
         } catch (iosError) {
           console.error('❌ [CLIENT] Errore durante la gestione delle notifiche per Safari iOS:', iosError);
@@ -284,6 +326,21 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
 }
 
 /**
+ * Ottieni gli header di autenticazione
+ */
+export function getAuthHeaders() {
+  console.log('🔐 [CLIENT] Preparazione header di autenticazione');
+  const token = localStorage.getItem('token');
+  if (token) {
+    console.log('🔐 [CLIENT] Token trovato nel localStorage');
+    return { Authorization: `Bearer ${token}` };
+  } else {
+    console.log('⚠️ [CLIENT] Token non trovato nel localStorage');
+    return {};
+  }
+}
+
+/**
  * Salva la sottoscrizione sul server
  */
 async function saveSubscription(subscription: PushSubscription): Promise<void> {
@@ -313,7 +370,13 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
   };
   
   try {
-    await axios.post('/api/notifications/subscribe', { subscription: safeSubscription });
+    // Aggiungi l'Authorization header
+    const headers = getAuthHeaders();
+    
+    await axios.post('/api/notifications/subscribe', 
+      { subscription: safeSubscription },
+      { headers }
+    );
     console.log('✅ [CLIENT] Sottoscrizione salvata con successo sul server');
   } catch (error) {
     console.error('❌ [CLIENT] Errore durante il salvataggio della sottoscrizione:', error);
@@ -335,24 +398,81 @@ async function saveSubscription(subscription: PushSubscription): Promise<void> {
  * Annulla la sottoscrizione alle notifiche push
  */
 export async function unsubscribeFromPushNotifications(): Promise<boolean> {
+  console.log('🔔 [CLIENT] Avvio processo di annullamento sottoscrizione');
+  
   try {
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
-    
-    if (subscription) {
-      // Elimina la sottoscrizione dal server
-      await axios.delete('/api/notifications/unsubscribe', {
-        data: { endpoint: subscription.endpoint }
-      });
-      
-      // Annulla la sottoscrizione lato client
-      await subscription.unsubscribe();
-      return true;
+    console.log('🔧 [CLIENT] Verifico se il service worker è supportato');
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.error('❌ [CLIENT] Service Worker o Push Manager non supportati');
+      throw new Error('Il browser non supporta le notifiche push');
     }
     
-    return false;
+    // Otteniamo la registrazione del service worker
+    console.log('🔧 [CLIENT] Recupero registrazione del service worker');
+    const registration = await navigator.serviceWorker.ready;
+    console.log('✅ [CLIENT] Service worker pronto');
+    
+    // Otteniamo la sottoscrizione corrente
+    console.log('🔍 [CLIENT] Verifica esistenza sottoscrizione');
+    const subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      console.log('ℹ️ [CLIENT] Nessuna sottoscrizione trovata');
+      return false;
+    }
+    
+    console.log('🔍 [CLIENT] Sottoscrizione trovata:', {
+      endpoint: subscription.endpoint.substring(0, 30) + '...'
+    });
+    
+    // Annulla la sottoscrizione lato browser
+    console.log('🔄 [CLIENT] Annullamento sottoscrizione sul browser');
+    const unsubscribeResult = await subscription.unsubscribe();
+    console.log('✅ [CLIENT] Sottoscrizione annullata sul browser:', unsubscribeResult);
+    
+    if (unsubscribeResult) {
+      // Notifica al server per rimuovere la sottoscrizione dal database
+      console.log('🔄 [CLIENT] Notifica al server per rimuovere la sottoscrizione');
+      
+      const headers = getAuthHeaders();
+      console.log('🔔 [CLIENT] Header per la chiamata API:', headers);
+      
+      console.log('🔄 [CLIENT] Invio richiesta DELETE a /api/notifications/unsubscribe');
+      const startTime = performance.now();
+      
+      const response = await axios.delete('/api/notifications/unsubscribe', {
+        data: { endpoint: subscription.endpoint },
+        headers
+      });
+      
+      const endTime = performance.now();
+      const requestTime = Math.round(endTime - startTime);
+      
+      console.log(`✅ [CLIENT] Risposta ricevuta in ${requestTime}ms:`, {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+      
+      console.log('✅ [CLIENT] Sottoscrizione rimossa con successo dal database');
+    }
+    
+    return unsubscribeResult;
   } catch (error) {
-    console.error('Errore durante l\'annullamento della sottoscrizione:', error);
+    console.error('❌ [CLIENT] Errore durante l\'annullamento della sottoscrizione:');
+    
+    if (axios.isAxiosError(error)) {
+      console.error('❌ [CLIENT] Dettagli errore API:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+    } else {
+      console.error('❌ [CLIENT] Errore:', error instanceof Error ? error.message : String(error));
+    }
+    
     throw error;
   }
 }
@@ -361,10 +481,47 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
  * Invia una notifica di test
  */
 export async function sendTestNotification(): Promise<void> {
+  console.log('🔔 [CLIENT] Avvio invio notifica di test');
   try {
-    await axios.post('/api/notifications/test');
+    // Ottieni gli header di autenticazione e mostra i dettagli
+    const headers = getAuthHeaders();
+    console.log('🔔 [CLIENT] Header per la chiamata API:', headers);
+    
+    console.log('🔔 [CLIENT] Invio richiesta POST a /api/notifications/test');
+    const startTime = performance.now();
+    
+    const response = await axios.post('/api/notifications/test', {}, { headers });
+    
+    const endTime = performance.now();
+    const requestTime = Math.round(endTime - startTime);
+    
+    console.log(`✅ [CLIENT] Risposta ricevuta in ${requestTime}ms:`, {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data
+    });
+    
+    console.log('✅ [CLIENT] Notifica di test inviata con successo!');
+    return;
   } catch (error) {
-    console.error('Errore durante l\'invio della notifica di test:', error);
+    console.error('❌ [CLIENT] Errore durante l\'invio della notifica di test:');
+    
+    if (axios.isAxiosError(error)) {
+      console.error('❌ [CLIENT] Dettagli errore API:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+      
+      // Controlla se è un problema di autenticazione
+      if (error.response?.status === 401) {
+        console.error('❌ [CLIENT] Problema di autenticazione. Assicurati di aver effettuato il login.');
+        throw new Error('Devi aver effettuato il login per inviare notifiche di test.');
+      }
+    }
+    
     throw error;
   }
 }
