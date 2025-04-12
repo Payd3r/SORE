@@ -65,7 +65,6 @@ const NotificationTest: React.FC = () => {
       let serviceWorkerURL = 'none';
       let subscriptionDetails = null;
       let pushEndpoint = null;
-      let activeRegistration = null;
       let vapidKey = null;
       
       // Ottieni tutte le registrazioni del service worker
@@ -110,7 +109,6 @@ const NotificationTest: React.FC = () => {
         // Ottieni la registrazione corrente
         const registration = await navigator.serviceWorker.getRegistration();
         if (registration) {
-          activeRegistration = registration;
           serviceWorkerURL = registration.active?.scriptURL || 'unknown';
           swState = registration.active 
             ? 'active' 
@@ -215,9 +213,8 @@ const NotificationTest: React.FC = () => {
       }
       
       // Prova a registrare/ottenere il service worker
-      let swRegistration;
       try {
-        swRegistration = await registerServiceWorker();
+        await registerServiceWorker();
       } catch (e) {
         throw new Error(`Errore service worker: ${e instanceof Error ? e.message : String(e)}`);
       }
