@@ -38,6 +38,11 @@ const NotificationTest: React.FC = () => {
       timestamp: new Date()
     }]);
   };
+
+  // Funzione per aggiungere log direttamente all'UI senza sovrascrivere console
+  const addApiLog = (message: string, isError = false) => {
+    setApiLogs(prev => [...prev, `${isError ? '❌' : '📋'} ${message}`]);
+  };
   
   // Stato per le informazioni di debug
   const [debugInfo, setDebugInfo] = useState<{
@@ -173,7 +178,9 @@ const NotificationTest: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // Inizializzazione del componente
     const init = async () => {
+      addApiLog('Inizializzazione del componente NotificationTest');
       try {
         const currentPermission = await checkPermission();
         setPermission(currentPermission);
@@ -182,9 +189,10 @@ const NotificationTest: React.FC = () => {
         if ('serviceWorker' in navigator) {
           try {
             await registerServiceWorker();
-            console.log('Service worker registrato con successo');
+            addApiLog('Service worker registrato con successo');
           } catch (e) {
-            console.error('Errore nella registrazione del service worker:', e);
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            addApiLog(`Errore nella registrazione del service worker: ${errorMsg}`, true);
           }
         }
 
@@ -195,85 +203,25 @@ const NotificationTest: React.FC = () => {
             if (registration?.pushManager) {
               const subscription = await registration.pushManager.getSubscription();
               setIsSubscribed(!!subscription);
+              addApiLog(`Stato sottoscrizione: ${!!subscription ? 'attiva' : 'inattiva'}`);
             }
           } catch (e) {
-            console.error('Errore controllo sottoscrizione:', e);
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            addApiLog(`Errore controllo sottoscrizione: ${errorMsg}`, true);
           }
         }
         
         // Update debug info
         await updateDebugInfo();
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        addApiLog(`Errore inizializzazione: ${errorMsg}`, true);
         await updateDebugInfo(error instanceof Error ? error.message : 'Unknown error');
       }
     };
 
     init();
   }, [updateDebugInfo]);
-
-  // Sovrascriviamo console.log e console.error per salvare i messaggi nella UI
-  useEffect(() => {
-    const originalConsoleLog = console.log;
-    const originalConsoleError = console.error;
-
-    console.log = function(...args) {
-      // Chiamare l'originale per mantenere i log nella console
-      originalConsoleLog.apply(console, args);
-      
-      // Formattare il messaggio per la UI in modo sicuro per Safari
-      let message;
-      try {
-        message = args.map(arg => {
-          if (arg === null) return "null";
-          if (arg === undefined) return "undefined";
-          if (typeof arg === 'object') {
-            try {
-              return JSON.stringify(arg);
-            } catch (e) {
-              return "[Oggetto complesso]";
-            }
-          }
-          return String(arg);
-        }).join(' ');
-      } catch (e) {
-        message = "Errore durante la formattazione del log";
-      }
-      
-      setApiLogs(logs => [...logs, `📋 ${message}`]);
-    };
-
-    console.error = function(...args) {
-      // Chiamare l'originale per mantenere i log nella console
-      originalConsoleError.apply(console, args);
-      
-      // Formattare il messaggio per la UI in modo sicuro per Safari
-      let message;
-      try {
-        message = args.map(arg => {
-          if (arg === null) return "null";
-          if (arg === undefined) return "undefined";
-          if (typeof arg === 'object') {
-            try {
-              return JSON.stringify(arg);
-            } catch (e) {
-              return "[Oggetto complesso]";
-            }
-          }
-          return String(arg);
-        }).join(' ');
-      } catch (e) {
-        message = "Errore durante la formattazione del log";
-      }
-      
-      setApiLogs(logs => [...logs, `❌ ${message}`]);
-    };
-
-    return () => {
-      // Ripristinare le funzioni originali quando il componente viene smontato
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-    };
-  }, []);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
@@ -282,14 +230,17 @@ const NotificationTest: React.FC = () => {
     
     // Reset dei logs e degli errori
     setSubscriptionSteps([]);
+    setApiLogs([]);
     setDebugInfo(prev => ({...prev, error: null}));
     
     addSubscriptionStep('init', 'pending', 'Inizializzazione processo di sottoscrizione');
+    addApiLog('Avvio processo di sottoscrizione');
 
     // Rimuovo il blocco per Safari iOS e sostituisco con un avviso informativo
     const isSafariIOS = isIOSDevice() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
     if (isSafariIOS) {
       addSubscriptionStep('check_compatibility', 'info', 'Rilevato Safari su iOS - Utilizzo configurazione specifica');
+      addApiLog('Rilevato Safari su iOS - Utilizzo configurazione specifica');
     }
 
     try {
@@ -393,21 +344,68 @@ const NotificationTest: React.FC = () => {
     setApiLogs([]); // Pulizia dei log precedenti
     
     addSubscriptionStep('send_test', 'pending', 'Invio notifica di test al server');
+    addApiLog('Avvio invio notifica di test');
 
     try {
-      await sendTestNotification();
+      // Modificato per catturare i log dalla funzione di notifica
+      const testNotificationWithLogs = async () => {
+        addApiLog('Preparazione invio richiesta al server');
+        try {
+          // Ottieni gli header di autenticazione
+          const token = localStorage.getItem('token');
+          addApiLog(`Token di autorizzazione: ${token ? 'presente' : 'assente'}`);
+          
+          const startTime = performance.now();
+          addApiLog('Invio richiesta POST a /api/notifications/test');
+          
+          // Richiesta semplificata
+          const response = await fetch('/api/notifications/test', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({})
+          });
+          
+          const endTime = performance.now();
+          const requestTime = Math.round(endTime - startTime);
+          
+          // Gestione della risposta
+          if (!response.ok) {
+            const errorText = await response.text();
+            addApiLog(`Errore dal server: ${response.status} ${response.statusText}`, true);
+            addApiLog(`Dettagli: ${errorText}`, true);
+            throw new Error(`Errore ${response.status}: ${errorText}`);
+          }
+          
+          const data = await response.json();
+          addApiLog(`Risposta ricevuta in ${requestTime}ms: ${JSON.stringify(data)}`);
+          addApiLog('Notifica di test inviata con successo!');
+          
+          return data;
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          addApiLog(`Errore durante l'invio della notifica: ${errorMsg}`, true);
+          throw error;
+        }
+      };
+      
+      await testNotificationWithLogs();
+      
       setStatus('Notifica di test inviata con successo!');
       setStatusType('success');
       addSubscriptionStep('send_test', 'success', 'Notifica di test inviata con successo');
     } catch (error) {
-      console.error('Errore durante l\'invio della notifica di test:', error);
-      setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      addApiLog(`Errore finale: ${errorMsg}`, true);
+      setStatus(`Errore: ${errorMsg}`);
       setStatusType('error');
       setDebugInfo(prev => ({
         ...prev, 
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMsg
       }));
-      addSubscriptionStep('send_test', 'error', `Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
+      addSubscriptionStep('send_test', 'error', `Errore: ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
