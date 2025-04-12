@@ -2,12 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   isPushNotificationSupported, 
   requestNotificationPermission, 
-  subscribeToPushNotifications,
-  unsubscribeFromPushNotifications,
   isIOSDevice,
   isPWAMode,
   checkPermission,
-  registerServiceWorker
+  registerServiceWorker,
+  unsubscribeFromPushNotifications
 } from '../api/notifications';
 
 const NotificationTest: React.FC = () => {
