@@ -26,6 +26,7 @@ self.addEventListener('activate', (event) => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
+          return Promise.resolve();
         })
       );
     })
@@ -37,11 +38,36 @@ self.addEventListener('push', (event) => {
   let notificationData = {};
   
   try {
-    notificationData = event.data.json();
-  } catch (e) {
+    if (event.data) {
+      try {
+        notificationData = event.data.json();
+      } catch (e) {
+        try {
+          notificationData = {
+            title: 'Notifica Memory Grove',
+            body: event.data.text(),
+            icon: '/icons/icon-152x152.png'
+          };
+        } catch (textError) {
+          notificationData = {
+            title: 'Notifica Memory Grove',
+            body: 'Nuova notifica',
+            icon: '/icons/icon-152x152.png'
+          };
+        }
+      }
+    } else {
+      notificationData = {
+        title: 'Notifica Memory Grove',
+        body: 'Nuova notifica',
+        icon: '/icons/icon-152x152.png'
+      };
+    }
+  } catch (error) {
+    console.error('Errore nella gestione dei dati push:', error);
     notificationData = {
       title: 'Notifica Memory Grove',
-      body: event.data ? event.data.text() : 'Nuova notifica',
+      body: 'Nuova notifica',
       icon: '/icons/icon-152x152.png'
     };
   }
@@ -50,11 +76,15 @@ self.addEventListener('push', (event) => {
     body: notificationData.body || 'Hai ricevuto una notifica',
     icon: notificationData.icon || '/icons/icon-152x152.png',
     badge: '/icons/icon-96x96.png',
-    vibrate: [100, 50, 100],
     data: {
       url: notificationData.url || '/'
     }
   };
+  
+  // Utilizziamo il vibrate solo se supportato (non su iOS)
+  if ('vibrate' in navigator) {
+    options.vibrate = [100, 50, 100];
+  }
   
   event.waitUntil(
     self.registration.showNotification(
@@ -68,28 +98,41 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
+  const urlToOpen = (event.notification.data && event.notification.data.url) ? 
+    event.notification.data.url : '/';
+  
   event.waitUntil(
     clients.matchAll({ type: 'window' })
       .then((clientList) => {
         // Verifica se c'è già una finestra/tab aperta con la nostra app
-        const hadWindowToFocus = clientList.some((client) => {
-          if (client.url === event.notification.data.url && 'focus' in client) {
-            client.focus();
-            return true;
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
           }
-          return false;
-        });
+        }
         
         // Se non c'è una finestra aperta, aprine una nuova
-        if (!hadWindowToFocus && clients.openWindow) {
-          return clients.openWindow(event.notification.data.url || '/');
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
         }
+        
+        return Promise.resolve();
       })
   );
 });
 
 // Intercettazione delle richieste
 self.addEventListener('fetch', (event) => {
+  if (!event || !event.request) {
+    return;
+  }
+  
+  // Per migliorare la compatibilità con Safari, evitiamo di intercettare richieste non HTTP/HTTPS
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -100,12 +143,20 @@ self.addEventListener('fetch', (event) => {
 
         // Clone della richiesta
         const fetchRequest = event.request.clone();
-
-        // Fetch dalla rete
-        return fetch(fetchRequest).then(
-          (response) => {
+        
+        // Fetch dalla rete con gestione errori migliorata per Safari
+        return fetch(fetchRequest)
+          .then((response) => {
             // Verifica se abbiamo ricevuto una risposta valida
-            if (!response || response.status !== 200 || response.type !== 'basic') {
+            if (!response || response.status !== 200) {
+              return response;
+            }
+            
+            // La verifica del tipo 'basic' causa problemi su alcuni browser, verifichiamo in modo più sicuro
+            const isBasicType = response.type === 'basic' || 
+                               response.url.indexOf(self.location.origin) === 0;
+            
+            if (!isBasicType) {
               return response;
             }
 
@@ -115,11 +166,19 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(event.request, responseToCache);
-              });
+              })
+              .catch(err => console.error('Errore nel salvataggio nella cache:', err));
 
             return response;
-          }
-        );
+          })
+          .catch(error => {
+            console.error('Errore fetch:', error);
+            // Tenta di recuperare una risposta offline per le pagine HTML
+            if (event.request.mode === 'navigate') {
+              return caches.match('/index.html');
+            }
+            throw error;
+          });
       })
   );
 }); 

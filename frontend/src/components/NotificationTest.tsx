@@ -220,6 +220,12 @@ const NotificationTest: React.FC = () => {
     
     addSubscriptionStep('init', 'pending', 'Inizializzazione processo di sottoscrizione');
 
+    // Rimuovo il blocco per Safari iOS e sostituisco con un avviso informativo
+    const isSafariIOS = isIOSDevice() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    if (isSafariIOS) {
+      addSubscriptionStep('check_compatibility', 'info', 'Rilevato Safari su iOS - Utilizzo configurazione specifica');
+    }
+
     try {
       addSubscriptionStep('check_support', 'pending', 'Verifica del supporto per le notifiche');
       await updateDebugInfo('Tentativo di sottoscrizione...');
@@ -460,10 +466,11 @@ const NotificationTest: React.FC = () => {
       {debugInfo.isIOS && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
           <strong>Dispositivo iOS rilevato:</strong> Safari su iOS ha un supporto limitato per le notifiche push web.
-          Per ricevere notifiche, ti consigliamo di:
+          Per una migliore esperienza con le notifiche, ti consigliamo di:
           <ul className="list-disc pl-5 mt-2">
             <li>Aggiungere l'app alla schermata home (installare come PWA)</li>
-            <li>Utilizzare un browser alternativo come Chrome</li>
+            <li>Abilitare tutte le autorizzazioni per le notifiche quando richiesto</li>
+            <li>Se continui a riscontrare problemi, prova ad effettuare l'accesso anche su un altro browser o dispositivo</li>
           </ul>
         </div>
       )}

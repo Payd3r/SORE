@@ -113,6 +113,13 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     console.log('🔧 [CLIENT] Recupero registrazione Service Worker');
     const registration = await registerServiceWorker();
     
+    // Safari su iOS richiede un approccio più specifico
+    const isSafariIOS = isIOSDevice() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    if (isSafariIOS) {
+      console.log('🍎 [CLIENT] Rilevato Safari su iOS, utilizzo configurazione specifica');
+    }
+    
     try {
       console.log('🔑 [CLIENT] Recupero chiave VAPID pubblica');
       const vapidPublicKey = await getVapidPublicKey();
@@ -132,15 +139,24 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
       // Se non esiste, crea una nuova sottoscrizione
       if (!subscription) {
         try {
+          // Opzioni di sottoscrizione che funzionano con Safari
+          const subscribeOptions = {
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+          };
+          
           console.log('🔔 [CLIENT] Creazione nuova sottoscrizione con options:', {
             userVisibleOnly: true,
             applicationServerKey: 'convertedVapidKey (omesso per brevità)'
           });
           
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: convertedVapidKey
-          });
+          // Ritardo per Safari prima di tentare la sottoscrizione
+          if (isSafariIOS) {
+            console.log('⏱️ [CLIENT] Attendere breve pausa prima della sottoscrizione su Safari');
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
+          subscription = await registration.pushManager.subscribe(subscribeOptions);
           
           if (!subscription) {
             console.error('❌ [CLIENT] La sottoscrizione è fallita senza errori specifici');
@@ -153,7 +169,7 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
             expirationTime: subscription.expirationTime
           });
           
-          // Invia la sottoscrizione al server
+          // Invia la sottoscrizione al server con un formato adatto anche a Safari
           console.log('📤 [CLIENT] Invio sottoscrizione al server');
           await saveSubscription(subscription);
           console.log('✅ [CLIENT] Sottoscrizione salvata sul server');
@@ -170,8 +186,8 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
           
           // Controlla se il dispositivo è iOS (Safari)
           if (isIOSDevice()) {
-            console.error('❌ [CLIENT] Le notifiche push potrebbero non essere supportate completamente su questo browser Safari/iOS');
-            throw new Error('Safari su iOS potrebbe non supportare completamente le notifiche push web standard');
+            console.error('❌ [CLIENT] Difficoltà nell\'utilizzo delle notifiche push su Safari iOS. Prova ad installare l\'app nella schermata home.');
+            throw new Error('Le notifiche push su Safari iOS potrebbero richiedere l\'installazione come PWA. Per favore aggiungi l\'app alla schermata home.');
           }
           throw subscribeError;
         }
@@ -193,8 +209,32 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
  */
 async function saveSubscription(subscription: PushSubscription): Promise<void> {
   console.log('💾 [CLIENT] Salvataggio sottoscrizione sul server');
+  
+  // Definiamo un'interfaccia per il formato di sottoscrizione che può avere la proprietà keys
+  interface ExtendedPushSubscription {
+    endpoint: string;
+    expirationTime: number | null;
+    keys?: {
+      p256dh: string;
+      auth: string;
+    };
+  }
+  
+  // Casting di subscription a any per accedere alle proprietà in modo sicuro
+  const subscriptionData = subscription as any;
+  
+  // Assicuriamoci che la sottoscrizione sia in un formato valido per Safari
+  const safeSubscription: ExtendedPushSubscription = {
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: subscriptionData.keys?.p256dh || '',
+      auth: subscriptionData.keys?.auth || ''
+    },
+    expirationTime: subscription.expirationTime || null
+  };
+  
   try {
-    await axios.post('/api/notifications/subscribe', { subscription });
+    await axios.post('/api/notifications/subscribe', { subscription: safeSubscription });
     console.log('✅ [CLIENT] Sottoscrizione salvata con successo sul server');
   } catch (error) {
     console.error('❌ [CLIENT] Errore durante il salvataggio della sottoscrizione:', error);
