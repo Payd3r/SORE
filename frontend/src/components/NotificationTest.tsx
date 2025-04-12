@@ -271,31 +271,188 @@ const NotificationTest: React.FC = () => {
         throw new Error(`Errore service worker: ${e instanceof Error ? e.message : String(e)}`);
       }
       
+      // Implementazione sicura per Safari della sottoscrizione
+      const subscribeWithLogs = async () => {
+        addApiLog('Inizio processo di sottoscrizione alle notifiche');
+        
+        // Per Safari iOS, usiamo una simulazione diretta
+        if (isSafariIOS) {
+          addApiLog('Utilizzo modalità compatibilità per Safari iOS');
+          const isPWA = isPWAMode();
+          
+          if (isPWA) {
+            addApiLog('Rilevata modalità PWA su Safari iOS');
+            
+            try {
+              // Genera un ID casuale per l'endpoint simulato
+              const deviceId = `ios-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+              const simulatedEndpoint = `https://push.example.com/safari-ios/${deviceId}`;
+              
+              // Crea una sottoscrizione simulata
+              const subscriptionData = {
+                endpoint: simulatedEndpoint,
+                keys: {
+                  p256dh: 'safari-ios-' + btoa(deviceId + '-p256dh'),
+                  auth: 'safari-ios-' + btoa(deviceId + '-auth')
+                },
+                expirationTime: null,
+                isSafariIOSSimulation: true
+              };
+              
+              addApiLog('Invio sottoscrizione simulata al server');
+              
+              // Ottieni il token di autenticazione
+              const token = localStorage.getItem('token');
+              if (!token) {
+                addApiLog('Token non trovato nel localStorage', true);
+                throw new Error('Token non trovato. Esegui il login prima di attivare le notifiche.');
+              }
+              
+              // Invia la sottoscrizione simulata al server
+              const response = await fetch('/api/notifications/subscribe', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  subscription: subscriptionData,
+                  isSafariIOSSimulation: true
+                })
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                addApiLog(`Errore dal server: ${response.status} ${response.statusText}`, true);
+                addApiLog(`Dettagli: ${errorText}`, true);
+                throw new Error(`Errore ${response.status}: ${errorText}`);
+              }
+              
+              const data = await response.json();
+              addApiLog(`Risposta server: ${JSON.stringify(data)}`);
+              
+              // Sotto con successo
+              addApiLog('Sottoscrizione simulata completata con successo');
+              return { isSimulated: true };
+            } catch (error) {
+              const errorMsg = error instanceof Error ? error.message : String(error);
+              addApiLog(`Errore durante la simulazione: ${errorMsg}`, true);
+              throw error;
+            }
+          } else {
+            addApiLog('Safari iOS non in modalità PWA, consiglia installazione', true);
+            throw new Error('Per Safari iOS, installa l\'app alla schermata Home per ricevere notifiche');
+          }
+        }
+        
+        // Per browser standard che supportano le notifiche push
+        addApiLog('Utilizzo flusso standard per browser compatibili');
+        try {
+          // Ottieni la registrazione del service worker
+          const registration = await navigator.serviceWorker.ready;
+          addApiLog('Service worker pronto per la sottoscrizione');
+          
+          // Ottieni la chiave VAPID pubblica
+          addApiLog('Richiesta chiave VAPID pubblica');
+          
+          const token = localStorage.getItem('token');
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json'
+          };
+          
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          const vapidResponse = await fetch('/api/notifications/vapid-public-key', {
+            headers
+          });
+          
+          if (!vapidResponse.ok) {
+            const errorText = await vapidResponse.text();
+            addApiLog(`Errore recupero chiave VAPID: ${vapidResponse.status} ${vapidResponse.statusText}`, true);
+            throw new Error(`Errore recupero chiave VAPID: ${errorText}`);
+          }
+          
+          const vapidData = await vapidResponse.json();
+          const vapidPublicKey = vapidData.publicKey;
+          
+          addApiLog('Chiave VAPID pubblica ottenuta');
+          
+          // Converti la chiave VAPID in formato ArrayBuffer
+          const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+          
+          // Controlla se esiste già una sottoscrizione
+          let subscription = await registration.pushManager.getSubscription();
+          
+          if (subscription) {
+            addApiLog('Sottoscrizione esistente trovata, verrà riutilizzata');
+          } else {
+            addApiLog('Creazione nuova sottoscrizione');
+            
+            // Crea una nuova sottoscrizione
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: convertedVapidKey
+            });
+            
+            addApiLog('Sottoscrizione creata nel browser');
+          }
+          
+          // Invia la sottoscrizione al server
+          addApiLog('Invio sottoscrizione al server');
+          
+          const subscribeResponse = await fetch('/api/notifications/subscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+              subscription
+            })
+          });
+          
+          if (!subscribeResponse.ok) {
+            const errorText = await subscribeResponse.text();
+            addApiLog(`Errore salvataggio sottoscrizione: ${subscribeResponse.status}`, true);
+            throw new Error(`Errore salvataggio sottoscrizione: ${errorText}`);
+          }
+          
+          const subscribeData = await subscribeResponse.json();
+          addApiLog(`Risposta server: ${JSON.stringify(subscribeData)}`);
+          addApiLog('Sottoscrizione completata con successo');
+          
+          return { isSimulated: false, subscription };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          addApiLog(`Errore durante la sottoscrizione: ${errorMsg}`, true);
+          throw error;
+        }
+      };
+      
       // Sottoscrivi alle push notification
       addSubscriptionStep('get_vapid', 'pending', 'Recupero chiave VAPID');
       addSubscriptionStep('subscribe', 'pending', 'Sottoscrizione alle notifiche push');
-      const result = await subscribeToPushNotifications();
+      
+      const result = await subscribeWithLogs();
       
       if (result) {
         addSubscriptionStep('subscribe', 'success', 'Sottoscrizione completata');
         setIsSubscribed(true);
-        setIsSimulatedSubscription(false);
-        setStatus('Sottoscrizione alle notifiche push completata con successo!');
+        setIsSimulatedSubscription(result.isSimulated || false);
+        
+        if (result.isSimulated) {
+          setStatus('Notifiche configurate per Safari iOS in modalità PWA');
+        } else {
+          setStatus('Sottoscrizione alle notifiche push completata con successo!');
+        }
+        
         setStatusType('success');
       } else {
-        // Per Safari iOS, il risultato nullo potrebbe significare che stiamo usando una sottoscrizione simulata
-        const isPWA = isPWAMode();
-        if (isSafariIOS && isPWA) {
-          addSubscriptionStep('subscribe', 'success', 'Sottoscrizione simulata configurata per Safari iOS');
-          setIsSubscribed(true);
-          setIsSimulatedSubscription(true);
-          setStatus('Notifiche configurate per Safari iOS in modalità PWA');
-          setStatusType('success');
-        } else {
-          addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
-          setStatus('Sottoscrizione non riuscita, nessun errore riportato');
-          setStatusType('error');
-        }
+        addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
+        setStatus('Sottoscrizione non riuscita, nessun errore riportato');
+        setStatusType('error');
       }
       
       const currentPermission = await checkPermission();
@@ -671,5 +828,21 @@ const NotificationTest: React.FC = () => {
     </div>
   );
 };
+
+// Helper function to convert base64 to Uint8Array (needed for VAPID key)
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 export default NotificationTest; 
