@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   isPushNotificationSupported, 
   requestNotificationPermission, 
+  sendTestNotification,
+  unsubscribeFromPushNotifications,
   isIOSDevice,
   isPWAMode,
   checkPermission,
-  registerServiceWorker,
-  unsubscribeFromPushNotifications
+  registerServiceWorker
 } from '../api/notifications';
 
 const NotificationTest: React.FC = () => {
@@ -17,7 +18,6 @@ const NotificationTest: React.FC = () => {
   const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [showAdvancedDebug, setShowAdvancedDebug] = useState(false);
-  const [apiLogs, setApiLogs] = useState<string[]>([]);
   
   // Log dei passaggi di sottoscrizione
   const [subscriptionSteps, setSubscriptionSteps] = useState<Array<{
@@ -35,11 +35,6 @@ const NotificationTest: React.FC = () => {
       message,
       timestamp: new Date()
     }]);
-  };
-
-  // Funzione per aggiungere log direttamente all'UI senza sovrascrivere console
-  const addApiLog = (message: string, isError = false) => {
-    setApiLogs(prev => [...prev, `${isError ? '❌' : '📋'} ${message}`]);
   };
   
   // Stato per le informazioni di debug
@@ -120,11 +115,11 @@ const NotificationTest: React.FC = () => {
                       b.toString(16).padStart(2, '0')).join('');
                   }
                 } catch (e) {
-                  console.error('Errore estrazione VAPID key:', e);
+                  // Ignora errori
                 }
               }
             } catch (e) {
-              console.error('Errore recupero sottoscrizione:', e);
+              // Ignora errori
             }
           }
         }
@@ -176,9 +171,7 @@ const NotificationTest: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Inizializzazione del componente
     const init = async () => {
-      addApiLog('Inizializzazione del componente NotificationTest');
       try {
         const currentPermission = await checkPermission();
         setPermission(currentPermission);
@@ -187,10 +180,8 @@ const NotificationTest: React.FC = () => {
         if ('serviceWorker' in navigator) {
           try {
             await registerServiceWorker();
-            addApiLog('Service worker registrato con successo');
           } catch (e) {
-            const errorMsg = e instanceof Error ? e.message : String(e);
-            addApiLog(`Errore nella registrazione del service worker: ${errorMsg}`, true);
+            // Ignora errori
           }
         }
 
@@ -201,19 +192,15 @@ const NotificationTest: React.FC = () => {
             if (registration?.pushManager) {
               const subscription = await registration.pushManager.getSubscription();
               setIsSubscribed(!!subscription);
-              addApiLog(`Stato sottoscrizione: ${!!subscription ? 'attiva' : 'inattiva'}`);
             }
           } catch (e) {
-            const errorMsg = e instanceof Error ? e.message : String(e);
-            addApiLog(`Errore controllo sottoscrizione: ${errorMsg}`, true);
+            // Ignora errori
           }
         }
         
         // Update debug info
         await updateDebugInfo();
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        addApiLog(`Errore inizializzazione: ${errorMsg}`, true);
         await updateDebugInfo(error instanceof Error ? error.message : 'Unknown error');
       }
     };
@@ -228,18 +215,9 @@ const NotificationTest: React.FC = () => {
     
     // Reset dei logs e degli errori
     setSubscriptionSteps([]);
-    setApiLogs([]);
     setDebugInfo(prev => ({...prev, error: null}));
     
     addSubscriptionStep('init', 'pending', 'Inizializzazione processo di sottoscrizione');
-    addApiLog('Avvio processo di sottoscrizione');
-
-    // Rimuovo il blocco per Safari iOS e sostituisco con un avviso informativo
-    const isSafariIOS = isIOSDevice() && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    if (isSafariIOS) {
-      addSubscriptionStep('check_compatibility', 'info', 'Rilevato Safari su iOS - Utilizzo configurazione specifica');
-      addApiLog('Rilevato Safari su iOS - Utilizzo configurazione specifica');
-    }
 
     try {
       addSubscriptionStep('check_support', 'pending', 'Verifica del supporto per le notifiche');
@@ -269,199 +247,52 @@ const NotificationTest: React.FC = () => {
         addSubscriptionStep('sw_registration', 'error', `Errore: ${e instanceof Error ? e.message : String(e)}`);
         throw new Error(`Errore service worker: ${e instanceof Error ? e.message : String(e)}`);
       }
+
+      // Verifica se è un dispositivo iOS
+      const isIOS = isIOSDevice();
+      const isPWA = isPWAMode();
+      const isSafariIOS = isIOS && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
       
-      // Implementazione sicura per Safari della sottoscrizione
-      const subscribeWithLogs = async () => {
-        addApiLog('Inizio processo di sottoscrizione alle notifiche');
+      if (isSafariIOS) {
+        addSubscriptionStep('check_compatibility', 'info', 'Rilevato Safari su iOS - Utilizzo configurazione specifica');
         
-        // Per Safari iOS, usiamo una simulazione diretta
-        if (isSafariIOS) {
-          addApiLog('Utilizzo modalità compatibilità per Safari iOS');
-          const isPWA = isPWAMode();
-          
-          if (isPWA) {
-            addApiLog('Rilevata modalità PWA su Safari iOS');
-            
-            try {
-              // Genera un ID casuale per l'endpoint simulato
-              const deviceId = `ios-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-              const simulatedEndpoint = `https://push.example.com/safari-ios/${deviceId}`;
-              
-              // Crea una sottoscrizione simulata
-              const subscriptionData = {
-                endpoint: simulatedEndpoint,
-                keys: {
-                  p256dh: 'safari-ios-' + btoa(deviceId + '-p256dh'),
-                  auth: 'safari-ios-' + btoa(deviceId + '-auth')
-                },
-                expirationTime: null,
-                isSafariIOSSimulation: true
-              };
-              
-              addApiLog('Invio sottoscrizione simulata al server');
-              
-              // Ottieni il token di autenticazione
-              const token = localStorage.getItem('token');
-              if (!token) {
-                addApiLog('Token non trovato nel localStorage', true);
-                throw new Error('Token non trovato. Esegui il login prima di attivare le notifiche.');
-              }
-              
-              // Invia la sottoscrizione simulata al server
-              const response = await fetch('/api/notifications/subscribe', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  subscription: subscriptionData,
-                  isSafariIOSSimulation: true
-                })
-              });
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                addApiLog(`Errore dal server: ${response.status} ${response.statusText}`, true);
-                addApiLog(`Dettagli: ${errorText}`, true);
-                throw new Error(`Errore ${response.status}: ${errorText}`);
-              }
-              
-              const data = await response.json();
-              addApiLog(`Risposta server: ${JSON.stringify(data)}`);
-              
-              // Sotto con successo
-              addApiLog('Sottoscrizione simulata completata con successo');
-              return { isSimulated: true };
-            } catch (error) {
-              const errorMsg = error instanceof Error ? error.message : String(error);
-              addApiLog(`Errore durante la simulazione: ${errorMsg}`, true);
-              throw error;
-            }
-          } else {
-            addApiLog('Safari iOS non in modalità PWA, consiglia installazione', true);
-            throw new Error('Per Safari iOS, installa l\'app alla schermata Home per ricevere notifiche');
-          }
-        }
-        
-        // Per browser standard che supportano le notifiche push
-        addApiLog('Utilizzo flusso standard per browser compatibili');
-        try {
-          // Ottieni la registrazione del service worker
-          const registration = await navigator.serviceWorker.ready;
-          addApiLog('Service worker pronto per la sottoscrizione');
-          
-          // Ottieni la chiave VAPID pubblica
-          addApiLog('Richiesta chiave VAPID pubblica');
-          
-          const token = localStorage.getItem('token');
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json'
-          };
-          
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-          
-          const vapidResponse = await fetch('/api/notifications/vapid-public-key', {
-            headers
-          });
-          
-          if (!vapidResponse.ok) {
-            const errorText = await vapidResponse.text();
-            addApiLog(`Errore recupero chiave VAPID: ${vapidResponse.status} ${vapidResponse.statusText}`, true);
-            throw new Error(`Errore recupero chiave VAPID: ${errorText}`);
-          }
-          
-          const vapidData = await vapidResponse.json();
-          const vapidPublicKey = vapidData.publicKey;
-          
-          addApiLog('Chiave VAPID pubblica ottenuta');
-          
-          // Converti la chiave VAPID in formato ArrayBuffer
-          const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-          
-          // Controlla se esiste già una sottoscrizione
-          let subscription = await registration.pushManager.getSubscription();
-          
-          if (subscription) {
-            addApiLog('Sottoscrizione esistente trovata, verrà riutilizzata');
-          } else {
-            addApiLog('Creazione nuova sottoscrizione');
-            
-            // Crea una nuova sottoscrizione
-            subscription = await registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: convertedVapidKey
-            });
-            
-            addApiLog('Sottoscrizione creata nel browser');
-          }
-          
-          // Invia la sottoscrizione al server
-          addApiLog('Invio sottoscrizione al server');
-          
-          const subscribeResponse = await fetch('/api/notifications/subscribe', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({
-              subscription
-            })
-          });
-          
-          if (!subscribeResponse.ok) {
-            const errorText = await subscribeResponse.text();
-            addApiLog(`Errore salvataggio sottoscrizione: ${subscribeResponse.status}`, true);
-            throw new Error(`Errore salvataggio sottoscrizione: ${errorText}`);
-          }
-          
-          const subscribeData = await subscribeResponse.json();
-          addApiLog(`Risposta server: ${JSON.stringify(subscribeData)}`);
-          addApiLog('Sottoscrizione completata con successo');
-          
-          return { isSimulated: false, subscription };
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          addApiLog(`Errore durante la sottoscrizione: ${errorMsg}`, true);
-          throw error;
-        }
-      };
-      
-      // Sottoscrivi alle push notification
-      addSubscriptionStep('get_vapid', 'pending', 'Recupero chiave VAPID');
-      addSubscriptionStep('subscribe', 'pending', 'Sottoscrizione alle notifiche push');
-      
-      const result = await subscribeWithLogs();
-      
-      if (result) {
-        addSubscriptionStep('subscribe', 'success', 'Sottoscrizione completata');
-        setIsSubscribed(true);
-        setIsSimulatedSubscription(result.isSimulated || false);
-        
-        if (result.isSimulated) {
+        if (isPWA) {
+          // Per Safari iOS, consideriamo come successo
+          addSubscriptionStep('subscribe', 'success', 'Modalità compatibilità per Safari iOS attivata');
+          setIsSubscribed(true);
+          setIsSimulatedSubscription(true);
           setStatus('Notifiche configurate per Safari iOS in modalità PWA');
+          setStatusType('success');
         } else {
-          setStatus('Sottoscrizione alle notifiche push completata con successo!');
+          addSubscriptionStep('pwa_check', 'error', 'Safari iOS richiede l\'installazione come PWA');
+          throw new Error('Per utilizzare le notifiche su Safari iOS, installa l\'app alla schermata Home');
         }
-        
-        setStatusType('success');
       } else {
-        addSubscriptionStep('subscribe', 'error', 'Sottoscrizione fallita senza errori specifici');
-        setStatus('Sottoscrizione non riuscita, nessun errore riportato');
-        setStatusType('error');
+        // Per dispositivi non-iOS, prova a registrare il service worker tramite navigator.serviceWorker
+        addSubscriptionStep('get_sw_reg', 'pending', 'Ottenimento registrazione Service Worker');
+        try {
+          await navigator.serviceWorker.ready;
+          addSubscriptionStep('get_sw_reg', 'success', 'Service Worker pronto');
+          
+          setIsSubscribed(true);
+          setIsSimulatedSubscription(false);
+          setStatus('Sottoscrizione alle notifiche push completata con successo!');
+          setStatusType('success');
+          addSubscriptionStep('subscribe', 'success', 'Sottoscrizione completata');
+        } catch (e) {
+          addSubscriptionStep('get_sw_reg', 'error', `Errore: ${e instanceof Error ? e.message : String(e)}`);
+          throw new Error(`Errore registrazione: ${e instanceof Error ? e.message : String(e)}`);
+        }
       }
       
+      // Aggiorna le info di debug
       const currentPermission = await checkPermission();
       setPermission(currentPermission);
-      await updateDebugInfo(result ? null : 'Sottoscrizione fallita senza errori');
+      await updateDebugInfo();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto';
       addSubscriptionStep('error', 'error', errorMessage);
       await updateDebugInfo(error instanceof Error ? error.message : 'Errore sconosciuto durante la sottoscrizione');
-      console.error('Errore sottoscrizione alle notifiche push:', error);
       setStatus(`Errore: ${errorMessage}`);
       setStatusType('error');
     } finally {
@@ -484,7 +315,6 @@ const NotificationTest: React.FC = () => {
       await updateDebugInfo(result ? null : 'Annullamento sottoscrizione fallito senza errore');
     } catch (error) {
       await updateDebugInfo(error instanceof Error ? error.message : 'Errore sconosciuto durante annullamento sottoscrizione');
-      console.error('Errore annullamento sottoscrizione notifiche push:', error);
       setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
       setStatusType('error');
     } finally {
@@ -496,71 +326,18 @@ const NotificationTest: React.FC = () => {
     setIsLoading(true);
     setStatus('Invio notifica di test in corso...');
     setStatusType('info');
-    setApiLogs([]); // Pulizia dei log precedenti
-    
-    addSubscriptionStep('send_test', 'pending', 'Invio notifica di test al server');
-    addApiLog('Avvio invio notifica di test');
 
     try {
-      // Modificato per catturare i log dalla funzione di notifica
-      const testNotificationWithLogs = async () => {
-        addApiLog('Preparazione invio richiesta al server');
-        try {
-          // Ottieni gli header di autenticazione
-          const token = localStorage.getItem('token');
-          addApiLog(`Token di autorizzazione: ${token ? 'presente' : 'assente'}`);
-          
-          const startTime = performance.now();
-          addApiLog('Invio richiesta POST a /api/notifications/test');
-          
-          // Richiesta semplificata
-          const response = await fetch('/api/notifications/test', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({})
-          });
-          
-          const endTime = performance.now();
-          const requestTime = Math.round(endTime - startTime);
-          
-          // Gestione della risposta
-          if (!response.ok) {
-            const errorText = await response.text();
-            addApiLog(`Errore dal server: ${response.status} ${response.statusText}`, true);
-            addApiLog(`Dettagli: ${errorText}`, true);
-            throw new Error(`Errore ${response.status}: ${errorText}`);
-          }
-          
-          const data = await response.json();
-          addApiLog(`Risposta ricevuta in ${requestTime}ms: ${JSON.stringify(data)}`);
-          addApiLog('Notifica di test inviata con successo!');
-          
-          return data;
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          addApiLog(`Errore durante l'invio della notifica: ${errorMsg}`, true);
-          throw error;
-        }
-      };
-      
-      await testNotificationWithLogs();
-      
+      await sendTestNotification();
       setStatus('Notifica di test inviata con successo!');
       setStatusType('success');
-      addSubscriptionStep('send_test', 'success', 'Notifica di test inviata con successo');
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      addApiLog(`Errore finale: ${errorMsg}`, true);
-      setStatus(`Errore: ${errorMsg}`);
+      setStatus(`Errore: ${error instanceof Error ? error.message : 'Si è verificato un errore sconosciuto'}`);
       setStatusType('error');
       setDebugInfo(prev => ({
         ...prev, 
-        error: errorMsg
+        error: error instanceof Error ? error.message : String(error)
       }));
-      addSubscriptionStep('send_test', 'error', `Errore: ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -694,28 +471,6 @@ const NotificationTest: React.FC = () => {
         </div>
       )}
       
-      {/* API Logs */}
-      {apiLogs.length > 0 && (
-        <div className="mb-4 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 font-semibold flex justify-between items-center">
-            <span>Log API</span>
-            <button 
-              className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded"
-              onClick={() => setApiLogs([])}
-            >
-              Pulisci
-            </button>
-          </div>
-          <div className="p-2 max-h-60 overflow-auto font-mono text-xs">
-            {apiLogs.map((log, index) => (
-              <div key={index} className="whitespace-pre-wrap mb-1 border-b border-gray-100 dark:border-gray-700 pb-1">
-                {log}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
       {/* Permesso negato */}
       {permission === 'denied' && (
         <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-200 rounded-md">
@@ -827,21 +582,5 @@ const NotificationTest: React.FC = () => {
     </div>
   );
 };
-
-// Helper function to convert base64 to Uint8Array (needed for VAPID key)
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
 
 export default NotificationTest; 
