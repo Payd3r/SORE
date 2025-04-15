@@ -111,15 +111,64 @@ const handleNetworkFirst = async (request: Request): Promise<Response> => {
   const cache = await caches.open(CACHE_CONFIG.NETWORK_FIRST.name);
   
   try {
-    const networkResponse = await fetch(request);
-    cache.put(request, networkResponse.clone());
-    return networkResponse;
+    // Impostiamo un timeout per le richieste di rete
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondi di timeout
+    
+    try {
+      const networkResponse = await fetch(request, { signal });
+      clearTimeout(timeoutId);
+      
+      // Se la risposta non è OK (es. 404, 500), lanciamo un errore
+      if (!networkResponse.ok) {
+        throw new Error(`HTTP error! status: ${networkResponse.status}`);
+      }
+      
+      // Salva nella cache e restituisci la risposta
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      throw fetchError; // Rilancia l'errore per gestirlo sotto
+    }
   } catch (error) {
+    console.log(`[SW] Errore di rete per ${request.url}. Cerco nella cache...`);
+    
     const cachedResponse = await cache.match(request);
     if (cachedResponse) {
+      console.log(`[SW] Risposta trovata nella cache per ${request.url}`);
       return cachedResponse;
     }
-    throw error;
+    
+    // Se non c'è risposta nella cache, restituisci una risposta generica di errore
+    console.log(`[SW] Nessuna risposta nella cache per ${request.url}`);
+    
+    // Se la richiesta è per un'API, restituisci un JSON di errore
+    if (request.url.includes('/api/')) {
+      return new Response(JSON.stringify({
+        error: 'Connessione di rete non disponibile',
+        offline: true,
+        message: 'Verifica la tua connessione di rete'
+      }), {
+        status: 503,
+        headers: {'Content-Type': 'application/json'}
+      });
+    }
+    
+    // Per richieste di navigazione, mantieni il comportamento originale
+    if (request.mode === 'navigate') {
+      const offlineResponse = await caches.match('/offline.html');
+      if (offlineResponse) {
+        return offlineResponse;
+      }
+    }
+    
+    // Per altre richieste (es. immagini, CSS, JS), ritorna una risposta vuota
+    return new Response('', { 
+      status: 408, 
+      statusText: 'Richiesta scaduta, connessione non disponibile' 
+    });
   }
 };
 
@@ -132,30 +181,69 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
   if (cachedResponse) {
     // Aggiorna la cache in background
     fetch(request).then(async (networkResponse) => {
-      const responseData = await networkResponse.json();
-      responseData.timestamp = new Date().toISOString();
-      
-      const newResponse = new Response(JSON.stringify(responseData), {
-        headers: networkResponse.headers
-      });
-      
-      cache.put(request, newResponse);
-    }).catch(console.error);
+      try {
+        if (!networkResponse.ok) {
+          throw new Error(`HTTP error! status: ${networkResponse.status}`);
+        }
+        
+        const responseData = await networkResponse.clone().json();
+        responseData.timestamp = new Date().toISOString();
+        
+        const newResponse = new Response(JSON.stringify(responseData), {
+          headers: networkResponse.headers
+        });
+        
+        cache.put(request, newResponse);
+      } catch (error) {
+        console.error(`[SW] Errore nell'aggiornamento della cache:`, error);
+        // Non lanciamo l'errore, perché l'operazione è in background
+      }
+    }).catch(error => {
+      console.error(`[SW] Errore nel fetch di rete:`, error);
+      // Non facciamo nulla, perché abbiamo già restituito la risposta dalla cache
+    });
     
     return cachedResponse;
   }
   
   // Se non c'è cache, fai la richiesta di rete
-  const networkResponse = await fetch(request);
-  const responseData = await networkResponse.json();
-  responseData.timestamp = new Date().toISOString();
-  
-  const newResponse = new Response(JSON.stringify(responseData), {
-    headers: networkResponse.headers
-  });
-  
-  cache.put(request, newResponse.clone());
-  return newResponse;
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (!networkResponse.ok) {
+      throw new Error(`HTTP error! status: ${networkResponse.status}`);
+    }
+    
+    const responseData = await networkResponse.clone().json();
+    responseData.timestamp = new Date().toISOString();
+    
+    const newResponse = new Response(JSON.stringify(responseData), {
+      headers: networkResponse.headers
+    });
+    
+    cache.put(request, newResponse.clone());
+    return newResponse;
+  } catch (error) {
+    console.error(`[SW] Errore nella richiesta di rete:`, error);
+    
+    // Per richieste di API, ritorna un JSON di errore
+    if (request.url.includes('/api/')) {
+      return new Response(JSON.stringify({
+        error: 'Connessione di rete non disponibile',
+        offline: true,
+        message: 'Verifica la tua connessione di rete'
+      }), {
+        status: 503,
+        headers: {'Content-Type': 'application/json'}
+      });
+    }
+    
+    // Per altre richieste, ritorna una risposta vuota
+    return new Response('', { 
+      status: 408, 
+      statusText: 'Richiesta scaduta, connessione non disponibile' 
+    });
+  }
 };
 
 // Installazione del Service Worker
@@ -212,6 +300,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
             return fetch(event.request);
         }
       } catch (error) {
+        console.error(`[SW] Errore non gestito nell'intercettazione della richiesta:`, error);
+        
         // Fallback alla pagina offline per le richieste di navigazione
         if (event.request.mode === 'navigate') {
           const offlineResponse = await caches.match('/offline.html');
@@ -219,7 +309,24 @@ self.addEventListener('fetch', (event: FetchEvent) => {
             return offlineResponse;
           }
         }
-        throw error;
+        
+        // Per richieste API, ritorna un JSON di errore
+        if (event.request.url.includes('/api/')) {
+          return new Response(JSON.stringify({
+            error: 'Errore nella gestione della richiesta',
+            offline: true,
+            message: 'Si è verificato un errore imprevisto'
+          }), {
+            status: 500,
+            headers: {'Content-Type': 'application/json'}
+          });
+        }
+        
+        // Per altre richieste, ritorna una risposta vuota
+        return new Response('', { 
+          status: 500, 
+          statusText: 'Errore interno del service worker' 
+        });
       }
     })()
   );

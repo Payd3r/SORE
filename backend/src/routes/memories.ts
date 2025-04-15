@@ -6,6 +6,7 @@ import { RowDataPacket } from 'mysql2';
 import fs from 'fs';
 import path from 'path';
 import { updateMemoryDates } from '../services/memoryDateUpdater';
+import { createMemoryNotification } from '../services/notificationService';
 
 const router = express.Router();
 
@@ -228,6 +229,35 @@ router.post('/', auth, async (req: any, res) => {
 
       const memoryId = memoryResult.insertId;
       console.log(`[Memory] Created memory ${memoryId}`);
+
+      // Get user name for notification
+      const [userResult] = await connection.query<RowDataPacket[]>(
+        'SELECT name FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      // Get recipient IDs (all users in the couple except creator)
+      const [recipientsResult] = await connection.query<RowDataPacket[]>(
+        'SELECT id FROM users WHERE couple_id = ? AND id != ?',
+        [coupleId, req.user.id]
+      );
+      
+      const recipientIds = recipientsResult.map(row => row.id);
+      
+      if (recipientIds.length > 0) {
+        // Create notification for the new memory
+        try {
+          await createMemoryNotification(
+            userResult[0].name,
+            memoryId,
+            recipientIds
+          );
+          console.log(`[Memory] Notification created for memory ${memoryId}`);
+        } catch (notificationError) {
+          console.error('[Memory] Error creating notification:', notificationError instanceof Error ? notificationError.message : 'Unknown error');
+          // We continue even if notification fails
+        }
+      }
 
       await connection.commit();
 

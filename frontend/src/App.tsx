@@ -6,48 +6,102 @@ import { queryClient } from './lib/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Suspense, lazy, useEffect } from 'react';
 import Layout from './components/Layout';
-import NotificationTest from './components/NotificationTest';
 import { SidebarProvider } from './components/Layout';
 import Loader from './components/Loader';
+import { useIsPwa } from './utils/isPwa';
+import MappaMobile from './components/mobile/MappaMobile';
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./pages/WelcomeAuthenticate'));
 const Home = lazy(() => import('./pages/Home'));
+const HomeMobile = lazy(() => import('./components/mobile/HomeMobile'));
 const Profile = lazy(() => import('./pages/Profile'));
+const ProfileMobile = lazy(() => import('./components/mobile/ProfileMobile'));
 const Gallery = lazy(() => import('./pages/Gallery'));
+const GalleryMobile = lazy(() => import('./components/mobile/GalleryMobile'));
 const Memory = lazy(() => import('./pages/Memory'));
 const DetailMemory = lazy(() => import('./pages/DetailMemory'));
+const DetailMemoryMobile = lazy(() => import('./components/mobile/DetailMemoryMobile'));
 const Ideas = lazy(() => import('./pages/Ideas'));
 const Recap = lazy(() => import('./pages/Recap'));
 const Mappa = lazy(() => import('./pages/Mappa'));
+const UploadMobile = lazy(() => import('./components/mobile/UploadMobile'));
+
+// Layout PWA
+const PwaLayout = lazy(() => import('./components/pwa/PwaLayout'));
+
+// Componente che sceglie quale versione della Home mostrare
+const HomeSelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <HomeMobile /> : <Home />;
+};
+
+// Componente che sceglie quale versione della Galleria mostrare
+const GallerySelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <GalleryMobile /> : <Gallery />;
+};
+
+
+// Per altre pagine che potrebbero avere una versione mobile in futuro
+const MappaSelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <MappaMobile /> : <Mappa />;
+};
+
+const MemorySelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <Memory /> : <Memory />;
+};
+
+const DetailMemorySelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <DetailMemoryMobile /> : <DetailMemory />;
+};
+
+const ProfileSelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <ProfileMobile /> : <Profile />;
+};
+
+// Layout Selector - sceglie quale layout utilizzare in base alla modalità
+const LayoutSelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <PwaLayout /> : <Layout />;
+};
 
 function App() {
+  const isPwa = useIsPwa();
+
   useEffect(() => {
-    // Assicuriamoci che la sidebar sia nascosta all'avvio
-    const initApp = () => {
-      // Questa funzione aiuta a forzare la sidebar chiusa per risolvere il problema di visualizzazione
-      const sidebarElement = document.querySelector('aside') as HTMLElement;
-      if (sidebarElement) {
-        sidebarElement.style.transform = 'translateX(-100%) translateZ(0)';
-      }
-    };
-    
-    // Esegui subito per forzare la sidebar chiusa
-    initApp();
-    
-    // Esegui anche dopo un breve ritardo per assicurarsi che funzioni dopo il rendering completo
-    setTimeout(initApp, 100);
-    
+    // Se non è in PWA mode, inizializza la sidebar
+    if (!isPwa) {
+      // Assicuriamoci che la sidebar sia nascosta all'avvio
+      const initApp = () => {
+        // Questa funzione aiuta a forzare la sidebar chiusa per risolvere il problema di visualizzazione
+        const sidebarElement = document.querySelector('aside') as HTMLElement;
+        if (sidebarElement) {
+          sidebarElement.style.transform = 'translateX(-100%) translateZ(0)';
+        }
+      };
+
+      // Esegui subito per forzare la sidebar chiusa
+      initApp();
+
+      // Esegui anche dopo un breve ritardo per assicurarsi che funzioni dopo il rendering completo
+      setTimeout(initApp, 100);
+    }
+
     // Forza viewport height
     const forceViewportHeight = () => {
       // Calcola l'altezza reale del viewport su iOS
       const vh = window.screen.height;
       const vw = window.screen.width;
-      
+
       // Imposta le variabili CSS
       document.documentElement.style.setProperty('--vh', `${vh}px`);
       document.documentElement.style.setProperty('--vw', `${vw}px`);
-      
+
       // Forza le dimensioni del viewport
       document.documentElement.style.height = `${vh}px`;
       document.documentElement.style.width = `${vw}px`;
@@ -59,11 +113,11 @@ function App() {
       document.documentElement.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
       document.body.style.overflow = 'hidden';
-      
+
       // Forza il viewport per iOS
       const meta = document.querySelector('meta[name="viewport"]');
       if (meta) {
-        meta.setAttribute('content', 
+        meta.setAttribute('content',
           'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, ' +
           'height=' + vh + ', minimal-ui'
         );
@@ -102,7 +156,7 @@ function App() {
     window.addEventListener('resize', forceViewportHeight);
     window.addEventListener('orientationchange', forceViewportHeight);
     window.visualViewport?.addEventListener('resize', forceViewportHeight);
-    
+
     // Forza l'aggiornamento periodicamente
     const interval = setInterval(forceViewportHeight, 1000);
 
@@ -112,7 +166,16 @@ function App() {
       window.visualViewport?.removeEventListener('resize', forceViewportHeight);
       clearInterval(interval);
     };
-  }, []);
+  }, [isPwa]);
+
+  // Aggiunge classi specifiche al body quando in modalità PWA
+  useEffect(() => {
+    if (isPwa) {
+      document.body.classList.add('pwa-mode');
+    } else {
+      document.body.classList.remove('pwa-mode');
+    }
+  }, [isPwa]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -132,28 +195,28 @@ function App() {
                 WebkitOverflowScrolling: 'touch'
               }}>
                 <Suspense fallback={
-                  <Loader 
-                    type="spinner" 
-                    size="lg" 
-                    fullScreen 
-                    text="Caricamento in corso..." 
+                  <Loader
+                    type="spinner"
+                    size="lg"
+                    fullScreen
+                    text="Caricamento in corso..."
                     subText="Stiamo preparando l'app per te"
                   />
                 }>
                   <Routes>
                     <Route path="/welcome" element={<WelcomeAuthenticate />} />
                     <Route element={<ProtectedRoute />}>
-                      <Route element={<Layout />}>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/ricordi" element={<Memory />} />
-                        <Route path="/ricordo/:id" element={<DetailMemory />} />
-                        <Route path="/galleria" element={<Gallery />} />
+                      <Route element={<LayoutSelector />}>
+                        <Route path="/" element={<HomeSelector />} />
+                        <Route path="/ricordi" element={<MemorySelector />} />
+                        <Route path="/ricordo/:id" element={<DetailMemorySelector />} />
+                        <Route path="/galleria" element={<GallerySelector />} />
                         <Route path="/idee" element={<Ideas />} />
-                        <Route path="/mappa" element={<Mappa />} />
+                        <Route path="/mappa" element={<MappaSelector />} />
                         <Route path="/recap" element={<Recap />} />
-                        <Route path="/profilo" element={<Profile />} />
-                        <Route path="/notifications" element={<NotificationTest />} />
+                        <Route path="/profilo" element={<ProfileSelector />} />
                         <Route path="/logout" element={<div>Logout...</div>} />
+                        <Route path="/upload" element={<UploadMobile />} />
                       </Route>
                     </Route>
                     <Route path="*" element={<Navigate to="/welcome" replace />} />

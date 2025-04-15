@@ -14,7 +14,6 @@
   "launch_handler": {
     "client_mode": ["focus-existing", "auto"]
   },
-  "permissions": ["notifications", "push-notifications"],
   "icons": [
     {
       "src": "/icons/icon-152x152.png",

@@ -10,6 +10,8 @@ import { useInView } from 'react-intersection-observer';
 import { useUpload } from '../contexts/UploadContext';
 import { optimizeGridLayout } from '../components/Memories/optimizeGridLayout';
 import Loader from '../components/Loader';
+import 'lazysizes';
+import 'lazysizes/plugins/attrchange/ls.attrchange';
 
 type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
 
@@ -107,7 +109,7 @@ export default function Memory() {
     rootMargin: '100px',
   });
 
-  // Filtra e ordina i ricordi
+  // Filtra e ordina i ricordi - Ottimizzato
   const filteredAndSortedMemories = useMemo(() => {
     let filtered = memories;
 
@@ -128,7 +130,7 @@ export default function Memory() {
       });
     }
 
-    // Su mobile, ordina solo per data
+    // Su mobile, ordina solo per data senza ottimizzazione del layout
     if (windowWidth < 640) {
       return filtered.sort((a, b) => {
         const dateA = a.end_date || a.start_date || a.created_at;
@@ -146,20 +148,25 @@ export default function Memory() {
         height: img.height || 1080
       })) as MemoryImage[]
     }));
+    
     return optimizeGridLayout(memoriesWithImages, windowWidth);
   }, [memories, searchQuery, selectedTypes, windowWidth]);
 
-  // Funzione per caricare più ricordi
+  // Funzione per caricare più ricordi - Ottimizzata per performance
   const loadMore = useCallback(() => {
     if (!hasMore) return;
-    setVisibleMemories(prev => {
-      const next = prev + 12;
-      if (next >= filteredAndSortedMemories.length) {
-        setHasMore(false);
-      }
-      return next;
+    
+    // Utilizziamo requestAnimationFrame per evitare di bloccare il thread principale
+    requestAnimationFrame(() => {
+      setVisibleMemories(prev => {
+        const next = prev + 12;
+        if (next >= filteredAndSortedMemories.length) {
+          setHasMore(false);
+        }
+        return next;
+      });
     });
-  }, [filteredAndSortedMemories.length]);
+  }, [filteredAndSortedMemories.length, hasMore]);
 
   // Effetto per il lazy loading
   useEffect(() => {
@@ -287,6 +294,57 @@ export default function Memory() {
     setIsPinching(false);
     setPinchScale(1); // Reset dello scale
   };
+
+  // Funzione per renderizzare le schede con memoization
+  const renderMemoryCards = useMemo(() => {
+    const visibleItems = filteredAndSortedMemories.slice(0, visibleMemories);
+    
+    if (viewMode === 'grid') {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6 will-change-transform">
+          {visibleItems.map((memory) => (
+            <div
+              key={memory.id}
+              id={`memory-${memory.id}`}
+              className={`${memory.type.toLowerCase() === 'viaggio'
+                ? 'sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2'
+                : memory.type.toLowerCase() === 'evento'
+                  ? 'sm:col-span-2 lg:col-span-2'
+                  : ''
+                }`}
+              onClick={() => {
+                // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
+                sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
+                sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
+              }}
+              style={{ contain: 'content' }} // Ottimizzazione per il browser
+            >
+              <MemoryCard memory={memory} />
+            </div>
+          ))}
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex flex-col gap-3 will-change-transform">
+          {visibleItems.map((memory) => (
+            <div
+              key={memory.id}
+              id={`memory-${memory.id}`}
+              onClick={() => {
+                // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
+                sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
+                sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
+              }}
+              style={{ contain: 'content' }} // Ottimizzazione per il browser
+            >
+              <MemoryCardList memory={memory} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+  }, [filteredAndSortedMemories, visibleMemories, viewMode]);
 
   if (isLoading) {
     return <Loader type="spinner" size="lg" fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />;
@@ -469,54 +527,19 @@ export default function Memory() {
               </div>
             </div>
 
-            {/* Memories Grid */}
+            {/* Memories Grid - Ottimizzato */}
             <div className="w-full pb-8 lg:pt-6 pt-4">
               <div 
                 className="max-w-[2000px] mx-auto"
                 style={{
                   transform: isPinching ? `scale(${pinchScale > 1 ? 1 + (pinchScale - 1) * 0.1 : 1 - (1 - pinchScale) * 0.1})` : 'scale(1)',
                   transition: isPinching ? 'none' : 'transform 0.3s ease-out',
+                  willChange: 'transform', // Ottimizzazione per il browser
+                  overflowX: 'hidden' // Previene lo scorrimento laterale durante il pinch
                 }}
               >
-                {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6">
-                    {filteredAndSortedMemories.slice(0, visibleMemories).map((memory) => (
-                      <div
-                        key={memory.id}
-                        id={`memory-${memory.id}`}
-                        className={`${memory.type.toLowerCase() === 'viaggio'
-                          ? 'sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2'
-                          : memory.type.toLowerCase() === 'evento'
-                            ? 'sm:col-span-2 lg:col-span-2'
-                            : ''
-                          }`}
-                        onClick={() => {
-                          // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
-                          sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
-                          sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
-                        }}
-                      >
-                        <MemoryCard memory={memory} />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {filteredAndSortedMemories.slice(0, visibleMemories).map((memory) => (
-                      <div
-                        key={memory.id}
-                        id={`memory-${memory.id}`}
-                        onClick={() => {
-                          // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
-                          sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
-                          sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
-                        }}
-                      >
-                        <MemoryCardList memory={memory} />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Utilizziamo renderMemoryCards invece di renderizzare direttamente */}
+                {renderMemoryCards}
 
                 {/* Loading indicator */}
                 {hasMore && filteredAndSortedMemories.length > visibleMemories && (

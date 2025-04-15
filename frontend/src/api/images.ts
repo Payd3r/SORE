@@ -194,11 +194,19 @@ interface ImageMetadata {
   created_at: string;
 }
 
+// Nuova interfaccia per aggiornare solo il tipo
+interface ImageTypeUpdate {
+  type: string;
+}
+
 export const updateImageMetadata = async (imageId: string, metadata: ImageMetadata): Promise<void> => {
   try {
     const response = await fetch(`${API_URLS.base}/api/images/${imageId}/metadata`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify(metadata),
     });
 
@@ -207,6 +215,27 @@ export const updateImageMetadata = async (imageId: string, metadata: ImageMetada
     }
   } catch (error) {
     console.error('Errore nell\'aggiornamento dei metadata:', error);
+    throw error;
+  }
+};
+
+// Funzione specializzata per aggiornare solo il tipo di un'immagine
+export const updateImageType = async (imageId: string, type: string): Promise<void> => {
+  try {
+    const response = await fetch(`${API_URLS.base}/api/images/${imageId}/type`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ type }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Errore durante l\'aggiornamento del tipo di immagine');
+    }
+  } catch (error) {
+    console.error('Errore nell\'aggiornamento del tipo di immagine:', error);
     throw error;
   }
 }; 

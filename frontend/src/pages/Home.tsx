@@ -132,24 +132,47 @@ const Home = () => {
   const ideas = useMemo(() => homeData?.data?.Ideas ?? [], [homeData]);
 
   const formatDateRange = (startDate: Date, endDate: Date | null) => {
-    const start = format(new Date(startDate), 'd MMMM', { locale: it });
+    if (!startDate) return '';
     
-    if (!endDate) return start;
-    
-    // Se le date sono uguali, mostra solo una data
-    if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
-      return start;
+    try {
+      const start = format(new Date(startDate), 'd MMMM', { locale: it });
+      
+      if (!endDate) return start;
+      
+      // Se le date sono uguali, mostra solo una data
+      if (format(startDate, 'yyyy-MM-dd') === format(endDate, 'yyyy-MM-dd')) {
+        return start;
+      }
+      
+      // Se il mese è lo stesso, mostra solo il giorno per la prima data
+      if (format(startDate, 'MM-yyyy') === format(endDate, 'MM-yyyy')) {
+        return `${format(startDate, 'd')} - ${format(endDate, 'd MMMM', { locale: it })}`;
+      }
+      
+      // Se i mesi sono diversi, mostra il mese per entrambe le date
+      return `${start} - ${format(endDate, 'd MMMM', { locale: it })}`;
+    } catch (error) {
+      console.error("Errore nella formattazione della data:", error);
+      return '';
     }
-    
-    // Se il mese è lo stesso, mostra solo il giorno per la prima data
-    if (format(startDate, 'MM-yyyy') === format(endDate, 'MM-yyyy')) {
-      return `${format(startDate, 'd')} - ${format(endDate, 'd MMMM', { locale: it })}`;
-    }
-    
-    // Se i mesi sono diversi, mostra il mese per entrambe le date
-    return `${start} - ${format(endDate, 'd MMMM', { locale: it })}`;
   };
 
+  // Aggiungiamo una funzione sicura per formattare le date
+  const formatDateSafe = (dateStr: string | null | undefined, formatStr: string = 'd MMMM yyyy') => {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      // Verifica che la data sia valida
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      return format(date, formatStr, { locale: it });
+    } catch (error) {
+      console.error(`Errore nella formattazione della data "${dateStr}":`, error);
+      return '';
+    }
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -443,7 +466,7 @@ const Home = () => {
                               <div className="min-w-0 flex-1">
                                 <h3 className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white truncate">{idea.title}</h3>
                                 <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-500">
-                                  {format(new Date(idea.created_at), 'd MMMM yyyy', { locale: it })}
+                                  {formatDateSafe(idea.created_at, 'd MMMM yyyy')}
                                 </p>
                               </div>
                             </div>
@@ -475,7 +498,7 @@ const Home = () => {
                       >
                         <img
                           src={getImageUrl(image.image)}
-                          alt={`Foto del ${format(new Date(image.created_at), 'd MMMM yyyy', { locale: it })}`}
+                          alt={`Foto del ${formatDateSafe(image.created_at, 'd MMMM yyyy')}`}
                           className="w-full h-full object-cover hover:scale-110 transition-all duration-500"
                           loading="lazy"
                         />

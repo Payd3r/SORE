@@ -7,6 +7,8 @@ import imageQueue from '../config/bull';
 import sharp from 'sharp';
 import { classifyImage } from './imageClassifier';
 import { updateMemoryDates } from './memoryDateUpdater';
+import { createNewPhotosNotification, createNotification } from './notificationService';
+import { RowDataPacket } from 'mysql2';
 
 interface ProcessedImage {
   id: string;
@@ -180,6 +182,42 @@ export async function processImageJob(job: ImageJob) {
 
     // Aggiorna lo stato finale
     await updateJobProgress(job.id, 100, 'Completato');
+
+    // Crea notifiche per l'upload completato
+    try {
+      // Notifica per l'uploader
+      await createNotification({
+        user_id: job.userId,
+        title: 'Upload completato',
+        body: 'La tua immagine è stata caricata con successo',
+        url: '/galleria/'
+      });
+
+      // Notifiche per gli altri utenti nella coppia
+      // Ottieni il nome dell'uploader e gli ID degli altri utenti nella coppia
+      const [userResult] = await pool.promise().query<RowDataPacket[]>(
+        'SELECT name FROM users WHERE id = ?',
+        [job.userId]
+      );
+      
+      const [recipientsResult] = await pool.promise().query<RowDataPacket[]>(
+        'SELECT id FROM users WHERE couple_id = ? AND id != ?',
+        [job.coupleId, job.userId]
+      );
+      
+      const recipientIds = recipientsResult.map(row => row.id);
+      
+      if (recipientIds.length > 0 && userResult.length > 0) {
+        await createNewPhotosNotification(
+          userResult[0].name,
+          1, // Una foto per volta
+          recipientIds
+        );
+      }
+    } catch (notificationError) {
+      console.error('[Worker] Error creating notification:', notificationError instanceof Error ? notificationError.message : 'Unknown error');
+      // Continuiamo anche se la notifica fallisce
+    }
 
     console.log(`[Worker] Successfully processed image: ${job.originalName} (Job ID: ${job.id})`);
     return result.insertId;

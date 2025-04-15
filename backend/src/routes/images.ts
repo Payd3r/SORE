@@ -272,6 +272,60 @@ router.put('/:imageId/metadata', auth, async (req: any, res) => {
   }
 });
 
+// Update only image type
+router.put('/:imageId/type', auth, async (req: any, res) => {
+  try {
+    const imageId = req.params.imageId;
+    const coupleId = req.user.coupleId;
+    const { type } = req.body;
+
+    // Valida il tipo in input
+    if (!type) {
+      console.log(`[UpdateImageType] Validazione fallita - Type mancante`);
+      return res.status(400).json({ error: 'Il campo \'type\' è mancante.' });
+    }
+
+    // Converti il tipo in minuscolo per confrontarlo con i valori dell'enum
+    const normalizedType = type.toLowerCase();
+    if (!Object.values(ImageType).includes(normalizedType as ImageType)) {
+      console.log(`[UpdateImageType] Validazione fallita - Type: ${type}, Type normalizzato: ${normalizedType}, Valori validi:`, Object.values(ImageType));
+      return res.status(400).json({ error: 'Il campo \'type\' non è valido.' });
+    }
+
+    // Verifica che l'immagine esista e appartenga alla coppia  
+    const [images] = await pool.promise().query((
+      'SELECT id FROM images WHERE id = ? AND couple_id = ?'
+    ) as any,
+      [imageId, coupleId]
+    );
+
+    if (!images || (images as any[]).length === 0) {
+      console.log(`[UpdateImageType] Immagine non trovata o non autorizzata - ImageId: ${imageId}, CoupleId: ${coupleId}`);
+      return res.status(404).json({ error: 'Immagine non trovata' });
+    }
+    
+    // Aggiorna solo il tipo dell'immagine
+    const [updateResult] = await pool.promise().query(
+      `UPDATE images 
+       SET type = ?
+       WHERE id = ? AND couple_id = ?`,
+      [normalizedType, imageId, coupleId]
+    );
+
+    res.json({ 
+      message: 'Tipo immagine aggiornato con successo',
+      data: {
+        id: imageId,
+        type
+      }
+    });
+
+  } catch (error) {
+    console.error('[UpdateImageType] Errore durante aggiornamento:', error);
+    res.status(500).json({ error: 'Errore durante l\'aggiornamento del tipo di immagine' });
+  }
+});
+
 // Check image processing status
 router.get('/status/:jobId', auth, async (req: any, res) => {
   try {

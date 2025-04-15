@@ -17,7 +17,7 @@ import mapRoutes from './routes/map';
 import notificationRoutes from './routes/notifications';
 
 // Import servizi
-import { initializeWebPush } from './services/notificationService';
+import { setupNotificationCron } from './cron/notifications';
 
 dotenv.config();
 
@@ -109,10 +109,8 @@ app.use('/api/notifications', notificationRoutes);
 
 console.log('=== ROUTES MOUNTED ===');
 
-// Inizializza il servizio di web push notifications
-initializeWebPush().catch(err => {
-  console.error('Errore durante l\'inizializzazione di web-push:', err);
-});
+// Inizializza i cron job
+setupNotificationCron();
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

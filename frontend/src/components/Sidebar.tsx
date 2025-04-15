@@ -61,7 +61,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     { to: '/idee', text: 'Idee', icon: <LightBulbIcon className="w-6 h-6 text-current stroke-[1.5]" /> },
     { to: '/mappa', text: 'Mappa', icon: <FiMap className="w-6 h-6 text-current stroke-[1.5]" /> },
     { to: '/recap', text: 'Recap', icon: <FiZap className="w-6 h-6 text-current stroke-[1.5]" /> },
-    { to: '/notifications', text: 'Notifiche', icon: <FiBell className="w-6 h-6 text-current stroke-[1.5]" /> },
   ];
 
   return (

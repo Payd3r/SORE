@@ -1,132 +1,159 @@
-import express from 'express';
+import { Router, Request, Response } from 'express';
+import pool from '../config/db';
 import { auth } from '../middleware/auth';
-import * as notificationService from '../services/notificationService';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-const router = express.Router();
+// Estendi l'interfaccia Request per includere l'utente
+interface AuthRequest extends Request {
+  user?: {
+    id: string | number;
+    email: string;
+    coupleId?: number;
+  };
+}
 
-/**
- * @route   GET /api/notifications/vapid-public-key
- * @desc    Ottiene la chiave pubblica VAPID
- * @access  Public
- */
-router.get('/vapid-public-key', async (req, res) => {
-  console.log('📢 [API] Richiesta chiave VAPID pubblica');
+const router = Router();
+
+// Interfaccia per le notifiche
+interface Notification extends RowDataPacket {
+  id: number;
+  user_id: number;
+  title: string;
+  body: string;
+  icon: string | null;
+  url: string | null;
+  status: 'read' | 'unread';
+  created_at: Date;
+}
+
+// Ottenere tutte le notifiche dell'utente
+router.get('/', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const publicKey = await notificationService.getVapidPublicKey();
-    console.log(`📢 [API] Chiave VAPID pubblica recuperata con successo: ${publicKey.substring(0, 10)}...`);
-    res.json({ publicKey });
-  } catch (error) {
-    console.error('❌ [API] Errore nel recupero della chiave VAPID pubblica:', error);
-    res.status(500).json({ 
-      error: 'Errore nel recupero della chiave VAPID pubblica',
-      details: error instanceof Error ? error.message : 'Errore sconosciuto'
-    });
-  }
-});
-
-/**
- * @route   POST /api/notifications/subscribe
- * @desc    Salva una sottoscrizione push
- * @access  Private
- */
-router.post('/subscribe', auth, async (req: any, res) => {
-  console.log(`📢 [API] Tentativo di sottoscrizione per l'utente ID: ${req.user.id}`);
-  try {
-    const { subscription, isSafariIOSSimulation } = req.body;
-    const userId = req.user.id;
-
-    console.log(`📢 [API] Dati sottoscrizione ricevuti:`, JSON.stringify({
-      endpoint: subscription?.endpoint?.substring(0, 30) + '...',
-      keys: subscription?.keys ? {
-        p256dh: subscription.keys.p256dh?.substring(0, 10) + '...',
-        auth: subscription.keys.auth?.substring(0, 5) + '...'
-      } : 'mancanti',
-      isSafariIOSSimulation: !!isSafariIOSSimulation
-    }));
-
-    if (!subscription || !subscription.endpoint || !subscription.keys) {
-      console.error('❌ [API] Dati di sottoscrizione non validi');
-      return res.status(400).json({ error: 'Dati di sottoscrizione non validi' });
-    }
-
-    // Se è una sottoscrizione simulata per Safari iOS, aggiungiamo un'etichetta
-    if (isSafariIOSSimulation) {
-      console.log('🍎 [API] Sottoscrizione simulata per Safari iOS ricevuta');
-      // Qui potresti voler salvare l'informazione che questa è una simulazione
-      // nel database per gestirla in modo diverso quando invii notifiche
-      
-      // Per esempio:
-      await notificationService.saveSubscription(userId, {
-        ...subscription,
-        isSafariIOSSimulation: true
-      });
-      
-      console.log(`✅ [API] Sottoscrizione simulata per iOS salvata con successo per l'utente ID: ${userId}`);
-      return res.status(201).json({ 
-        message: 'Sottoscrizione simulata per Safari iOS salvata con successo',
-        isSafariIOSSimulation: true
-      });
+    const userId = req.user?.id;
+    const { limit = 20, offset = 0, status } = req.query;
+    
+    // Verifica utente autenticato
+    if (!userId) {
+      return res.status(401).json({ error: 'Utente non autenticato' });
     }
     
-    // Sottoscrizione standard
-    await notificationService.saveSubscription(userId, subscription);
-    console.log(`✅ [API] Sottoscrizione salvata con successo per l'utente ID: ${userId}`);
-    res.status(201).json({ message: 'Sottoscrizione salvata con successo' });
-  } catch (error) {
-    console.error('❌ [API] Errore durante il salvataggio della sottoscrizione:', error);
-    res.status(500).json({ 
-      error: 'Errore durante il salvataggio della sottoscrizione',
-      details: error instanceof Error ? error.message : 'Errore sconosciuto'
-    });
-  }
-});
-
-/**
- * @route   DELETE /api/notifications/unsubscribe
- * @desc    Elimina una sottoscrizione push
- * @access  Private
- */
-router.delete('/unsubscribe', auth, async (req, res) => {
-  console.log(`📢 [API] Richiesta di annullamento sottoscrizione`);
-  try {
-    const { endpoint } = req.body;
-
-    if (!endpoint) {
-      console.error('❌ [API] Endpoint non fornito per l\'annullamento della sottoscrizione');
-      return res.status(400).json({ error: 'Endpoint non fornito' });
+    let query = `
+      SELECT * FROM notifications 
+      WHERE user_id = ? 
+    `;
+    
+    const queryParams: any[] = [userId];
+    
+    // Filtro per stato (lette/non lette)
+    if (status) {
+      query += ` AND status = ?`;
+      queryParams.push(status);
     }
-
-    console.log(`📢 [API] Annullamento sottoscrizione per endpoint: ${endpoint.substring(0, 30)}...`);
-    await notificationService.deleteSubscription(endpoint);
-    console.log('✅ [API] Sottoscrizione eliminata con successo');
-    res.json({ message: 'Sottoscrizione eliminata con successo' });
-  } catch (error) {
-    console.error('❌ [API] Errore durante l\'eliminazione della sottoscrizione:', error);
-    res.status(500).json({ 
-      error: 'Errore durante l\'eliminazione della sottoscrizione',
-      details: error instanceof Error ? error.message : 'Errore sconosciuto'
+    
+    // Ordinamento e paginazione
+    query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    queryParams.push(Number(limit), Number(offset));
+    
+    // Esegui query con promise
+    const [notifications] = await pool.promise().query<Notification[]>(query, queryParams);
+    
+    // Ottieni conteggio totale e non lette
+    const [countResult] = await pool.promise().query<RowDataPacket[]>(
+      'SELECT COUNT(*) AS total FROM notifications WHERE user_id = ?', 
+      [userId]
+    );
+    
+    const [unreadResult] = await pool.promise().query<RowDataPacket[]>(
+      'SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND status = "unread"', 
+      [userId]
+    );
+    
+    res.json({ 
+      notifications, 
+      total: countResult[0]?.total || 0,
+      unread: unreadResult[0]?.count || 0
     });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Errore nel recupero delle notifiche' });
   }
 });
 
-/**
- * @route   POST /api/notifications/test
- * @desc    Invia una notifica di test
- * @access  Private
- */
-router.post('/test', auth, async (req: any, res) => {
-  console.log(`📢 [API] Richiesta di invio notifica di test per l'utente ID: ${req.user.id}`);
+// Segnare una notifica come letta
+router.put('/:id/read', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user.id;
-    await notificationService.sendTestNotification(userId);
-    console.log(`✅ [API] Notifica di test inviata con successo all'utente ID: ${userId}`);
-    res.json({ message: 'Notifica di test inviata con successo' });
+    const { id } = req.params;
+    const userId = req.user?.id;
+    
+    // Verifica utente autenticato
+    if (!userId) {
+      return res.status(401).json({ error: 'Utente non autenticato' });
+    }
+    
+    const [result] = await pool.promise().query<ResultSetHeader>(
+      'UPDATE notifications SET status = "read" WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+    
+    // Verifica che la notifica esista e appartenga all'utente
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Notifica non trovata o non autorizzata' });
+    }
+    
+    res.json({ success: true });
   } catch (error) {
-    console.error('❌ [API] Errore durante l\'invio della notifica di test:', error);
-    res.status(500).json({ 
-      error: 'Errore durante l\'invio della notifica di test',
-      details: error instanceof Error ? error.message : 'Errore sconosciuto'
-    });
+    console.error('Error updating notification:', error);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento della notifica' });
+  }
+});
+
+// Segnare tutte le notifiche come lette
+router.put('/read-all', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    // Verifica utente autenticato
+    if (!userId) {
+      return res.status(401).json({ error: 'Utente non autenticato' });
+    }
+    
+    await pool.promise().query<ResultSetHeader>(
+      'UPDATE notifications SET status = "read" WHERE user_id = ? AND status = "unread"',
+      [userId]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating notifications:', error);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento delle notifiche' });
+  }
+});
+
+// Eliminare una notifica
+router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    
+    // Verifica utente autenticato
+    if (!userId) {
+      return res.status(401).json({ error: 'Utente non autenticato' });
+    }
+    
+    const [result] = await pool.promise().query<ResultSetHeader>(
+      'DELETE FROM notifications WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+    
+    // Verifica che la notifica esista e appartenga all'utente
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Notifica non trovata o non autorizzata' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ error: 'Errore nell\'eliminazione della notifica' });
   }
 });
 

@@ -5,9 +5,16 @@
 /* Rimuovo gli stili della mappa che sono stati spostati in map.css */
 
 @layer base {
-  /* Scrollbar styles */
+  /* Scrollbar styles - solo per la versione desktop */
   ::-webkit-scrollbar {
     @apply w-2;
+  }
+
+  /* Disattiva stili della scrollbar in modalità PWA */
+  html.pwa-layout::-webkit-scrollbar,
+  body.pwa-layout::-webkit-scrollbar,
+  .pwa-layout *::-webkit-scrollbar {
+    @apply w-0 hidden;
   }
 
   ::-webkit-scrollbar-track {
@@ -399,6 +406,16 @@
   
   .animate-pulse-slow {
     animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Nascondi scrollbar ma mantieni funzionalità */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
   }
 }
 

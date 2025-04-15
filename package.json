@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "web-push": "^3.3.4"
+    "lazysizes": "^5.3.2"
   }
-} 
+}

@@ -132,7 +132,25 @@ function BoundsHandler({ images, bounds }: { images: ImageLocation[], bounds?: M
   // Adatta la vista quando cambia la dimensione della finestra
   useEffect(() => {
     const handleResize = () => {
+      // Verifica se la mappa è ancora valida
+      if (!map || !(map as any)._loaded) return;
+      
       // Ricalcola i bounds quando cambia la dimensione della finestra
+      if (bounds) {
+        const latLngBounds = L.latLngBounds(
+          [[bounds.south, bounds.west], [bounds.north, bounds.east]]
+        );
+        
+        const isMobile = window.innerWidth < 768;
+        map.fitBounds(latLngBounds, { 
+          padding: isMobile ? [50, 50] : [100, 100],
+          maxZoom: isMobile ? 13 : 15,
+          animate: false
+        });
+        return;
+      }
+      
+      // Solo se non ci sono bounds specifici, usa le immagini
       const validImages = images.filter(img => {
         const coords = cleanCoordinates(img.lat, img.lon);
         return coords !== null;
@@ -155,11 +173,19 @@ function BoundsHandler({ images, bounds }: { images: ImageLocation[], bounds?: M
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
+    // Debounce la funzione di resize per evitare chiamate troppo frequenti
+    let resizeTimeout: number;
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(handleResize, 300);
     };
-  }, [images, map]);
+
+    window.addEventListener('resize', debouncedResize);
+    return () => {
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', debouncedResize);
+    };
+  }, [map, bounds, images]);  // Aggiungiamo images come dipendenza ma con debounce
 
   return null;
 }

@@ -40,3 +40,126 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Stili specifici per PWA */
+body.pwa-mode {
+  /* Stili per tutta l'app in modalità PWA */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  /* Per migliorare l'aspetto su iOS */
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+body.pwa-mode button,
+body.pwa-mode a {
+  /* Per migliorare il feedback del tocco */
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+body.pwa-mode button:active,
+body.pwa-mode a:active {
+  opacity: 0.7;
+}
+
+/* Layout PWA - Nasconde la sidebar e usa le barre specifiche */
+body.pwa-layout aside {
+  display: none !important;
+}
+
+body.pwa-layout main {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* Supporto per safe area su iOS */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body.pwa-mode .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  body.pwa-mode .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 20px);
+  }
+  
+  body.pwa-mode .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  body.pwa-mode .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  body.pwa-mode .fixed-bottom {
+    bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Stili specifici per DownBar */
+body.pwa-mode .fixed-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Menu principale più grande */
+body.pwa-mode .main-tab {
+  transform: translateY(-10px);
+}
+
+/* Animazioni per gli elementi della UI nella modalità PWA */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+body.pwa-mode .animate-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Stili bottoni primari più grandi e rotondi in stile iOS */
+body.pwa-mode .ios-button {
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 600;
+  /* Disattiva lo stile tap/focus */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Elementi della UI in stile iOS */
+body.pwa-mode .ios-card {
+  border-radius: 20px;
+  background-color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Nascondi COMPLETAMENTE tutte le barre di scorrimento in modalità PWA */
+html.pwa-layout,
+body.pwa-layout,
+.pwa-layout * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html.pwa-layout::-webkit-scrollbar,
+body.pwa-layout::-webkit-scrollbar,
+.pwa-layout *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+}
+
+/* Stili per la modalità PWA */
+body.pwa-mode {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  touch-action: pan-y;
+}
+
+body.pwa-mode .fixed-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
