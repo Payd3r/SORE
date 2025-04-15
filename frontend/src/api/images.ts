@@ -194,10 +194,6 @@ interface ImageMetadata {
   created_at: string;
 }
 
-// Nuova interfaccia per aggiornare solo il tipo
-interface ImageTypeUpdate {
-  type: string;
-}
 
 export const updateImageMetadata = async (imageId: string, metadata: ImageMetadata): Promise<void> => {
   try {

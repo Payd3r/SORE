@@ -10,7 +10,7 @@ import {
   MoonIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
-import { FiBell, FiCalendar, FiGrid, FiImage, FiMap, FiZap } from 'react-icons/fi';
+import { FiCalendar, FiGrid, FiImage, FiMap, FiZap } from 'react-icons/fi';
 
 interface SidebarProps {
   onClose?: () => void;
