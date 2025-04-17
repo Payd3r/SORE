@@ -1,7 +1,7 @@
 .marker-icon {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 12%;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   transition: all 0.2s ease;
@@ -91,7 +91,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 20%;
   background: rgba(59, 130, 246, 0.9);
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   color: white;
@@ -247,10 +247,8 @@
 
 /* Cluster row per 2 immagini */
 .cluster-icon-row-2 {
-  width: 77px;
-  height: 50px;
   background: white;
-  border-radius: 10px;
+  border-radius: 7px;
   overflow: hidden;
   position: relative;
   display: grid;
@@ -266,10 +264,8 @@
 
 /* Cluster row per 3 immagini */
 .cluster-icon-row-3 {
-  width: 126px;
-  height: 55px;
   background: white;
-  border-radius: 10px;
+  border-radius: 7px;
   overflow: hidden;
   position: relative;
   display: grid;
@@ -285,10 +281,8 @@
 
 /* Cluster grid 2x2 */
 .cluster-icon-grid-2x2 {
-  width: 61px;
-  height: 82px;
   background: white;
-  border-radius: 12px;
+  border-radius: 7px;
   overflow: hidden;
   position: relative;
   display: grid;
@@ -304,10 +298,8 @@
 
 /* Cluster grid 3x3 */
 .cluster-icon-grid-3x3 {
-  width: 80px;
-  height: 105px;
   background: white;
-  border-radius: 15px;
+  border-radius: 9px;
   overflow: hidden;
   position: relative;
   display: grid;
@@ -323,10 +315,8 @@
 
 /* Cluster grid 4x4 */
 .cluster-icon-grid-4x4 {
-  width: 120px;
-  height: 150px;
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
   display: grid;
@@ -341,8 +331,8 @@
 }
 
 .cluster-preview-image {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   overflow: hidden;
   position: relative;
   border-radius: 0;
@@ -356,7 +346,7 @@
 
 .cluster-preview-image img {
   display: block;
-  width: 100%;
+  width: 100% !important;
   height: 100%;
   object-fit: cover;
   object-position: center;
@@ -398,7 +388,7 @@
 .cluster-icon-huge {
   width: 64px;
   height: 64px;
-  border-radius: 50%;
+  border-radius: 20%;
   background: rgba(59, 130, 246, 0.9);
   color: white;
   font-weight: bold;

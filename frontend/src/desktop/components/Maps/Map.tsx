@@ -80,9 +80,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
     // Verifica che ci siano thumbnail valide
     return thumbs;
   };
-
-  // Debug info
-  console.log(`Creazione cluster con ${count} markers`);
   
   // Per cluster con 2 immagini, mostra una fila di 2 immagini (1x2)
   if (count === 2) {
@@ -90,7 +87,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
     
     // Se abbiamo thumbnail valide, crea la fila 1x2
     if (thumbs && thumbs.length > 0) {
-      console.log('Creazione cluster 1x2');
       return new L.DivIcon({
         html: `
           <div class="cluster-icon-row-2">
@@ -109,7 +105,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
     
     // Se abbiamo thumbnail valide, crea la fila 1x3
     if (thumbs && thumbs.length > 0) {
-      console.log('Creazione cluster 1x3');
       return new L.DivIcon({
         html: `
           <div class="cluster-icon-row-3">
@@ -128,7 +123,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
     
     // Se abbiamo thumbnail valide, crea la griglia 2x2
     if (thumbs && thumbs.length > 0) {
-      console.log('Creazione cluster 2x2');
       return new L.DivIcon({
         html: `
           <div class="cluster-icon-grid-2x2">
@@ -148,7 +142,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
     
     // Se abbiamo thumbnail valide, crea la griglia 3x3
     if (thumbs && thumbs.length > 0) {
-      console.log('Creazione cluster 3x3');
       return new L.DivIcon({
         html: `
           <div class="cluster-icon-grid-3x3">
@@ -168,7 +161,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
     
     // Se abbiamo thumbnail valide, crea la griglia 4x4
     if (thumbs && thumbs.length > 0) {
-      console.log('Creazione cluster 4x4');
       return new L.DivIcon({
         html: `
           <div class="cluster-icon-grid-4x4">
@@ -185,7 +177,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
   
   // Fallback: cluster classico con solo il numero
   if (count > 100) {
-    console.log('Creazione cluster huge');
     return new L.DivIcon({
       html: `<div class="cluster-icon cluster-icon-huge"><span>${count}</span></div>`,
       className: 'custom-cluster-icon',
@@ -193,7 +184,6 @@ const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) 
       iconAnchor: L.point(32, 32)
     });
   } else {
-    console.log('Creazione cluster standard');
     const size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
     return new L.DivIcon({
       html: `<div class="cluster-icon cluster-icon-${size}"><span>${count}</span></div>`,
@@ -228,7 +218,6 @@ function CustomMarker({ image, coords, customIcon, markerId }: { image: ImageLoc
     if (markerRef.current) {
       // Assegna l'ID all'opzione del marker per poterlo recuperare nel cluster
       (markerRef.current as any).options.id = markerId;
-      console.log(`Marker ID ${markerId} impostato`);
     }
   }, [markerId]);
   
