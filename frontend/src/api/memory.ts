@@ -1,7 +1,7 @@
 import { API_URLS } from './config';
 import { ApiResponse } from './types';
 import axios from 'axios';
-import type { CarouselImage } from '../pages/DetailMemory';
+import type { CarouselImage } from '../desktop/pages/DetailMemory';
 
 export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
 

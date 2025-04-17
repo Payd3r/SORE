@@ -3,32 +3,32 @@ import { AuthProvider } from './contexts/AuthContext';
 import { UploadProvider } from './contexts/UploadContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './desktop/components/Layout/ProtectedRoute';
 import { Suspense, lazy, useEffect } from 'react';
-import Layout from './components/Layout';
-import { SidebarProvider } from './components/Layout';
-import Loader from './components/Loader';
+import Layout from './desktop/components/Layout/Layout';
+import { SidebarProvider } from './desktop/components/Layout/Layout';
+import Loader from './desktop/components/Layout/Loader';
 import { useIsPwa } from './utils/isPwa';
-import MappaMobile from './components/mobile/MappaMobile';
+import MappaMobile from './mobile/pages/MappaMobile';
 
 // Lazy loading delle pagine
-const WelcomeAuthenticate = lazy(() => import('./pages/WelcomeAuthenticate'));
-const Home = lazy(() => import('./pages/Home'));
-const HomeMobile = lazy(() => import('./components/mobile/HomeMobile'));
-const Profile = lazy(() => import('./pages/Profile'));
-const ProfileMobile = lazy(() => import('./components/mobile/ProfileMobile'));
-const Gallery = lazy(() => import('./pages/Gallery'));
-const GalleryMobile = lazy(() => import('./components/mobile/GalleryMobile'));
-const Memory = lazy(() => import('./pages/Memory'));
-const DetailMemory = lazy(() => import('./pages/DetailMemory'));
-const DetailMemoryMobile = lazy(() => import('./components/mobile/DetailMemoryMobile'));
-const Ideas = lazy(() => import('./pages/Ideas'));
-const Recap = lazy(() => import('./pages/Recap'));
-const Mappa = lazy(() => import('./pages/Mappa'));
-const UploadMobile = lazy(() => import('./components/mobile/UploadMobile'));
+const WelcomeAuthenticate = lazy(() => import('./desktop/pages/WelcomeAuthenticate'));
+const Home = lazy(() => import('./desktop/pages/Home'));
+const HomeMobile = lazy(() => import('./mobile/pages/HomeMobile'));
+const Profile = lazy(() => import('./desktop/pages/Profile'));
+const ProfileMobile = lazy(() => import('./mobile/pages/ProfileMobile'));
+const Gallery = lazy(() => import('./desktop/pages/Gallery'));
+const GalleryMobile = lazy(() => import('./mobile/pages/GalleryMobile'));
+const Memory = lazy(() => import('./desktop/pages/Memory'));
+const DetailMemory = lazy(() => import('./desktop/pages/DetailMemory'));
+const DetailMemoryMobile = lazy(() => import('./mobile/pages/DetailMemoryMobile'));
+const Ideas = lazy(() => import('./desktop/pages/Ideas'));
+const Recap = lazy(() => import('./desktop/pages/Recap'));
+const Mappa = lazy(() => import('./desktop/pages/Mappa'));
+const UploadMobile = lazy(() => import('./mobile/pages/UploadMobile'));
 
 // Layout PWA
-const PwaLayout = lazy(() => import('./components/pwa/PwaLayout'));
+const PwaLayout = lazy(() => import('./mobile/pwa/PwaLayout'));
 
 // Componente che sceglie quale versione della Home mostrare
 const HomeSelector = () => {
