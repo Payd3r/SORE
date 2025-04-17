@@ -520,7 +520,7 @@ const Map = ({ images, isLoading, error, initialLocation, bounds }: MapProps) =>
   ];
 
   // Seleziona il tema scuro predefinito (puoi cambiarlo a seconda di quale preferisci)
-  const defaultDarkTheme = darkTileOptions[2]; // CartoDB Dark Matter
+  const defaultDarkTheme = darkTileOptions[0]; // CartoDB Dark Matter
 
   // Funzione per determinare l'URL della tile in base al tema
   const getTileUrl = () => {
