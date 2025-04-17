@@ -744,7 +744,7 @@ const HomeMobile = () => {
                   if (futureMemories.length > 0) {
                     // La card Futuro viene già gestita nella prima riga della griglia
                   }
-                  rows.forEach((row, rowIdx) => {
+                  rows.forEach((row) => {
                     row.items.forEach((memory, idx) => {
                       if (memory.type.toUpperCase() === 'FUTURO') {
                         // Card Futuro: col-span-1

@@ -11,7 +11,6 @@ interface IdeaCardMobileProps {
 export default function IdeaCardMobile({ idea: initialIdea, onCheckChange, onClick }: IdeaCardMobileProps) {
   const [idea, setIdea] = useState(initialIdea);
   const [isChecking, setIsChecking] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
 
   const handleCheckboxClick = async (e: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -33,7 +32,6 @@ export default function IdeaCardMobile({ idea: initialIdea, onCheckChange, onCli
   const handleMenuClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setShowMenu(true);
     onClick?.();
   };
 

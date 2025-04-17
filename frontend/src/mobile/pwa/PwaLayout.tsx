@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import DownBar from './DownBar';
 import MobileUploadStatus from '../components/MobileUploadStatus';
 import NotificationsMobile from '../components/NotificationsMobile';
@@ -11,7 +11,6 @@ import { getNotifications } from '../../api/notifications';
  */
 const PwaLayout = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const mainRef = useRef<HTMLDivElement>(null);
   
   // Stati per gestire le notifiche
