@@ -5,12 +5,6 @@ import MobileUploadStatus from '../components/MobileUploadStatus';
 import NotificationsMobile from '../components/NotificationsMobile';
 import { getNotifications } from '../../api/notifications';
 
-// Ordine delle pagine per la navigazione con swipe
-const pageOrder = ['/', '/galleria', '/mappa', '/profilo'];
-
-// Percorsi in cui disabilitare le gesture di swipe
-const disabledSwipePaths = ['/ricordo/', '/upload' , '/mappa'];
-
 /**
  * Layout specifico per la modalità PWA
  * Utilizza solo la barra di navigazione inferiore
@@ -19,26 +13,11 @@ const PwaLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const mainRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
-  const touchEndX = useRef<number | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationDirection, setAnimationDirection] = useState<'left' | 'right' | null>(null);
-  const [targetPage, setTargetPage] = useState<string | null>(null);
-  const [swipeDistance, setSwipeDistance] = useState(0);
-  const touchStartY = useRef<number | null>(null);
   
   // Stati per gestire le notifiche
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   
-  // Trova l'indice della pagina corrente
-  const currentPageIndex = pageOrder.indexOf(location.pathname) !== -1 
-    ? pageOrder.indexOf(location.pathname) 
-    : 0;
-    
-  // Verifica se le gesture di swipe sono disabilitate per il percorso corrente
-  const isSwipeDisabled = disabledSwipePaths.some(path => location.pathname.includes(path));
-
   // Carica le notifiche all'apertura della PWA
   useEffect(() => {
     fetchNotificationsCount();
@@ -109,211 +88,19 @@ const PwaLayout = () => {
     };
   }, []);
 
-  // Gestione dello swipe orizzontale per la navigazione tra pagine (semplificata)
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Se siamo in un percorso in cui le gesture sono disabilitate, non fare nulla
-    if (isSwipeDisabled) return;
-    
-    // Memorizza la posizione iniziale del touch
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Se siamo in un percorso in cui le gesture sono disabilitate, non fare nulla
-    if (isSwipeDisabled) return;
-    
-    // Se non abbiamo un punto di partenza o siamo in animazione, usciamo
-    if (touchStartX.current === null || touchStartY.current === null || isAnimating) return;
-    
-    // Ottieni la posizione attuale
-    const touchX = e.touches[0].clientX;
-    const touchY = e.touches[0].clientY;
-    
-    // Calcola distanze
-    const deltaX = touchX - touchStartX.current;
-    const deltaY = Math.abs(touchY - touchStartY.current);
-    
-    // Verifica se lo swipe è principalmente verticale
-    // Se è così, lascia che la pagina gestisca lo scrolling e annulla lo swipe
-    const isVerticalSwipe = deltaY > Math.abs(deltaX * 1.2);
-    if (isVerticalSwipe) return;
-    
-    // Se lo swipe è significativo e principalmente orizzontale 
-    if (Math.abs(deltaX) > 20 && !isVerticalSwipe) {
-      // Calcola la direzione dello swipe
-      const direction = deltaX > 0 ? 'right' : 'left';
-      const directionIndex = direction === 'right' ? -1 : 1;
-      
-      // Calcola l'indice della pagina di destinazione
-      const targetIndex = Math.max(0, Math.min(pageOrder.length - 1, currentPageIndex + directionIndex));
-      
-      // Se siamo al limite, ignora lo swipe
-      if (
-        (currentPageIndex === 0 && direction === 'right') || 
-        (currentPageIndex === pageOrder.length - 1 && direction === 'left')
-      ) {
-        return;
-      }
-      
-      // Aggiorna lo stato
-      setSwipeDistance(deltaX);
-      setAnimationDirection(direction);
-      setTargetPage(pageOrder[targetIndex]);
-      
-      // Previeni lo scrolling verticale solo durante swipe orizzontali significativi
-      if (Math.abs(deltaX) > 40) {
+  // Blocca le gesture di swipe di default del browser (indietro/avanti)
+  useEffect(() => {
+    const preventSwipeNavigation = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      // Blocca swipe da bordo sinistro o destro (tipico per back/forward)
+      if (touch.clientX < 30 || touch.clientX > window.innerWidth - 30) {
         e.preventDefault();
       }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    // Se siamo in un percorso in cui le gesture sono disabilitate, non fare nulla
-    if (isSwipeDisabled) return;
-    
-    // Se non abbiamo memorizzato un punto di partenza o non c'è un'animazione in corso, reset
-    if (touchStartX.current === null || !animationDirection || !targetPage) {
-      touchStartX.current = null;
-      touchStartY.current = null;
-      touchEndX.current = null;
-      setSwipeDistance(0);
-      setAnimationDirection(null);
-      setTargetPage(null);
-      return;
-    }
-    
-    // Determina se lo swipe è abbastanza lungo per cambiare pagina (25%)
-    const threshold = window.innerWidth * 0.25;
-    
-    if (Math.abs(swipeDistance) > threshold) {
-      // Attiva l'animazione
-      setIsAnimating(true);
-      
-      // Calcola la distanza finale per l'animazione
-      const finalDistance = animationDirection === 'right' ? window.innerWidth : -window.innerWidth;
-      setSwipeDistance(finalDistance);
-      
-      // Naviga alla pagina di destinazione
-      setTimeout(() => {
-        navigate(targetPage);
-        
-        // Reset lo stato dopo la navigazione
-        setTimeout(() => {
-          setIsAnimating(false);
-          setSwipeDistance(0);
-          setAnimationDirection(null);
-          setTargetPage(null);
-          touchStartX.current = null;
-          touchStartY.current = null;
-          touchEndX.current = null;
-        }, 50);
-      }, 250);
-    } else {
-      // Se lo swipe non è abbastanza lungo, torna alla posizione iniziale
-      setIsAnimating(true);
-      setSwipeDistance(0);
-      
-      setTimeout(() => {
-        setIsAnimating(false);
-        setAnimationDirection(null);
-        setTargetPage(null);
-        touchStartX.current = null;
-        touchStartY.current = null;
-        touchEndX.current = null;
-      }, 250);
-    }
-  };
-
-  // Calcola lo stile per l'animazione
-  const getAnimationStyle = () => {
-    if (!animationDirection) return {};
-    
-    // Calcola quanto mostrare della pagina che sta entrando
-    const translateX = `${swipeDistance}px`;    
-    
-    // Aggiungiamo un leggero effetto di rotazione 3D per un aspetto più realistico
-    const rotateY = isAnimating
-      ? 0
-      : (swipeDistance / window.innerWidth) * 1.5; // Ridotto a 1.5 gradi per un effetto più sottile
-    
-    return {
-      transform: `translateX(${translateX}) perspective(1200px) rotateY(${rotateY}deg)`,
-      opacity: 1, // Manteniamo l'opacità sempre a 1 per evitare problemi
-      transition: isAnimating 
-        ? 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)' 
-        : 'none',
-      willChange: 'transform',
-      backfaceVisibility: 'hidden' as 'hidden',
-      WebkitBackfaceVisibility: 'hidden' as 'hidden',
     };
-  };
-
-  useEffect(() => {
-    // Blocca solo il rimbalzo elastico di iOS ai bordi del documento
-    const preventBounce = (event: TouchEvent) => {
-      // Verifica se l'elemento target o un suo genitore è scrollabile
-      const isScrollableElement = (element: Element | null): boolean => {
-        if (!element) return false;
-        
-        // Verifica attributo data-scrollable
-        if (element.getAttribute('data-scrollable') === 'true') return true;
-
-        // Verifica se l'elemento è scrollabile
-        const style = window.getComputedStyle(element);
-        const overflowY = style.getPropertyValue('overflow-y');
-        const isScrollable = overflowY === 'scroll' || overflowY === 'auto';
-        
-        // Verifica se l'elemento ha scrollbar attiva
-        const hasScrollbar = element.scrollHeight > element.clientHeight;
-        
-        if (isScrollable && hasScrollbar) return true;
-        
-        // Controlla ricorsivamente il genitore
-        return isScrollableElement(element.parentElement);
-      };
-
-      // Ottieni l'elemento target
-      const target = event.target as Element;
-      
-      // Se l'evento è all'interno di un elemento scrollabile, permetti lo scroll normale
-      if (isScrollableElement(target)) {
-        return;
-      }
-      
-      // Altrimenti previeni il bounce
-      event.preventDefault();
-    };
-    
-    // Inizializza il tracciamento del touch
-    (window as any).__lastTouchY = null;
-    
-    // Gestisci l'inizio del touch
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches && e.touches.length > 0) {
-        (window as any).__lastTouchY = e.touches[0].clientY;
-      }
-    };
-    
-    // Aggiungi gli event listener
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', preventBounce, { passive: false });
-    
-    // Imposta proprietà CSS utili
-    document.documentElement.style.setProperty('--webkit-tap-highlight-color', 'transparent');
-    document.documentElement.style.setProperty('touch-action', 'manipulation');
-    
+    document.addEventListener('touchstart', preventSwipeNavigation, { passive: false });
     return () => {
-      // Rimuovi gli event listener quando il componente viene smontato
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', preventBounce);
-      
-      // Ripristina le proprietà CSS
-      document.documentElement.style.removeProperty('--webkit-tap-highlight-color');
-      document.documentElement.style.removeProperty('touch-action');
-      
-      // Pulisci le variabili globali
-      (window as any).__lastTouchY = undefined;
+      document.removeEventListener('touchstart', preventSwipeNavigation);
     };
   }, []);
 
@@ -326,9 +113,6 @@ const PwaLayout = () => {
   return (
     <div 
       className="flex flex-col w-full h-[100dvh] relative overflow-hidden" 
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       {/* Sfondo gradiente */}
       <div className="pwa-gradient-bg" />
@@ -336,8 +120,6 @@ const PwaLayout = () => {
       <main 
         ref={mainRef}
         className="flex-1 overflow-auto overscroll-none relative touch-pan-y"
-        style={getAnimationStyle()}
-        data-scrollable="true"
       >
         <Outlet />
       </main>
@@ -349,7 +131,7 @@ const PwaLayout = () => {
       <MobileUploadStatus />
 
       {/* Bottone delle notifiche (visibile solo se ci sono notifiche non lette) */}
-      {unreadNotificationsCount > 0 && (
+      {unreadNotificationsCount > 0 && !location.pathname.startsWith('/upload') && (
         <button 
           onClick={() => setIsNotificationsModalOpen(true)}
           className="fixed bottom-24 right-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-blue-500 text-white"

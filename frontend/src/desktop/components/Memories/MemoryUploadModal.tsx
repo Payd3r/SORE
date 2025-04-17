@@ -6,7 +6,7 @@ import { searchTracks } from '../../../api/spotify';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
-type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
+type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 
 interface UploadingFile {
   fileName: string;
@@ -61,6 +61,7 @@ export default function MemoryUploadModal({
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [futureDate, setFutureDate] = useState<string>('');
 
   // Reset dei campi quando il modal viene chiuso
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function MemoryUploadModal({
       setLocation('');
       setSelectedFiles([]);
       setError(null);
+      setFutureDate('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -148,7 +150,7 @@ export default function MemoryUploadModal({
       setError('Inserisci un titolo');
       return false;
     }
-    if (selectedFiles.length === 0) {
+    if (type !== 'FUTURO' && selectedFiles.length === 0) {
       setError('Seleziona almeno un\'immagine');
       return false;
     }
@@ -164,12 +166,15 @@ export default function MemoryUploadModal({
 
     try {
       // Preparo i dati del ricordo
-      const memoryData = {
+      const memoryData: any = {
         title: title.trim(),
         type,
         song: song.trim() || undefined,
         location: location.trim() || undefined,
       };
+      if (type === 'FUTURO' && futureDate) {
+        memoryData.date = futureDate;
+      }
 
       // Se ci sono immagini, preparo lo stato iniziale dell'upload
       if (selectedFiles.length > 0) {
@@ -397,6 +402,16 @@ export default function MemoryUploadModal({
               >
                 Semplice
               </button>
+              <button
+                type="button"
+                className={`tab-menu-button ${type === 'FUTURO'
+                  ? 'tab-menu-button-active'
+                  : 'tab-menu-button-inactive'
+                  }`}
+                onClick={() => setType('FUTURO')}
+              >
+                Futuro
+              </button>
             </div>
           </div>
 
@@ -475,6 +490,22 @@ export default function MemoryUploadModal({
                   </div>
                 )}
 
+                {/* Data (solo per Futuro) */}
+                {type === 'FUTURO' && (
+                  <div>
+                    <label htmlFor="future-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Data (opzionale)
+                    </label>
+                    <input
+                      type="date"
+                      id="future-date"
+                      value={futureDate}
+                      onChange={e => setFutureDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
+                    />
+                  </div>
+                )}
+
                 {/* Posizione */}
                 <div>
                   <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -549,6 +580,22 @@ export default function MemoryUploadModal({
               </div>
             )}
 
+            {/* Data (solo per Futuro) */}
+            {type === 'FUTURO' && (
+              <div>
+                <label htmlFor="future-date-desktop" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Data (opzionale)
+                </label>
+                <input
+                  type="date"
+                  id="future-date-desktop"
+                  value={futureDate}
+                  onChange={e => setFutureDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
+                />
+              </div>
+            )}
+
             {/* Posizione */}
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -604,7 +651,7 @@ export default function MemoryUploadModal({
                   <span className="mx-1">o trascina qui</span>
                 </div>
                 <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                  PNG, JPG, HEIC, JPEG fino a 50MB
+                  PNG, JPG, HEIC, JPEG fino a 100MB
                 </p>
               </div>
             </div>

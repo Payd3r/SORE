@@ -55,18 +55,153 @@ const cleanCoordinates = (lat: number | string, lon: number | string): [number, 
 };
 
 // Funzione per creare l'icona del cluster personalizzata
-const createClusterCustomIcon = (cluster: any) => {
+const makeCreateClusterCustomIcon = (images: ImageLocation[]) => (cluster: any) => {
   const count = cluster.getChildCount();
-  const size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
+  const markers = cluster.getAllChildMarkers();
   
-  return new L.DivIcon({
-    html: `<div class="cluster-icon cluster-icon-${size}">
-            <span>${count}</span>
-          </div>`,
-    className: 'custom-cluster-icon',
-    iconSize: L.point(40, 40),
-    iconAnchor: L.point(20, 20)
-  });
+  // Funzione per ottenere le miniature dei marker nel cluster
+  const getThumbs = (n: number) => {
+    // Filtra i marker che hanno un ID valido e trova le corrispondenti immagini
+    const validMarkers = markers.filter((m: any) => m.options && typeof m.options.id !== 'undefined');
+    
+    // Mappa i marker validi alle loro thumbnail HTML
+    const thumbs = validMarkers.slice(0, n).map((m: any) => {
+      const markerId = m.options.id;
+      const imgObj = images.find(img => img.id === markerId);
+      
+      if (imgObj && imgObj.thumb_small_path) {
+        // Utilizza un URL completo per l'immagine
+        const imgUrl = getImageUrl(imgObj.thumb_small_path);
+        return `<div class="cluster-preview-image"><img src="${imgUrl}" alt="thumb-${markerId}" /></div>`;
+      }
+      return '';
+    }).filter((thumb: string) => thumb !== '').join('');
+    
+    // Verifica che ci siano thumbnail valide
+    return thumbs;
+  };
+
+  // Debug info
+  console.log(`Creazione cluster con ${count} markers`);
+  
+  // Per cluster con 2 immagini, mostra una fila di 2 immagini (1x2)
+  if (count === 2) {
+    const thumbs = getThumbs(2);
+    
+    // Se abbiamo thumbnail valide, crea la fila 1x2
+    if (thumbs && thumbs.length > 0) {
+      console.log('Creazione cluster 1x2');
+      return new L.DivIcon({
+        html: `
+          <div class="cluster-icon-row-2">
+            ${thumbs}
+          </div>
+        `,
+        className: 'custom-cluster-icon',
+        iconSize: L.point(82, 40),
+        iconAnchor: L.point(41, 20)
+      });
+    }
+  } 
+  // Per cluster con 3 immagini, mostra una fila di 3 immagini (1x3)
+  else if (count === 3) {
+    const thumbs = getThumbs(3);
+    
+    // Se abbiamo thumbnail valide, crea la fila 1x3
+    if (thumbs && thumbs.length > 0) {
+      console.log('Creazione cluster 1x3');
+      return new L.DivIcon({
+        html: `
+          <div class="cluster-icon-row-3">
+            ${thumbs}
+          </div>
+        `,
+        className: 'custom-cluster-icon',
+        iconSize: L.point(123, 40),
+        iconAnchor: L.point(61, 20)
+      });
+    }
+  }
+  // Per cluster con 4-29 immagini, mostra una griglia 2x2
+  else if (count >= 4 && count <= 29) {
+    const thumbs = getThumbs(4);
+    
+    // Se abbiamo thumbnail valide, crea la griglia 2x2
+    if (thumbs && thumbs.length > 0) {
+      console.log('Creazione cluster 2x2');
+      return new L.DivIcon({
+        html: `
+          <div class="cluster-icon-grid-2x2">
+            ${thumbs}
+            <div class="cluster-badge">${count}</div>
+          </div>
+        `,
+        className: 'custom-cluster-icon',
+        iconSize: L.point(61, 82),
+        iconAnchor: L.point(30, 41)
+      });
+    }
+  } 
+  // Per cluster con 30-59 immagini, mostra una griglia 3x3
+  else if (count >= 30 && count <= 59) {
+    const thumbs = getThumbs(9);
+    
+    // Se abbiamo thumbnail valide, crea la griglia 3x3
+    if (thumbs && thumbs.length > 0) {
+      console.log('Creazione cluster 3x3');
+      return new L.DivIcon({
+        html: `
+          <div class="cluster-icon-grid-3x3">
+            ${thumbs}
+            <div class="cluster-badge">${count}</div>
+          </div>
+        `,
+        className: 'custom-cluster-icon',
+        iconSize: L.point(80, 105),
+        iconAnchor: L.point(40, 52)
+      });
+    }
+  }
+  // Per cluster con 60-100 immagini, mostra una griglia 4x4
+  else if (count >= 60 && count <= 100) {
+    const thumbs = getThumbs(16);
+    
+    // Se abbiamo thumbnail valide, crea la griglia 4x4
+    if (thumbs && thumbs.length > 0) {
+      console.log('Creazione cluster 4x4');
+      return new L.DivIcon({
+        html: `
+          <div class="cluster-icon-grid-4x4">
+            ${thumbs}
+            <div class="cluster-badge">${count}</div>
+          </div>
+        `,
+        className: 'custom-cluster-icon',
+        iconSize: L.point(120, 150),
+        iconAnchor: L.point(60, 75)
+      });
+    }
+  }
+  
+  // Fallback: cluster classico con solo il numero
+  if (count > 100) {
+    console.log('Creazione cluster huge');
+    return new L.DivIcon({
+      html: `<div class="cluster-icon cluster-icon-huge"><span>${count}</span></div>`,
+      className: 'custom-cluster-icon',
+      iconSize: L.point(64, 64),
+      iconAnchor: L.point(32, 32)
+    });
+  } else {
+    console.log('Creazione cluster standard');
+    const size = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
+    return new L.DivIcon({
+      html: `<div class="cluster-icon cluster-icon-${size}"><span>${count}</span></div>`,
+      className: 'custom-cluster-icon',
+      iconSize: L.point(40, 40),
+      iconAnchor: L.point(20, 20)
+    });
+  }
 };
 
 // Funzione per creare l'icona del marker personalizzata
@@ -83,6 +218,49 @@ const createCustomIcon = (image: ImageLocation) => {
     popupAnchor: L.point(0, -40)
   });
 };
+
+// Componente marker custom per associare l'immagine all'istanza Leaflet
+function CustomMarker({ image, coords, customIcon, markerId }: { image: ImageLocation, coords: [number, number], customIcon: L.DivIcon, markerId: number }) {
+  const markerRef = useRef<L.Marker | null>(null);
+  
+  // Assicurati che l'ID del marker sia impostato correttamente
+  useEffect(() => {
+    if (markerRef.current) {
+      // Assegna l'ID all'opzione del marker per poterlo recuperare nel cluster
+      (markerRef.current as any).options.id = markerId;
+      console.log(`Marker ID ${markerId} impostato`);
+    }
+  }, [markerId]);
+  
+  return (
+    <Marker
+      position={coords}
+      icon={customIcon}
+      ref={markerRef}
+    >
+      <Popup className="custom-popup">
+        <img
+          src={getImageUrl(image.thumb_big_path)}
+          alt={`Location ${image.id}`}
+          className="custom-popup-image"
+        />
+      </Popup>
+    </Marker>
+  );
+}
+
+// Definiamo un'interfaccia estesa per accedere ai metodi privati di Leaflet
+interface ExtendedMarkerCluster extends L.MarkerCluster {
+  _spiderfy: () => any;
+  _spiderfyDistanceMultiplier: number;
+  _group: {
+    _spiderfyDistanceMultiplier: number;
+    _circleSpiralSwitchover: number;
+    _spiralFootSeparation: number;
+    _spiralLengthStart: number;
+    _spiralLengthFactor: number;
+  };
+}
 
 // Componente per gestire il bounds della mappa
 function BoundsHandler({ images, bounds }: { images: ImageLocation[], bounds?: MapProps['bounds'] }) {
@@ -281,6 +459,51 @@ const Map = ({ images, isLoading, error, initialLocation, bounds }: MapProps) =>
     };
   }, []);
 
+  // Estendo il comportamento di MarkerCluster per migliorare spiderfy
+  useEffect(() => {
+    // Vogliamo estendere il comportamento di Leaflet solo una volta
+    if (typeof window !== 'undefined' && L.MarkerCluster.prototype) {
+      // Override del metodo _spiderfy per migliorare la disposizione
+      const originalSpiderfy = (L.MarkerCluster.prototype as any)._spiderfy;
+      (L.MarkerCluster.prototype as any)._spiderfy = function(this: ExtendedMarkerCluster) {
+        // Rileva la dimensione del marker
+        const markerSize = 40; // Dimensione base del marker (in px)
+        const isMobile = window.innerWidth < 768;
+        const actualMarkerSize = isMobile ? markerSize : markerSize * 1.4;
+        
+        // Modifica il fattore di distanza in base al numero di markers
+        const childCount = this.getAllChildMarkers().length;
+        let lengthFactor = 1;
+        
+        if (childCount > 8) {
+          lengthFactor = 1.2;
+        } else if (childCount > 15) {
+          lengthFactor = 1.4;
+        } else if (childCount > 25) {
+          lengthFactor = 1.6;
+        }
+        
+        // Applica il fattore di distanza all'oggetto di configurazione
+        this._spiderfyDistanceMultiplier = lengthFactor;
+        
+        // Calcola la distanza tra marker per evitare sovrapposizioni
+        const originalRadius = this._group._spiderfyDistanceMultiplier || 1;
+        const radius = originalRadius * actualMarkerSize * 1.5;
+        const legs = this.getAllChildMarkers().length;
+        
+        // Imposta la distanza minima tra i marker in base al loro numero
+        // più marker = maggiore distanza per evitare sovrapposizioni
+        this._group._circleSpiralSwitchover = Math.min(legs, 9);
+        this._group._spiralFootSeparation = radius / 3;
+        this._group._spiralLengthStart = radius / 2;
+        this._group._spiralLengthFactor = 3;
+        
+        // Chiama la funzione originale
+        return originalSpiderfy.call(this);
+      };
+    }
+  }, []);
+
   // Gestione del caricamento della mappa
   const handleMapReady = () => {
     setIsMapReady(true);
@@ -288,49 +511,81 @@ const Map = ({ images, isLoading, error, initialLocation, bounds }: MapProps) =>
 
   // URL delle tile per tema chiaro e scuro
   const lightTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  const darkTileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+  // Opzioni di temi scuri gratuiti
+  const darkTileOptions = [
+    {
+      name: 'CartoDB Dark Matter',
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CartoDB</a>'
+    },
+    {
+      name: 'Stamen Toner Dark',
+      url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png',
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    },
+    {
+      name: 'Stadia Dark',
+      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
+      attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+    }
+  ];
+
+  // Seleziona il tema scuro predefinito (puoi cambiarlo a seconda di quale preferisci)
+  const defaultDarkTheme = darkTileOptions[2]; // CartoDB Dark Matter
 
   // Funzione per determinare l'URL della tile in base al tema
   const getTileUrl = () => {
-    return document.documentElement.classList.contains('dark') ? darkTileUrl : lightTileUrl;
+    return document.documentElement.classList.contains('dark') ? defaultDarkTheme.url : lightTileUrl;
+  };
+
+  // Funzione per ottenere l'attribuzione corretta in base al tema
+  const getTileAttribution = () => {
+    return document.documentElement.classList.contains('dark') 
+      ? defaultDarkTheme.attribution 
+      : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   };
 
   // Funzione per renderizzare il contenuto della mappa
   const renderMapContent = () => (
     <>
       <InitialLocationHandler initialLocation={initialLocation} />
-      <TileLayer url={getTileUrl()} />
+      <TileLayer 
+        url={getTileUrl()} 
+        attribution={getTileAttribution()}
+      />
       <BoundsHandler images={images} bounds={bounds} />
       <MarkerClusterGroup
         chunkedLoading
-        maxClusterRadius={50}
+        maxClusterRadius={80}
         spiderfyOnMaxZoom={true}
         showCoverageOnHover={false}
         zoomToBoundsOnClick={true}
-        iconCreateFunction={createClusterCustomIcon}
-        spiderfyDistanceMultiplier={2}
+        iconCreateFunction={makeCreateClusterCustomIcon(images)}
+        spiderfyDistanceMultiplier={2.5}
         disableClusteringAtZoom={19}
+        spiderLegPolylineOptions={{
+          weight: 2,
+          color: '#333',
+          opacity: 0.7
+        }}
+        animate={true}
+        // Opzioni per evitare sovrapposizioni
+        removeOutsideVisibleBounds={true}
+        animateAddingMarkers={true}
+        singleMarkerMode={false}
       >
         {images.map((image) => {
           const coords = cleanCoordinates(image.lat, image.lon);
           if (!coords) return null;
-
           const customIcon = createCustomIcon(image);
-
           return (
-            <Marker
+            <CustomMarker
               key={image.id}
-              position={coords}
-              icon={customIcon}
-            >
-              <Popup className="custom-popup">
-                <img
-                  src={getImageUrl(image.thumb_big_path)}
-                  alt={`Location ${image.id}`}
-                  className="custom-popup-image"
-                />
-              </Popup>
-            </Marker>
+              image={image}
+              coords={coords}
+              customIcon={customIcon}
+              markerId={image.id}
+            />
           );
         })}
       </MarkerClusterGroup>

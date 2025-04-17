@@ -162,6 +162,34 @@ export async function createNewPhotosNotification(
 }
 
 /**
+ * Crea notifiche per ricordi futuri in scadenza tra una settimana
+ * @param memoryTitle Titolo del ricordo
+ * @param memoryId ID del ricordo
+ * @param recipientIds Array di ID degli utenti destinatari
+ * @returns Array degli ID delle notifiche create
+ */
+export async function createFutureMemoryReminderNotification(
+  memoryTitle: string,
+  memoryId: number,
+  recipientIds: number[]
+): Promise<number[]> {
+  try {
+    const notificationPromises = recipientIds.map(userId =>
+      createNotification({
+        user_id: userId,
+        title: 'Manca una settimana!',
+        body: `Manca una settimana a "${memoryTitle}"!`,
+        url: `/ricordo/${memoryId}`
+      })
+    );
+    return Promise.all(notificationPromises);
+  } catch (error) {
+    console.error('Error creating future memory reminder notifications:', error);
+    throw error;
+  }
+}
+
+/**
  * Genera notifiche automatiche basate sul tempo (anniversari, compleanni, ecc.)
  * Da eseguire tramite cron job giornaliero
  * @returns true se l'esecuzione è avvenuta con successo
@@ -213,6 +241,29 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
       });
       
       // TODO: Invia notifiche anche agli altri membri del gruppo/coppia
+    }
+    
+    // 3. Ricordi futuri che scadono tra 7 giorni
+    const todayObj = new Date();
+    const weekAhead = new Date(todayObj);
+    weekAhead.setDate(todayObj.getDate() + 7);
+    const weekAheadStr = weekAhead.toISOString().split('T')[0];
+
+    const [futureMemories] = await pool.promise().query(
+      `SELECT m.id, m.title, m.start_date, m.couple_id
+       FROM memories m
+       WHERE m.type = 'FUTURO' AND DATE(m.start_date) = ?`,
+      [weekAheadStr]
+    );
+
+    for (const memory of (futureMemories as any[])) {
+      // Prendi tutti gli utenti della coppia
+      const [users] = await pool.promise().query(
+        'SELECT id FROM users WHERE couple_id = ?',
+        [memory.couple_id]
+      );
+      const userIds = (users as any[]).map((u: any) => u.id);
+      await createFutureMemoryReminderNotification(memory.title, memory.id, userIds);
     }
     
     return true;

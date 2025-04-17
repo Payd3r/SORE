@@ -54,7 +54,7 @@ export interface RecapAttivita {
         }>;
         memories: Array<{
             id: number;
-            type: 'viaggio' | 'evento' | 'semplice';
+            type: 'viaggio' | 'evento' | 'semplice' | 'futuro';
             start_date: string;
             end_date: string | null;
             thumb_big_path: string;

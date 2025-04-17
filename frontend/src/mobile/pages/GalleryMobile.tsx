@@ -30,21 +30,21 @@ export default function GalleryMobile() {
   const [isPinching, setIsPinching] = useState(false);
   const lastPinchTimeRef = useRef<number>(0);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Riferimento per tenere traccia del mese visibile al centro dello schermo
   const [visibleMonthKey, setVisibleMonthKey] = useState<string | null>(null);
   const monthsRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  
+
   // Riferimenti per il virtualizer
   const parentRef = useRef<HTMLDivElement>(null);
-  
+
   // Riferimento per lo scroll alla parte inferiore
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // React Query per il fetching delle immagini con paginazione
-  const { 
-    data, 
-    isLoading: loading, 
+  const {
+    data,
+    isLoading: loading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -125,7 +125,7 @@ export default function GalleryMobile() {
   useEffect(() => {
     const handleScroll = () => {
       if (!scrollContainerRef.current || !hasNextPage || isFetchingNextPage) return;
-      
+
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
       // Se siamo vicini alla fine, carica più immagini
       if (scrollHeight - scrollTop - clientHeight < 500) {
@@ -177,21 +177,21 @@ export default function GalleryMobile() {
   // Raggruppa immagini per mese
   const groupImagesByMonth = useCallback((images: ImageType[]) => {
     const groups: Record<string, { date: Date, images: ImageType[] }> = {};
-    
+
     images.forEach(image => {
       const date = new Date(image.created_at);
       const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      
+
       if (!groups[key]) {
         groups[key] = {
           date,
           images: []
         };
       }
-      
+
       groups[key].images.push(image);
     });
-    
+
     return groups;
   }, []);
 
@@ -226,11 +226,11 @@ export default function GalleryMobile() {
 
   const deleteSelectedImages = useCallback(async () => {
     if (selectedImages.size === 0) return;
-    
+
     setIsDeleting(true);
-    
+
     const deletePromises = Array.from(selectedImages).map(imageId => deleteImage(imageId));
-    
+
     try {
       await Promise.all(deletePromises);
       await refetch();
@@ -310,61 +310,32 @@ export default function GalleryMobile() {
     };
   }, [virtualizer]);
 
-  // Funzione per determinare quale mese è visibile al centro dello schermo
+  // Funzione per determinare quale mese è visibile in alto nello scroll (header più vicino al top visibile)
   const updateVisibleMonth = useCallback(() => {
-    if (!scrollContainerRef.current || activeTab !== 'grid') return;
-    
+    if (!scrollContainerRef.current || activeTab !== 'month') return;
     const containerRect = scrollContainerRef.current.getBoundingClientRect();
-    const containerCenter = containerRect.top + containerRect.height / 2;
-    
-    // Determiniamo la data dell'immagine più vicina al centro
-    const elements = document.querySelectorAll('#gallery-container .grid > div');
-    if (elements.length === 0) return;
-    
-    let closestEl: Element | null = null;
+    // Prendi tutti gli header sticky dei mesi
+    const monthHeaders = Array.from(document.querySelectorAll('[data-month-header]')) as HTMLElement[];
+    let closestKey = null;
     let minDistance = Infinity;
-    
-    elements.forEach(el => {
-      const rect = el.getBoundingClientRect();
-      const elCenter = rect.top + rect.height / 2;
-      const distance = Math.abs(elCenter - containerCenter);
-      
+    monthHeaders.forEach(header => {
+      const rect = header.getBoundingClientRect();
+      const distance = Math.abs(rect.top - containerRect.top - 60); // 60px offset per sticky
       if (distance < minDistance) {
         minDistance = distance;
-        closestEl = el;
+        closestKey = header.getAttribute('data-month-header');
       }
     });
-    
-    if (closestEl && filteredImages.length > 0) {
-      const index = Array.from(elements).indexOf(closestEl);
-      if (index >= 0 && index < filteredImages.length) {
-        const date = new Date(filteredImages[index].created_at);
-        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-        setVisibleMonthKey(monthKey);
-      }
-    }
-  }, [activeTab, filteredImages]);
-  
-  // Esegui lo scroll al mese corrispondente quando si passa da grid a month
-  useEffect(() => {
-    if (activeTab === 'month' && visibleMonthKey && monthsRefs.current[visibleMonthKey]) {
-      // Breve timeout per assicurarsi che il DOM sia aggiornato
-      setTimeout(() => {
-        const monthEl = monthsRefs.current[visibleMonthKey];
-        if (monthEl && scrollContainerRef.current) {
-          monthEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  }, [activeTab, visibleMonthKey]);
-  
+    if (closestKey) setVisibleMonthKey(closestKey);
+  }, [activeTab]);
+
   // Monitora lo scroll per aggiornare il mese visibile
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
     
     const handleScroll = () => {
-      if (activeTab === 'grid') {
+      if (activeTab === 'month') {
         updateVisibleMonth();
       }
     };
@@ -383,7 +354,7 @@ export default function GalleryMobile() {
   const [longPressPosition, setLongPressPosition] = useState({ x: 0, y: 0 });
   const [isUpdatingType, setIsUpdatingType] = useState(false);
   const longPressTimeoutRef = useRef<number | null>(null);
-  
+
   // Lista dei tipi di immagine disponibili
   const imageTypes = [
     { id: 'COPPIA', label: 'Coppia' },
@@ -396,12 +367,12 @@ export default function GalleryMobile() {
   const handleImageLongPress = useCallback((image: ImageType, event: React.TouchEvent | React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     if (isSelectionMode) return; // Non attivare long press in modalità selezione
-    
+
     // Determina la posizione del touch per il menu
     let clientX = 0, clientY = 0;
-    
+
     if ('touches' in event) {
       // È un evento touch
       clientX = event.touches[0].clientX;
@@ -411,46 +382,46 @@ export default function GalleryMobile() {
       clientX = (event as React.MouseEvent).clientX;
       clientY = (event as React.MouseEvent).clientY;
     }
-    
+
     // Calcola l'altezza del menu (circa 180px per 4 elementi)
     const menuHeight = 180;
     const menuWidth = 180;
-    
+
     // Determina se il menu deve apparire sopra o sotto il punto di tocco
     // Se il punto è nella metà inferiore dello schermo, posiziona il menu sopra
     const isInBottomHalf = clientY > window.innerHeight / 2;
-    
+
     // Calcola la distanza dal fondo dello schermo, considerando la barra di navigazione
     const distanceFromBottom = window.innerHeight - clientY;
     const bottomSafeArea = 100; // Tiene conto della barra di navigazione e altri elementi in basso
     const isNearBottom = distanceFromBottom < (menuHeight + bottomSafeArea);
-    
+
     // Posiziona il menu in modo che non esca dai bordi dello schermo
-    setLongPressPosition({ 
-      x: Math.max(10, Math.min(clientX - menuWidth/2, window.innerWidth - menuWidth - 10)),
+    setLongPressPosition({
+      x: Math.max(10, Math.min(clientX - menuWidth / 2, window.innerWidth - menuWidth - 10)),
       y: isInBottomHalf || isNearBottom
-         ? Math.max(10, clientY - menuHeight - 20) // Sopra il dito se in basso o vicino al fondo
-         : Math.min(window.innerHeight - menuHeight - bottomSafeArea, clientY + 20) // Sotto il dito se in alto
+        ? Math.max(10, clientY - menuHeight - 20) // Sopra il dito se in basso o vicino al fondo
+        : Math.min(window.innerHeight - menuHeight - bottomSafeArea, clientY + 20) // Sotto il dito se in alto
     });
-    
+
     setLongPressedImage(image);
     setShowTypeToggle(true);
   }, [isSelectionMode]);
-  
+
   // Gestione del touch start per le immagini
   const handleImageTouchStart = useCallback((event: TouchEvent, image: ImageType) => {
     if (event.touches.length !== 1 || isSelectionMode) return;
-    
+
     // Avvia il timer per il long press
     if (longPressTimeoutRef.current) {
       window.clearTimeout(longPressTimeoutRef.current);
     }
-    
+
     longPressTimeoutRef.current = window.setTimeout(() => {
       handleImageLongPress(image, event);
     }, 500); // 500ms per rilevare il long press
   }, [handleImageLongPress, isSelectionMode]);
-  
+
   // Gestione del touch move per annullare il long press se il dito si muove
   const handleImageTouchMove = useCallback(() => {
     if (longPressTimeoutRef.current) {
@@ -458,7 +429,7 @@ export default function GalleryMobile() {
       longPressTimeoutRef.current = null;
     }
   }, []);
-  
+
   // Gestione del touch end per cancellare il timer
   const handleImageTouchEnd = useCallback(() => {
     if (longPressTimeoutRef.current) {
@@ -470,16 +441,16 @@ export default function GalleryMobile() {
   // Funzione per aggiornare il tipo di immagine
   const updateImageTypeHandler = useCallback(async (newType: string) => {
     if (!longPressedImage) return;
-    
+
     // Chiudo subito il menu per dare un feedback immediato all'utente
     setShowTypeToggle(false);
     setLongPressedImage(null);
-    
+
     setIsUpdatingType(true);
     try {
       // Utilizziamo la nuova funzione che aggiorna solo il tipo
       await updateImageType(longPressedImage.id, newType);
-      
+
       // Aggiorna la cache di React Query
       queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
     } catch (error) {
@@ -493,19 +464,79 @@ export default function GalleryMobile() {
   const getActiveFiltersCount = () => {
     // Conta i filtri di tipo selezionati (escludendo 'all' che non è un filtro ma un reset)
     const typeFiltersCount = selectedTypes.size;
-    
+
     // Aggiunge 1 se è selezionato un filtro per ricordi diverso da 'all'
     const memoryFilterCount = memoryFilter !== 'all' ? 1 : 0;
-    
+
     return typeFiltersCount + memoryFilterCount;
   };
 
   const hasActiveFilters = getActiveFiltersCount() > 0;
 
+  // --- INIZIO: UI/UX MODERNA PER LA TAB MESI ---
+  // Calcola la lista dei mesi disponibili ordinati (più recenti prima)
+  const monthsList = useMemo(() => {
+    const groups = groupImagesByMonth(filteredImages);
+    return Object.entries(groups)
+      .sort(([keyA], [keyB]) => keyB.localeCompare(keyA))
+      .map(([key, group]) => ({
+        key,
+        date: group.date,
+        label: formatMonthTitle(group.date),
+        count: group.images.length
+      }));
+  }, [filteredImages, groupImagesByMonth, formatMonthTitle]);
+
+  // Ref per la barra orizzontale mesi
+  const monthsBarRef = useRef<HTMLDivElement>(null);
+
+  // Funzione per scrollare al mese selezionato
+  const scrollToMonth = (key: string) => {
+    const el = monthsRefs.current[key];
+    if (el && scrollContainerRef.current) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // Scrolla anche la barra orizzontale per centrare la pillola
+    if (monthsBarRef.current) {
+      const pill = monthsBarRef.current.querySelector(`[data-month-key='${key}']`);
+      if (pill) {
+        const pillRect = (pill as HTMLElement).getBoundingClientRect();
+        const barRect = monthsBarRef.current.getBoundingClientRect();
+        const offset = pillRect.left - barRect.left - barRect.width / 2 + pillRect.width / 2;
+        monthsBarRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+      }
+    }
+  };
+
+  // Quick jump: scrolla all'ultimo mese (più recente)
+  const handleJumpToLatest = () => {
+    if (monthsList.length > 0) {
+      scrollToMonth(monthsList[0].key);
+    }
+  };
+
+  // Quick jump: scrolla al primo mese (più vecchio)
+  const handleJumpToFirst = () => {
+    if (monthsList.length > 0) {
+      scrollToMonth(monthsList[monthsList.length - 1].key);
+    }
+  };
+
+  // --- FINE: UI/UX MODERNA PER LA TAB MESI ---
+
+  // Effetto: quando cambia visibleMonthKey, centra il mese evidenziato nella barra mesi
+  useEffect(() => {
+    if (!monthsBarRef.current || !visibleMonthKey) return;
+    const pill = monthsBarRef.current.querySelector(`[data-month-key='${visibleMonthKey}']`);
+    if (pill && 'scrollIntoView' in pill) {
+      (pill as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [visibleMonthKey]);
+
   return (
     <div className="flex flex-col h-full relative pb-[21%]">
       {/* Effetto blur in alto */}
-      <div 
+      <div
         className="absolute top-0 left-0 right-0 z-30 pointer-events-none h-[130px]"
         style={{
           background: 'transparent',
@@ -514,7 +545,7 @@ export default function GalleryMobile() {
           backdropFilter: 'blur(16px)'
         }}
       ></div>
-      
+
       {/* Contenuto principale - scrolling */}
       <div className="flex-1 overflow-auto" ref={scrollContainerRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         <div className="min-h-full">
@@ -538,23 +569,20 @@ export default function GalleryMobile() {
                   }}
                 >
                   <div className="space-y-0">
-                    <div className={`grid ${
-                      isCompactGrid
+                    <div className={`grid ${isCompactGrid
                         ? 'grid-cols-5 gap-[2px]'
                         : 'grid-cols-3 gap-[2px]'
-                    }`}>
+                      }`}>
                       {filteredImages.map((image) => (
                         <div
                           key={image.id}
-                          className={`relative aspect-square overflow-hidden ${
-                            isSelectionMode 
-                              ? 'border-[1px] border-transparent' 
+                          className={`relative aspect-square overflow-hidden ${isSelectionMode
+                              ? 'border-[1px] border-transparent'
                               : ''
-                          } ${
-                            isSelectionMode && selectedImages.has(image.id)
+                            } ${isSelectionMode && selectedImages.has(image.id)
                               ? '!border-[#007AFF] dark:!border-[#0A84FF]'
                               : ''
-                          }`}
+                            }`}
                           onClick={() => {
                             if (isSelectionMode) {
                               toggleSelectImage(image.id);
@@ -575,19 +603,17 @@ export default function GalleryMobile() {
                             alt={`Immagine ${image.id}`}
                             className="w-full h-full object-cover bg-gray-100 dark:bg-gray-800"
                           />
-                          
+
                           {/* Overlay di selezione in stile Apple */}
                           {isSelectionMode && (
                             <div
-                              className={`absolute inset-0 flex items-center justify-center ${
-                                selectedImages.has(image.id) ? 'bg-black/10 dark:bg-black/30' : ''
-                              }`}
+                              className={`absolute inset-0 flex items-center justify-center ${selectedImages.has(image.id) ? 'bg-black/10 dark:bg-black/30' : ''
+                                }`}
                             >
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${
-                                selectedImages.has(image.id)
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${selectedImages.has(image.id)
                                   ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-white'
                                   : 'border-white/80 bg-black/20'
-                              }`}>
+                                }`}>
                                 {selectedImages.has(image.id) && (
                                   <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -599,7 +625,7 @@ export default function GalleryMobile() {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Indicatore di caricamento per infinite scroll */}
                     {isFetchingNextPage && (
                       <div className="py-6 flex justify-center">
@@ -609,100 +635,141 @@ export default function GalleryMobile() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6 px-0">
-                  {Object.entries(groupImagesByMonth(filteredImages))
-                    .sort(([keyA], [keyB]) => keyB.localeCompare(keyA))
-                    .map(([key, group]) => (
-                      <div 
-                        key={key} 
-                        className="space-y-1"
-                        ref={el => {
-                          monthsRefs.current[key] = el;
-                        }}
-                      >
-                        <h2 className="text-sm font-semibold text-gray-900 dark:text-white px-3 py-2 sticky top-0 bg-transparent backdrop-blur-xl z-20 mb-1 flex items-center justify-between">
-                          <span>{formatMonthTitle(group.date)}</span>
-                          <span className="inline-flex items-center justify-center rounded-full bg-gray-200/80 dark:bg-gray-700/80 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                            {group.images.length} foto
-                          </span>
-                        </h2>
-                        <div className={`grid ${
-                          isCompactGrid
-                            ? 'grid-cols-5 gap-[2px]'
-                            : 'grid-cols-3 gap-[2px]'
-                        }`}>
-                          {[...group.images].map((image) => (
-                            <div
-                              key={image.id}
-                              className={`relative aspect-square overflow-hidden ${
-                                isSelectionMode 
-                                  ? 'border-[1.5px] border-transparent' 
-                                  : ''
-                              } ${
-                                isSelectionMode && selectedImages.has(image.id)
-                                  ? '!border-[#007AFF] dark:!border-[#0A84FF]'
-                                  : ''
+                <>
+                  {/* HEADER STICKY CON BARRA MESI */}
+                  <div className="sticky top-[13%] z-30 w-full flex flex-col items-center bg-transparent">
+                    <div ref={monthsBarRef} className="w-full overflow-x-auto flex gap-3 px-2 py-3 scrollbar-hide pointer-events-auto mt-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      {monthsList.map((month) => {
+                        // Formatta come 'Dic 25'
+                        const date = month.date;
+                        const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                        const label = `${monthNames[date.getMonth()]} ${String(date.getFullYear()).slice(-2)}`;
+                        return (
+                          <button
+                            key={month.key}
+                            data-month-key={month.key}
+                            className={`transition-all duration-200 px-5 py-2 rounded-full text-xs font-semibold whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-blue-400/40 ${(visibleMonthKey || monthsList[0]?.key) === month.key
+                                ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white scale-105 shadow-md'
+                                : 'bg-gray-200/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-gray-300/80 dark:hover:bg-gray-600/80'
                               }`}
-                              onClick={() => {
-                                if (isSelectionMode) {
-                                  toggleSelectImage(image.id);
-                                } else {
-                                  handleImageClick(image);
-                                }
-                              }}
-                              onTouchStart={(e) => handleImageTouchStart(e, image)}
-                              onTouchMove={handleImageTouchMove}
-                              onTouchEnd={handleImageTouchEnd}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                handleImageLongPress(image, e);
-                              }}
-                            >
-                              <LazyImage
-                                src={getImageUrl(image.thumb_big_path)}
-                                alt={`Immagine ${image.id}`}
-                                className="w-full h-full object-cover bg-gray-100 dark:bg-gray-800"
-                              />
-                              
-                              {/* Overlay di selezione in stile Apple */}
-                              {isSelectionMode && (
-                                <div
-                                  className="absolute inset-0 flex items-center justify-center"
-                                  style={{
-                                    backgroundColor: selectedImages.has(image.id) ? 'rgba(0,0,0,0.1)' : 'transparent',
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleSelectImage(image.id);
-                                  }}
-                                >
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${
-                                    selectedImages.has(image.id)
-                                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-white'
-                                      : 'border-white/80 bg-black/20'
-                                  }`}>
-                                    {selectedImages.has(image.id) && (
-                                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    
-                  {/* Indicatore di caricamento per infinite scroll */}
-                  {isFetchingNextPage && (
-                    <div className="py-6 flex justify-center">
-                      <Loader type="spinner" size="sm" />
+                            style={{ minWidth: '80px', minHeight: '32px', fontSize: '15px' }}
+                            onClick={() => scrollToMonth(month.key)}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
+                  </div>
+                  {/* QUICK JUMP BUTTONS IN BASSO A SINISTRA */}
+                  <div className="fixed bottom-[10%] left-2 z-50 flex flex-col gap-2 pointer-events-auto">
+                    <button
+                      className="bg-white/90 dark:bg-gray-900/90 shadow-lg rounded-full p-2 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all"
+                      onClick={handleJumpToLatest}
+                      aria-label="Vai all'ultimo mese"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 17l-7-7-7 7" /></svg>
+                    </button>
+                    <button
+                      className="bg-white/90 dark:bg-gray-900/90 shadow-lg rounded-full p-2 text-xs font-semibold text-[#007AFF] dark:text-[#0A84FF] hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all"
+                      onClick={handleJumpToFirst}
+                      aria-label="Vai al primo mese"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 7l7 7 7-7" /></svg>
+                    </button>
+                  </div>
+                  {/* SEZIONI MESI */}
+                  <div className="space-y-6 px-0">
+                    {Object.entries(groupImagesByMonth(filteredImages))
+                      .sort(([keyA], [keyB]) => keyB.localeCompare(keyA))
+                      .map(([key, group]) => (
+                        <div
+                          key={key}
+                          className=" bg-transparent pt-0 pb-1 px-1 transition-all duration-300"
+                          ref={el => {
+                            monthsRefs.current[key] = el;
+                          }}
+                          data-month-header={key}
+                        >
+                          <div className="flex items-center justify-between px-3 py-2 bg-transparent">
+                            <span className="text-base font-semibold text-gray-900 dark:text-white">{formatMonthTitle(group.date)}</span>
+                            <span className="inline-flex items-center justify-center rounded-full bg-gray-200/90 dark:bg-gray-700/90 px-3 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 min-w-[60px] min-h-[28px]">
+                              {group.images.length} foto
+                            </span>
+                          </div>
+                          <div className={`grid ${isCompactGrid
+                              ? 'grid-cols-5 gap-[2px]'
+                              : 'grid-cols-3 gap-[2px]'
+                            }`}>
+                            {[...group.images].map((image) => (
+                              <div
+                                key={image.id}
+                                className={`relative aspect-square overflow-hidden ${isSelectionMode
+                                    ? 'border-[1.5px] border-transparent'
+                                    : ''
+                                  } ${isSelectionMode && selectedImages.has(image.id)
+                                    ? '!border-[#007AFF] dark:!border-[#0A84FF]'
+                                    : ''
+                                  }`}
+                                onClick={() => {
+                                  if (isSelectionMode) {
+                                    toggleSelectImage(image.id);
+                                  } else {
+                                    handleImageClick(image);
+                                  }
+                                }}
+                                onTouchStart={(e) => handleImageTouchStart(e, image)}
+                                onTouchMove={handleImageTouchMove}
+                                onTouchEnd={handleImageTouchEnd}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  handleImageLongPress(image, e);
+                                }}
+                              >
+                                <LazyImage
+                                  src={getImageUrl(image.thumb_big_path)}
+                                  alt={`Immagine ${image.id}`}
+                                  className="w-full h-full object-cover bg-gray-100 dark:bg-gray-800"
+                                />
+
+                                {/* Overlay di selezione in stile Apple */}
+                                {isSelectionMode && (
+                                  <div
+                                    className="absolute inset-0 flex items-center justify-center"
+                                    style={{
+                                      backgroundColor: selectedImages.has(image.id) ? 'rgba(0,0,0,0.1)' : 'transparent',
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleSelectImage(image.id);
+                                    }}
+                                  >
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${selectedImages.has(image.id)
+                                        ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-white'
+                                        : 'border-white/80 bg-black/20'
+                                      }`}>
+                                      {selectedImages.has(image.id) && (
+                                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    {/* Indicatore di caricamento per infinite scroll */}
+                    {isFetchingNextPage && (
+                      <div className="py-6 flex justify-center">
+                        <Loader type="spinner" size="sm" />
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -727,16 +794,15 @@ export default function GalleryMobile() {
               )}
             </button>
           </div>
-          
+
           {/* Toggle visualizzazione al centro */}
           <div className="flex justify-center">
             <div className="inline-flex items-center rounded-full bg-gray-200/70 dark:bg-gray-800/70 p-1.5 min-w-[250px] backdrop-blur-xl shadow-sm">
               <button
-                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                  activeTab === 'grid'
+                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'grid'
                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold scale-105'
                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
-                }`}
+                  }`}
                 onClick={() => {
                   setActiveTab('grid');
                   // Aggiorna subito il mese visibile
@@ -751,11 +817,10 @@ export default function GalleryMobile() {
                 <span>Griglia</span>
               </button>
               <button
-                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                  activeTab === 'month'
+                className={`flex-1 py-2 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'month'
                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold scale-105'
                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
-                }`}
+                  }`}
                 onClick={() => {
                   // Aggiorna il mese visibile prima di cambiare tab
                   if (activeTab === 'grid') {
@@ -771,7 +836,7 @@ export default function GalleryMobile() {
               </button>
             </div>
           </div>
-          
+
           {/* Pulsante selezione a destra con icona */}
           <div className="flex justify-end">
             <button
@@ -779,11 +844,10 @@ export default function GalleryMobile() {
                 setIsSelectionMode(!isSelectionMode);
                 if (isSelectionMode) setSelectedImages(new Set());
               }}
-              className={`p-2 rounded-full backdrop-blur-xl ${
-                isSelectionMode 
-                  ? 'text-red-500 dark:text-red-400 bg-gray-100/50 dark:bg-gray-800/50' 
+              className={`p-2 rounded-full backdrop-blur-xl ${isSelectionMode
+                  ? 'text-red-500 dark:text-red-400 bg-gray-100/50 dark:bg-gray-800/50'
                   : 'text-[#007AFF] dark:text-[#0A84FF] bg-gray-100/50 dark:bg-gray-800/50'
-              }`}
+                }`}
             >
               {isSelectionMode ? (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -797,7 +861,7 @@ export default function GalleryMobile() {
             </button>
           </div>
         </div>
-        
+
         {/* Filtri collassati - Stile iOS 18 */}
         {showFilters && (
           <div className="mt-3 pb-3 bg-gray-200/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-sm overflow-hidden">
@@ -810,11 +874,10 @@ export default function GalleryMobile() {
                     setSortBy('newest');
                     setShowFilters(false);
                   }}
-                  className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${
-                    sortBy === 'newest'
-                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm' 
+                  className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${sortBy === 'newest'
+                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm'
                       : 'bg-white/70 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-700/90'
-                  }`}
+                    }`}
                 >
                   Più recenti
                 </button>
@@ -823,11 +886,10 @@ export default function GalleryMobile() {
                     setSortBy('oldest');
                     setShowFilters(false);
                   }}
-                  className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${
-                    sortBy === 'oldest'
-                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm' 
+                  className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${sortBy === 'oldest'
+                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm'
                       : 'bg-white/70 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-700/90'
-                  }`}
+                    }`}
                 >
                   Più vecchi
                 </button>
@@ -836,20 +898,19 @@ export default function GalleryMobile() {
                     setSortBy('random');
                     setShowFilters(false);
                   }}
-                  className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${
-                    sortBy === 'random'
-                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm' 
+                  className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${sortBy === 'random'
+                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm'
                       : 'bg-white/70 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-700/90'
-                  }`}
+                    }`}
                 >
                   Casuali
                 </button>
               </div>
             </div>
-            
+
             {/* Separatore sottile in stile iOS 18 */}
             <div className="mx-4 h-[0.5px] bg-gray-300/50 dark:bg-gray-600/50"></div>
-            
+
             {/* Filtri per tipo */}
             <div className="pt-3 pb-3 px-4">
               <h3 className="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 mb-3">Tipo</h3>
@@ -862,12 +923,12 @@ export default function GalleryMobile() {
                     PAESAGGIO: 'Paesaggio',
                     CIBO: 'Cibo'
                   }[type];
-                  
+
                   // Corretto per il filtro 'all'
-                  const isSelected = type === 'all' 
+                  const isSelected = type === 'all'
                     ? selectedTypes.size === 0
                     : selectedTypes.has(type);
-                  
+
                   return (
                     <button
                       key={type}
@@ -887,11 +948,10 @@ export default function GalleryMobile() {
                         }
                         setShowFilters(false);
                       }}
-                      className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm' 
+                      className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${isSelected
+                          ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm'
                           : 'bg-white/70 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-700/90'
-                      }`}
+                        }`}
                     >
                       {displayText}
                     </button>
@@ -899,10 +959,10 @@ export default function GalleryMobile() {
                 })}
               </div>
             </div>
-            
+
             {/* Separatore sottile in stile iOS 18 */}
             <div className="mx-4 h-[0.5px] bg-gray-300/50 dark:bg-gray-600/50"></div>
-            
+
             {/* Filtri per ricordi */}
             <div className="pt-3 pb-3 px-4">
               <h3 className="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400 mb-3">Ricordi</h3>
@@ -913,7 +973,7 @@ export default function GalleryMobile() {
                     withMemory: 'Con ricordi',
                     withoutMemory: 'Senza ricordi'
                   }[filter];
-                  
+
                   return (
                     <button
                       key={filter}
@@ -921,11 +981,10 @@ export default function GalleryMobile() {
                         setMemoryFilter(filter);
                         setShowFilters(false);
                       }}
-                      className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${
-                        memoryFilter === filter
-                          ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm' 
+                      className={`px-3.5 py-2 text-xs rounded-full transition-all duration-200 ${memoryFilter === filter
+                          ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm'
                           : 'bg-white/70 dark:bg-gray-700/70 text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-700/90'
-                      }`}
+                        }`}
                     >
                       {displayText}
                     </button>
@@ -936,7 +995,7 @@ export default function GalleryMobile() {
           </div>
         )}
       </div>
-      
+
       {/* Barra di selezione (appare solo in modalità selezione) */}
       {isSelectionMode && (
         <div className="fixed bottom-[9%] left-0 right-0 z-40 bg-[#F2F2F7]/95 dark:bg-black/95 backdrop-blur-lg px-4 py-1 shadow-lg transform transition-transform border-t border-gray-200 dark:border-gray-800">
@@ -947,11 +1006,10 @@ export default function GalleryMobile() {
             <button
               onClick={deleteSelectedImages}
               disabled={selectedImages.size === 0 || isDeleting}
-              className={`px-4 py-1 mb-1 rounded-full text-white text-sm font-medium ${
-                selectedImages.size === 0 || isDeleting
+              className={`px-4 py-1 mb-1 rounded-full text-white text-sm font-medium ${selectedImages.size === 0 || isDeleting
                   ? 'bg-red-400 dark:bg-red-500/50 opacity-50'
                   : 'bg-red-500 dark:bg-red-600'
-              }`}
+                }`}
             >
               {isDeleting ? 'Eliminazione...' : 'Elimina'}
             </button>
@@ -971,7 +1029,7 @@ export default function GalleryMobile() {
 
       {/* Aggiungi il toggle per cambiare il tipo di immagine */}
       {showTypeToggle && longPressedImage && (
-        <div 
+        <div
           className="fixed z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden"
           style={{
             left: longPressPosition.x,
@@ -980,18 +1038,17 @@ export default function GalleryMobile() {
             maxWidth: "220px"
           }}
         >
-          <div className="p-1">            
+          <div className="p-1">
             <div className="space-y-1">
               {imageTypes.map((type) => (
                 <button
                   key={type.id}
                   disabled={isUpdatingType}
                   onClick={() => updateImageTypeHandler(type.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center space-x-2 ${
-                    longPressedImage.type?.toUpperCase() === type.id 
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center space-x-2 ${longPressedImage.type?.toUpperCase() === type.id
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
                       : 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'
-                  }`}
+                    }`}
                 >
                   <span className="flex-1">{type.label}</span>
                   {longPressedImage.type?.toUpperCase() === type.id && (
@@ -1005,17 +1062,20 @@ export default function GalleryMobile() {
           </div>
         </div>
       )}
-      
+
       {/* Overlay per chiudere il toggle */}
       {showTypeToggle && (
-        <div 
-          className="fixed inset-0 z-40 bg-transparent" 
+        <div
+          className="fixed inset-0 z-40 bg-transparent"
           onClick={() => {
             setShowTypeToggle(false);
             setLongPressedImage(null);
           }}
         ></div>
       )}
+
+      {/* Spazio extra per header sticky principale */}
+      <style>{`.sticky.top-0.z-30 { top: 70px !important; }`}</style>
     </div>
   );
 } 

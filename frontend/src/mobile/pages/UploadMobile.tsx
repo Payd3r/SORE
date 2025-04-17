@@ -9,7 +9,7 @@ import { searchTracks } from '../../api/spotify';
 import { useUpload } from '../../contexts/UploadContext';
 
 // Tipi
-type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
+type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 type IdeaType = 'RISTORANTI' | 'VIAGGI' | 'SFIDE' | 'SEMPLICI';
 type UploadType = 'MEMORY' | 'IMAGE' | 'IDEA';
 
@@ -49,6 +49,7 @@ export default function UploadMobile() {
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState<string>('');
   const [memoryType, setMemoryType] = useState<MemoryType>('SEMPLICE');
+  const [futureDate, setFutureDate] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [spotifyTrack, setSpotifyTrack] = useState<SpotifyTrack | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,6 +134,7 @@ export default function UploadMobile() {
     setTitle('');
     setLocation('');
     setMemoryType('SEMPLICE');
+    setFutureDate('');
     setSelectedFiles([]);
     setSpotifyTrack(null);
     setSearchQuery('');
@@ -211,17 +213,32 @@ export default function UploadMobile() {
           // Prepariamo l'ID della canzone Spotify se selezionata
           const spotifyId = spotifyTrack ? spotifyTrack.id : undefined;
           
-          // Creiamo il ricordo
-          const memoryResponse = await createMemory({
+          // Preparo i dati del ricordo
+          const memoryData: any = {
             title: title.trim(),
             type: memoryType,
             song: spotifyId,
             location: location.trim() || undefined
-          });
+          };
+          if (memoryType === 'FUTURO' && futureDate) {
+            memoryData.date = futureDate;
+          }
+          
+          // Creiamo il ricordo
+          const memoryResponse = await createMemory(memoryData);
+          
+          // Invalida la cache dei ricordi per aggiornare subito la HomeMobile
+          queryClient.invalidateQueries({ queryKey: ['memories'] });
           
           // Se ci sono file da caricare, li associamo al ricordo
           if (selectedFiles.length > 0) {
             await handleUploadProcess(selectedFiles, memoryResponse.data.id);
+          }
+          
+          // Se è Futuro, non obbligare immagini
+          if (memoryType !== 'FUTURO' && selectedFiles.length === 0) {
+            setError('Seleziona almeno un\'immagine da caricare');
+            return;
           }
           
           // Reset form e navigazione verso la home
@@ -256,7 +273,7 @@ export default function UploadMobile() {
             type: ideaType,
           });
           
-          // Aggiorniamo la cache
+          // Invalida la cache delle idee per aggiornare subito la HomeMobile
           queryClient.invalidateQueries({ queryKey: ['ideas'] });
           
           // Reset form e navigazione verso la home
@@ -636,7 +653,7 @@ export default function UploadMobile() {
                 Tipo di ricordo
               </label>
               <div className="grid grid-cols-3 gap-2">
-                {(['SEMPLICE', 'EVENTO', 'VIAGGIO'] as MemoryType[]).map((type) => (
+                {(['SEMPLICE', 'EVENTO', 'VIAGGIO', 'FUTURO'] as MemoryType[]).map((type) => (
                   <button
                     key={type}
                     type="button"
@@ -647,11 +664,27 @@ export default function UploadMobile() {
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
-                    {type === 'VIAGGIO' ? 'Viaggio' : type === 'EVENTO' ? 'Evento' : 'Semplice'}
+                    {type === 'VIAGGIO' ? 'Viaggio' : type === 'EVENTO' ? 'Evento' : type === 'FUTURO' ? 'Futuro' : 'Semplice'}
                   </button>
                 ))}
               </div>
             </div>
+            
+            {/* Campo data opzionale per Futuro */}
+            {memoryType === 'FUTURO' && (
+              <div className="mt-3">
+                <label htmlFor="future-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Data (opzionale)
+                </label>
+                <input
+                  type="date"
+                  id="future-date"
+                  value={futureDate}
+                  onChange={e => setFutureDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
+                />
+              </div>
+            )}
             
             {/* Posizione */}
             <div className="bg-white/70 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl p-4 shadow-sm">

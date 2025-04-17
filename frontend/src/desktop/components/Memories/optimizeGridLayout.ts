@@ -15,6 +15,18 @@ export const optimizeGridLayout = (memories: MemoryWithImages[], windowWidth: nu
   let optimizedLayout: MemoryWithImages[] = [];
   let currentRowWidth = 0;
 
+  // --- NUOVA LOGICA: separa i futuri dagli altri ---
+  const futuri = memories.filter(m => m.type.toLowerCase() === 'futuro')
+    .sort((a, b) => {
+      // Ordina per data crescente, se non c'è data metti in fondo
+      const dateA = a.start_date || a.created_at;
+      const dateB = b.start_date || b.created_at;
+      if (!a.start_date && b.start_date) return 1;
+      if (a.start_date && !b.start_date) return -1;
+      return new Date(dateA).getTime() - new Date(dateB).getTime();
+    });
+  const altri = memories.filter(m => m.type.toLowerCase() !== 'futuro');
+
   // Funzione per ottenere la larghezza di un elemento
   const getItemWidth = (memory: MemoryWithImages) => {
     return memory.type.toLowerCase() === 'viaggio' || memory.type.toLowerCase() === 'evento' ? 2 : 1;
@@ -74,72 +86,60 @@ export const optimizeGridLayout = (memories: MemoryWithImages[], windowWidth: nu
 
   // Funzione per trovare il prossimo elemento da aggiungere
   const findNextMemory = (memories: MemoryWithImages[]) => {
-    // Se la riga è vuota, prendi il primo elemento disponibile
     if (currentRow.length === 0) {
       return memories[0];
     }
-
-    // Cerca un elemento che bilanci la riga
     for (const memory of memories) {
       const type = memory.type.toLowerCase();
-
-      // Se non c'è spazio per questo elemento, salta
       if (!canAddToRow(memory)) continue;
-
-      // Se la riga ha già un elemento di questo tipo, salta
       if (hasTypeInRow(type)) continue;
-
-      // Se è un viaggio o un evento e la riga è già piena a metà, salta
       if ((type === 'viaggio' || type === 'evento') && currentRowWidth >= columnsPerRow / 2) continue;
-
       return memory;
     }
-
-    // Se non troviamo un elemento che bilancia la riga, prendi il primo disponibile
     return memories.find(memory => canAddToRow(memory));
   };
 
-  // Ordina tutti i ricordi per punteggio
-  const sortedMemories = [...memories].sort((a, b) => {
-    const scoreA = getMemoryScore(a);
-    const scoreB = getMemoryScore(b);
-    return scoreB - scoreA;
-  });
-
-  // Distribuisci i ricordi ordinati
-  while (sortedMemories.length > 0) {
-    const nextMemory = findNextMemory(sortedMemories);
-    
-    if (!nextMemory) {
-      // Se non possiamo aggiungere più elementi alla riga corrente, completa la riga
-      if (currentRow.length > 0) {
+  // --- Applica la logica di grid PRIMA ai futuri, poi agli altri ---
+  function distribuisci(memoriesToDistribute: MemoryWithImages[]) {
+    // Funzione identica a quella già presente, ma applicata a un array specifico
+    // Ordina tutti i ricordi per punteggio (solo per "altri")
+    const sortedMemories = memoriesToDistribute === altri
+      ? [...memoriesToDistribute].sort((a, b) => {
+          const scoreA = getMemoryScore(a);
+          const scoreB = getMemoryScore(b);
+          return scoreB - scoreA;
+        })
+      : [...memoriesToDistribute]; // I futuri sono già ordinati
+    while (sortedMemories.length > 0) {
+      const nextMemory = findNextMemory(sortedMemories);
+      if (!nextMemory) {
+        if (currentRow.length > 0) {
+          optimizedLayout.push(...currentRow);
+          currentRow = [];
+          currentRowWidth = 0;
+        }
+        continue;
+      }
+      const index = sortedMemories.indexOf(nextMemory);
+      sortedMemories.splice(index, 1);
+      currentRow.push(nextMemory);
+      currentRowWidth += getItemWidth(nextMemory);
+      if (currentRowWidth >= columnsPerRow) {
         optimizedLayout.push(...currentRow);
         currentRow = [];
         currentRowWidth = 0;
       }
-      continue;
     }
-
-    // Rimuovi l'elemento dalla lista dei disponibili
-    const index = sortedMemories.indexOf(nextMemory);
-    sortedMemories.splice(index, 1);
-
-    // Aggiungi l'elemento alla riga corrente
-    currentRow.push(nextMemory);
-    currentRowWidth += getItemWidth(nextMemory);
-
-    // Se la riga è piena, completa la riga
-    if (currentRowWidth >= columnsPerRow) {
+    if (currentRow.length > 0) {
       optimizedLayout.push(...currentRow);
       currentRow = [];
       currentRowWidth = 0;
     }
   }
 
-  // Aggiungi l'ultima riga se non è vuota
-  if (currentRow.length > 0) {
-    optimizedLayout.push(...currentRow);
-  }
+  // Prima i futuri, poi gli altri
+  distribuisci(futuri);
+  distribuisci(altri);
 
   return optimizedLayout;
 }; 

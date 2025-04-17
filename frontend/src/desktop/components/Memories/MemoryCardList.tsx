@@ -6,20 +6,22 @@ import { useNavigate } from 'react-router-dom';
 import { IoCalendar, IoLocationOutline } from 'react-icons/io5';
 
 interface MemoryCardListProps {
-  memory: Memory;
+  memory?: Memory;
   onClick?: () => void;
+  futureMemories?: Memory[];
 }
 
-export default function MemoryCardList({ memory, onClick }: MemoryCardListProps) {
+export default function MemoryCardList({ memory, onClick, futureMemories }: MemoryCardListProps) {
   const navigate = useNavigate();
-  const isViaggio = memory.type.toLowerCase() === 'viaggio';
-  const isSemplice = memory.type.toLowerCase() === 'semplice';
+  const isViaggio = memory?.type.toLowerCase() === 'viaggio';
+  const isSemplice = memory?.type.toLowerCase() === 'semplice';
+  const isFuturo = memory?.type.toLowerCase() === 'futuro';
 
   const handleClick = () => {
     if (onClick) {
       onClick();
     } else {
-      navigate(`/ricordo/${memory.id}`);
+      navigate(`/ricordo/${memory?.id}`);
     }
   };
 
@@ -58,13 +60,76 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
     }
   };
 
-  const typeStyle = getTypeLabel(memory.type);
-  const firstImage = memory.images[0];
+  const typeStyle = getTypeLabel(memory?.type || '');
+  const firstImage = memory?.images[0];
   
   // Determiniamo quale percorso immagine utilizzare in base al tipo di ricordo
   const imagePath = isViaggio || isSemplice
     ? (firstImage?.webp_path || firstImage?.thumb_big_path || '')
     : (firstImage?.thumb_big_path || '');
+
+  // Se futureMemories è presente, mostra la card compatta multipla
+  if (futureMemories && futureMemories.length > 0) {
+    const showCount = Math.min(4, futureMemories.length);
+    return (
+      <div
+        className="bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-lg border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex items-center min-h-28 p-4 gap-4"
+        onClick={() => {
+          if (onClick) onClick();
+          else if (futureMemories.length === 1) navigate(`/ricordo/${futureMemories[0].id}`);
+        }}
+      >
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800">
+          <IoCalendar className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+        </div>
+        <div className="flex-1 flex flex-col justify-center overflow-hidden">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-500 text-white uppercase tracking-wide">Futuro</span>
+          </div>
+          <div className={`grid gap-x-4 gap-y-1 ${showCount > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {futureMemories.slice(0, showCount).map(fm => (
+              <div key={fm.id} className="truncate">
+                <div className="font-semibold text-blue-900 dark:text-blue-100 text-sm truncate">{fm.title}</div>
+                {fm.start_date && (
+                  <div className="text-xs text-blue-700 dark:text-blue-200 truncate">{formatDate(fm.start_date)}</div>
+                )}
+              </div>
+            ))}
+          </div>
+          {futureMemories.length > showCount && (
+            <div className="text-xs text-blue-800 dark:text-blue-200 opacity-80 mt-2">+{futureMemories.length - showCount} altri ricordi futuri</div>
+          )}
+          <p className="text-xs text-blue-800 dark:text-blue-200 opacity-80 mt-2">Presto potrai aggiungere foto e dettagli!</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isFuturo) {
+    return (
+      <div
+        className="bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-lg border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex items-center h-24 p-3 gap-3"
+        onClick={handleClick}
+      >
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800">
+          <IoCalendar className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+        </div>
+        <div className="flex-1 flex flex-col justify-center overflow-hidden">
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-500 text-white">Futuro</span>
+          </div>
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 line-clamp-1">{memory?.title}</h3>
+          {memory?.start_date && (
+            <div className="flex items-center gap-1 text-xs text-blue-700 dark:text-blue-200 mt-1">
+              <IoCalendar className="w-3.5 h-3.5" />
+              <span>In programma per il {formatDate(memory?.start_date ?? null)}</span>
+            </div>
+          )}
+          <p className="text-xs text-blue-800 dark:text-blue-200 opacity-80 mt-1">Presto potrai aggiungere foto e dettagli!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -77,7 +142,7 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
           {firstImage && (
             <img
               src={getImageUrl(imagePath)}
-              alt={memory.title}
+              alt={memory?.title || ''}
               className="w-full h-full object-cover"
             />
           )}
@@ -112,19 +177,19 @@ export default function MemoryCardList({ memory, onClick }: MemoryCardListProps)
             </div>
 
             <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
-              {memory.title}
+              {memory?.title}
             </h3>
           </div>
 
           <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-4 mt-1">
             <div className="flex items-center space-x-1">
               <IoCalendar className="w-3.5 h-3.5" />
-              <span>{formatDate(memory.start_date)}</span>
+              <span>{formatDate(memory?.start_date ?? null)}</span>
             </div>
-            {memory.location && (
+            {memory?.location && (
               <div className="flex items-center space-x-1 truncate">
                 <IoLocationOutline className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{memory.location}</span>
+                <span className="truncate">{memory?.location}</span>
               </div>
             )}
           </div>

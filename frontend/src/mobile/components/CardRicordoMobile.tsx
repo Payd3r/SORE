@@ -10,13 +10,14 @@ import { getTrackDetails, SpotifyTrack } from '../../api/spotify';
 
 // Interfacce
 interface MemoryCardMobileProps {
-  memory: Memory;
+  memory?: Memory;
+  futureMemories?: Memory[];
   onClick?: (e: React.MouseEvent) => void;
   isActive?: boolean;
 }
 
 // Memo wrapper per prevenire rendering inutili
-const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileProps) => {
+const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: MemoryCardMobileProps) => {
   const navigate = useNavigate();
   const [spotifyData, setSpotifyData] = useState<SpotifyTrack | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +28,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
   // Carica i dati Spotify solo se presente una canzone e solo per viaggi
   useEffect(() => {
     let isActive = true;
-    if (memory.song && memory.type.toUpperCase() === 'VIAGGIO') {
+    if (memory?.song && memory.type.toUpperCase() === 'VIAGGIO') {
       setIsLoading(true);
       getTrackDetails(memory.song.split(' - ')[0]) // Prendi solo il titolo prima del trattino
         .then(data => {
@@ -55,13 +56,13 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
         audio.removeEventListener('ended', () => setIsPlaying(false));
       }
     };
-  }, [memory.song, memory.type]);
+  }, [memory?.song, memory?.type]);
 
   const handleClick = (e: React.MouseEvent) => {
     if (onClick) {
       onClick(e);
     } else {
-      navigate(`/ricordo/${memory.id}`);
+      navigate(`/ricordo/${memory?.id}`);
     }
   };
 
@@ -152,14 +153,15 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
     }
   };
 
-  const typeStyle = getTypeStyle(memory.type);
-  const isViaggio = memory.type.toUpperCase() === 'VIAGGIO';
-  const isEvento = memory.type.toUpperCase() === 'EVENTO';
+  const typeStyle = getTypeStyle(memory?.type || '');
+  const isViaggio = memory?.type.toUpperCase() === 'VIAGGIO';
+  const isEvento = memory?.type.toUpperCase() === 'EVENTO';
+  const isFuturo = memory?.type.toUpperCase() === 'FUTURO';
 
   // Ottimizzato: determina il layout delle immagini in base al tipo di ricordo
   const getImagesLayout = () => {
     // Prepara le immagini da visualizzare
-    const immagini = memory.images?.filter(img => img.thumb_big_path || img.webp_path) || [];
+    const immagini = memory?.images?.filter(img => img.thumb_big_path || img.webp_path) || [];
     const hasImages = immagini.length > 0;
 
     // Se non ci sono immagini
@@ -168,7 +170,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
         <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
           <div className={`w-12 h-12 rounded-full ${typeStyle.badge} flex items-center justify-center`}>
             <span className={`text-xl font-medium ${typeStyle.iconColor}`}>
-              {memory.title.charAt(0).toUpperCase()}
+              {(memory?.title?.charAt(0) || '?').toUpperCase()}
             </span>
           </div>
         </div>
@@ -184,7 +186,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
               <img
                 src={'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='} // Placeholder trasparente
                 data-src={getImageUrl(immagini[0].thumb_big_path || immagini[0].webp_path || '')} // Lazy load
-                alt={`${memory.title} - principale`}
+                alt={`${memory?.title} - principale`}
                 className={`w-full h-full object-cover rounded-tl-xl lazyload ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setIsImageLoaded(true)}
                 loading="lazy"
@@ -212,7 +214,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
                 <img
                   src={'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='} // Placeholder trasparente
                   data-src={getImageUrl(immagini[1].thumb_big_path || immagini[1].webp_path || '')} // Lazy load
-                  alt={`${memory.title} - 2`}
+                  alt={`${memory?.title} - 2`}
                   className="w-full h-full object-cover rounded-tr-xl lazyload"
                   loading="lazy"
                 />
@@ -223,7 +225,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
                 <img
                   src={'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='} // Placeholder trasparente
                   data-src={getImageUrl(immagini[2].thumb_big_path || immagini[2].webp_path || '')} // Lazy load
-                  alt={`${memory.title} - 3`}
+                  alt={`${memory?.title} - 3`}
                   className="w-full h-full object-cover lazyload"
                   loading="lazy"
                 />
@@ -237,10 +239,10 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
           </div>
 
           {/* Badge che mostra il numero di immagini aggiuntive */}
-          {memory.tot_img > 3 && (
+          {(memory?.tot_img ?? 0) > 3 && (
             <div className="absolute top-2 right-2 z-10">
               <div className={`rounded-full px-2 py-0.5 text-xs font-medium backdrop-blur-lg bg-black/30 text-white`}>
-                +{memory.tot_img - 3}
+                +{(memory?.tot_img ?? 0) - 3}
               </div>
             </div>
           )}
@@ -257,7 +259,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
               <img
                 src={'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='} // Placeholder trasparente
                 data-src={getImageUrl(immagini[0].thumb_big_path || immagini[0].webp_path || '')} // Lazy load
-                alt={`${memory.title} - principale`}
+                alt={`${memory?.title} - principale`}
                 className="w-full h-full object-cover rounded-tl-xl lazyload"
                 loading="lazy"
               />
@@ -268,7 +270,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
               <img
                 src={'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='} // Placeholder trasparente
                 data-src={getImageUrl(immagini[1].thumb_big_path || immagini[1].webp_path || '')} // Lazy load
-                alt={`${memory.title} - 2`}
+                alt={`${memory?.title} - 2`}
                 className="w-full h-full object-cover rounded-tr-xl lazyload"
                 loading="lazy"
               />
@@ -280,10 +282,10 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
           )}
 
           {/* Badge che mostra il numero di immagini aggiuntive */}
-          {memory.tot_img > 2 && (
+          {(memory?.tot_img ?? 0) > 2 && (
             <div className="absolute top-2 right-2 z-10">
               <div className={`rounded-full px-2 py-0.5 text-xs font-medium backdrop-blur-lg bg-black/30 text-white`}>
-                +{memory.tot_img - 2}
+                +{(memory?.tot_img ?? 0) - 2}
               </div>
             </div>
           )}
@@ -297,16 +299,16 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
         <img
           src={'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='} // Placeholder trasparente
           data-src={getImageUrl(immagini[0].thumb_big_path || immagini[0].webp_path || '')} // Lazy load
-          alt={memory.title}
+          alt={memory?.title}
           className="w-full h-full object-cover rounded-t-xl lazyload"
           loading="lazy"
         />
 
         {/* Badge che mostra il numero di immagini aggiuntive */}
-        {memory.tot_img > 1 && (
+        {(memory?.tot_img ?? 0) > 1 && (
           <div className="absolute top-2 right-2 z-10">
             <div className={`rounded-full px-2 py-0.5 text-xs font-medium backdrop-blur-lg bg-black/30 text-white`}>
-              +{memory.tot_img - 1}
+              +{(memory?.tot_img ?? 0) - 1}
             </div>
           </div>
         )}
@@ -316,7 +318,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
 
   // Componente per il player di Spotify - Memoizzato per prevenire re-render inutili
   const SpotifyPreview = () => {
-    if (!memory.song) return null;
+    if (!memory?.song) return null;
 
     // Se stiamo ancora caricando i dati Spotify
     if (isLoading) {
@@ -388,6 +390,66 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
     );
   };
 
+  // Se riceve futureMemories, mostra la card compatta
+  if (futureMemories && futureMemories.length > 0) {
+    return (
+      <div
+        className="col-span-1 bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex flex-col min-h-[72px] h-full p-2 gap-1 transition-all duration-200 touch-manipulation active:scale-[0.98]"
+        style={{ WebkitTapHighlightColor: 'transparent', willChange: 'transform', contain: 'content' }}
+      >
+        <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-200 dark:bg-blue-800">
+            <IoCalendarOutline className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+          </div>
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-blue-500 text-white">Futuro</span>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          {futureMemories.slice(0, 3).map(fm => (
+            <div key={fm.id} className="flex items-center gap-1">
+              <span className="font-semibold text-blue-900 dark:text-blue-100 text-xs truncate">{fm.title}</span>
+              {fm.start_date && (
+                <span className="text-[10px] text-blue-700 dark:text-blue-200">{format(parseISO(fm.start_date), 'dd MMM', { locale: it })}</span>
+              )}
+            </div>
+          ))}
+          {futureMemories.length > 3 && (
+            <div className="text-[10px] text-blue-800 dark:text-blue-200 opacity-80 mt-0.5">+ altri {futureMemories.length - 3} ricordi futuri</div>
+          )}
+        </div>
+        <p className="text-[10px] text-blue-800 dark:text-blue-200 opacity-80 mt-1">Presto potrai aggiungere foto e dettagli!</p>
+      </div>
+    );
+  }
+
+  if (isFuturo) {
+    return (
+      <div
+        className={
+          'col-span-2 bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex items-center min-h-[110px] h-full p-3 gap-3 transition-all duration-200 touch-manipulation active:scale-[0.98]'
+        }
+        onClick={handleClick}
+        style={{ WebkitTapHighlightColor: 'transparent', willChange: 'transform', contain: 'content' }}
+      >
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800">
+          <IoCalendarOutline className="w-8 h-8 text-blue-600 dark:text-blue-300" />
+        </div>
+        <div className="flex-1 flex flex-col justify-center overflow-hidden">
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-500 text-white">Futuro</span>
+          </div>
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 line-clamp-1 text-base mb-1">{memory?.title}</h3>
+          {memory?.start_date && (
+            <div className="flex items-center gap-1 text-xs text-blue-700 dark:text-blue-200 mt-1">
+              <IoCalendarOutline className="w-3.5 h-3.5" />
+              <span>In programma per il {format(parseISO(memory.start_date), 'dd MMM yyyy', { locale: it })}</span>
+            </div>
+          )}
+          <p className="text-xs text-blue-800 dark:text-blue-200 opacity-80 mt-1">Presto potrai aggiungere foto e dettagli!</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative ${typeStyle.priority} ${typeStyle.cardSize} group bg-white dark:bg-gray-800 rounded-xl 
@@ -404,7 +466,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
       }}
     >
       {/* Contenitore principale con sfondo e immagini */}
-      <div className={`${isViaggio && memory.song ? 'h-56' : typeStyle.imageHeight} w-full relative overflow-hidden`}>
+      <div className={`${isViaggio && memory?.song ? 'h-56' : typeStyle.imageHeight} w-full relative overflow-hidden`}>
         {getImagesLayout()}
 
         {/* Gradiente overlay per leggibilità del testo - solo per non-viaggi */}
@@ -430,7 +492,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
         {/* Info sovrapposte all'immagine */}
         <div className="absolute bottom-0 left-0 right-0 px-3 pb-2 z-10 text-white">
           <h3 className="font-semibold text-base mb-1 text-white line-clamp-2 drop-shadow-sm">
-            {memory.title}
+            {memory?.title}
           </h3>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -438,12 +500,12 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
             <div className="flex items-center gap-1.5">
               <IoCalendarOutline className="w-3.5 h-3.5 text-white/80" />
               <span className="text-[11px] text-white/90">
-                {formatDateRange(memory.start_date, memory.end_date)}
+                {formatDateRange(memory?.start_date ?? null, memory?.end_date ?? null)}
               </span>
             </div>
 
             {/* Località (solo per viaggi ed eventi) */}
-            {memory.location && (isViaggio || isEvento) && (
+            {memory?.location && (isViaggio || isEvento) && (
               <div className="flex items-center gap-1.5">
                 <IoLocationOutline className="w-3.5 h-3.5 text-white/80" />
                 <span className="text-[11px] text-white/90 truncate max-w-[150px]">
@@ -453,7 +515,7 @@ const CardRicordoMobile = memo(({ memory, onClick, isActive }: MemoryCardMobileP
             )}
 
           </div>
-          {memory.song && isViaggio && (
+          {memory?.song && isViaggio && (
             <div className="max-w-52 mt-2">
               <SpotifyPreview />
             </div>

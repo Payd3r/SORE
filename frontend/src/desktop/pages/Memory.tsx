@@ -13,7 +13,7 @@ import Loader from '../components/Layout/Loader';
 import 'lazysizes';
 import 'lazysizes/plugins/attrchange/ls.attrchange';
 
-type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
+type ImageTypeFilter = 'all' | 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 
 export default function Memory() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -298,49 +298,80 @@ export default function Memory() {
   // Funzione per renderizzare le schede con memoization
   const renderMemoryCards = useMemo(() => {
     const visibleItems = filteredAndSortedMemories.slice(0, visibleMemories);
-    
+    // Raggruppa i ricordi futuri consecutivi all'inizio
+    const futureMemories: MemoryWithImages[] = [];
+    let firstNonFutureIdx = 0;
+    for (let i = 0; i < visibleItems.length; i++) {
+      if (visibleItems[i].type.toUpperCase() === 'FUTURO') {
+        futureMemories.push(visibleItems[i]);
+      } else {
+        firstNonFutureIdx = i;
+        break;
+      }
+    }
+    const result: any[] = [];
     if (viewMode === 'grid') {
+      if (futureMemories.length > 0) {
+        result.push(
+          <div key="future-group" className="sm:col-span-2 lg:col-span-2 xl:col-span-2 2xl:col-span-2">
+            <MemoryCard futureMemories={futureMemories} />
+          </div>
+        );
+      }
+      for (let i = firstNonFutureIdx; i < visibleItems.length; i++) {
+        const memory = visibleItems[i];
+        result.push(
+          <div
+            key={memory.id}
+            id={`memory-${memory.id}`}
+            className={`${memory.type.toLowerCase() === 'viaggio'
+              ? 'sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2'
+              : memory.type.toLowerCase() === 'evento'
+                ? 'sm:col-span-2 lg:col-span-2'
+                : ''
+              }`}
+            onClick={() => {
+              sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
+              sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
+            }}
+            style={{ contain: 'content' }}
+          >
+            <MemoryCard memory={memory} />
+          </div>
+        );
+      }
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6 will-change-transform">
-          {visibleItems.map((memory) => (
-            <div
-              key={memory.id}
-              id={`memory-${memory.id}`}
-              className={`${memory.type.toLowerCase() === 'viaggio'
-                ? 'sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2'
-                : memory.type.toLowerCase() === 'evento'
-                  ? 'sm:col-span-2 lg:col-span-2'
-                  : ''
-                }`}
-              onClick={() => {
-                // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
-                sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
-                sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
-              }}
-              style={{ contain: 'content' }} // Ottimizzazione per il browser
-            >
-              <MemoryCard memory={memory} />
-            </div>
-          ))}
+          {result}
         </div>
       );
     } else {
+      if (futureMemories.length > 0) {
+        result.push(
+          <div key="future-group-list">
+            <MemoryCardList futureMemories={futureMemories} />
+          </div>
+        );
+      }
+      for (let i = firstNonFutureIdx; i < visibleItems.length; i++) {
+        const memory = visibleItems[i];
+        result.push(
+          <div
+            key={memory.id}
+            id={`memory-${memory.id}`}
+            onClick={() => {
+              sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
+              sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
+            }}
+            style={{ contain: 'content' }}
+          >
+            <MemoryCardList memory={memory} />
+          </div>
+        );
+      }
       return (
         <div className="flex flex-col gap-3 will-change-transform">
-          {visibleItems.map((memory) => (
-            <div
-              key={memory.id}
-              id={`memory-${memory.id}`}
-              onClick={() => {
-                // Salva la posizione dello scroll e l'ID del ricordo prima di navigare
-                sessionStorage.setItem('memoryScrollPosition', window.scrollY.toString());
-                sessionStorage.setItem('lastViewedMemoryId', memory.id.toString());
-              }}
-              style={{ contain: 'content' }} // Ottimizzazione per il browser
-            >
-              <MemoryCardList memory={memory} />
-            </div>
-          ))}
+          {result}
         </div>
       );
     }
@@ -519,6 +550,26 @@ export default function Memory() {
                           )}
                         </div>
                         Semplice
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTypeClick('FUTURO');
+                        }}
+                        className={`w-full px-4 py-2 text-sm text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center focus:outline-none gap-2 ${selectedTypes.has('FUTURO') ? 'text-blue-500 dark:text-blue-400' : 'text-gray-700 dark:text-white'
+                          }`}
+                      >
+                        <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedTypes.has('FUTURO')
+                          ? 'bg-blue-500 border-blue-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                          }`}>
+                          {selectedTypes.has('FUTURO') && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        Futuro
                       </button>
                     </div>
                   )}

@@ -26,7 +26,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
+export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 
 export interface Image {
   id: number;

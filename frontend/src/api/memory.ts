@@ -3,7 +3,7 @@ import { ApiResponse } from './types';
 import axios from 'axios';
 import type { CarouselImage } from '../desktop/pages/DetailMemory';
 
-export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE';
+export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 
 export interface Memory {
   id: number;
