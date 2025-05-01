@@ -38,5 +38,5 @@ app.get('*', (req, res) => {
 
 // Avvio del server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server in esecuzione sulla porta ${PORT}`);
+  //console.log(`Server in esecuzione sulla porta ${PORT}`);
 }); 

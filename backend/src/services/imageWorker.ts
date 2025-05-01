@@ -51,7 +51,7 @@ export async function processImageJob(job: ImageJob) {
   let conn;
   
   try {
-    console.log(`[Worker] Processing image: ${job.originalName} (Job ID: ${job.id})`);
+    //console.log(`[Worker] Processing image: ${job.originalName} (Job ID: ${job.id})`);
 
     // Aggiorna lo stato iniziale
     await updateJobProgress(job.id, 0, 'Inizio processamento');
@@ -219,7 +219,7 @@ export async function processImageJob(job: ImageJob) {
       // Continuiamo anche se la notifica fallisce
     }
 
-    console.log(`[Worker] Successfully processed image: ${job.originalName} (Job ID: ${job.id})`);
+    //console.log(`[Worker] Successfully processed image: ${job.originalName} (Job ID: ${job.id})`);
     return result.insertId;
   } catch (error) {
     console.error(`[Worker] Error processing image ${job.originalName} (Job ID: ${job.id}):`, error instanceof Error ? error.message : 'Unknown error');
@@ -247,6 +247,6 @@ async function updateJobProgress(jobId: string, progress: number, status: string
     job.progress = progress;
     job.status = status;
     await imageQueue.updateJob(job);
-    console.log(`[Progress] Job ${jobId}: ${progress}% - ${status}`);
+    //console.log(`[Progress] Job ${jobId}: ${progress}% - ${status}`);
   }
 } 

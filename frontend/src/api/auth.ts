@@ -1,4 +1,5 @@
 import { API_URLS } from './config';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export interface LoginData {
   email: string;
@@ -106,7 +107,7 @@ export const registerNewCouple = async (data: CreateCoupleData): Promise<AuthRes
 };
 
 export const updateUser = async (data: UpdateUserData): Promise<ApiResponse<AuthResponse['user']>> => {
-  const response = await fetch(`${API_URLS.base}/auth/user`, {
+  const response = await fetchWithAuth(`${API_URLS.base}/auth/user`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
@@ -121,7 +122,7 @@ export const updateUser = async (data: UpdateUserData): Promise<ApiResponse<Auth
 };
 
 export const deleteUser = async (password: string): Promise<ApiResponse<null>> => {
-  const response = await fetch(`${API_URLS.base}/auth/user`, {
+  const response = await fetchWithAuth(`${API_URLS.base}/auth/user`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
     body: JSON.stringify({ password }),

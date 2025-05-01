@@ -1,5 +1,6 @@
 import { API_URLS } from './config';
-import axios from 'axios';
+import axiosInstance from './config';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export interface ImageLocation {
   id: number;
@@ -25,7 +26,7 @@ export const getMapImages = async (): Promise<ImageLocation[]> => {
   }
 
   try {
-    const response = await fetch(`${API_URLS.base}/api/map/images`, {
+    const response = await fetchWithAuth(`${API_URLS.base}/api/map/images`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -45,7 +46,7 @@ export const getMapImages = async (): Promise<ImageLocation[]> => {
 
 export const getMemoryMapImages = async (memoryId: number): Promise<ImageLocation[]> => {
   try {
-    const response = await axios.get(`${API_URLS.base}/api/map/memory/${memoryId}`, {
+    const response = await axiosInstance.get(`${API_URLS.base}/api/map/memory/${memoryId}`, {
       headers: getAuthHeaders(),
     });
     return response.data.data;
@@ -62,7 +63,7 @@ export const getMapImagesByBounds = async (
   west: number
 ): Promise<ImageLocation[]> => {
   try {
-    const response = await axios.get(`${API_URLS.base}/api/map/images/bounds`, {
+    const response = await axiosInstance.get(`${API_URLS.base}/api/map/images/bounds`, {
       headers: getAuthHeaders(),
       params: {
         north,

@@ -160,7 +160,7 @@ router.post('/register/new', async (req, res) => {
     try {
       await connection.beginTransaction();
 
-      console.log('Creating couple with name:', coupleName);
+      //console.log('Creating couple with name:', coupleName);
       // Create couple
       const [coupleResult] = await connection.query<ResultSetHeader>(
         'INSERT INTO couples (name, anniversary_date) VALUES (?, ?)',
@@ -253,26 +253,26 @@ router.post('/register/new', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  console.log('\n=== LOGIN ROUTE ===');
-  console.log('Request body:', { email: req.body.email, password: req.body.password ? '[REDACTED]' : undefined });
+  //console.log('\n=== LOGIN ROUTE ===');
+  //console.log('Request body:', { email: req.body.email, password: req.body.password ? '[REDACTED]' : undefined });
   
   try {
     const { email, password } = req.body;
 
     // Validate input
     if (!email || !password) {
-      console.log('Login failed: Missing credentials');
+      //console.log('Login failed: Missing credentials');
       return res.status(400).json({ error: 'Email e password sono obbligatori' });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.log('Login failed: Invalid email format');
+      //console.log('Login failed: Invalid email format');
       return res.status(400).json({ error: 'Formato email non valido' });
     }
 
-    console.log('Searching for user with email:', email);
+    //console.log('Searching for user with email:', email);
     
     // Find user
     const [userResult] = await pool.promise().query<User[]>(
@@ -281,12 +281,12 @@ router.post('/login', async (req, res) => {
     );
 
     if (userResult.length === 0) {
-      console.log('Login failed: User not found');
+      //console.log('Login failed: User not found');
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
     const user = userResult[0];
-    console.log('User found:', { 
+    //console.log('User found:', { 
       id: user.id, 
       email: user.email, 
       hasPasswordHash: !!user.password_hash,
@@ -294,24 +294,24 @@ router.post('/login', async (req, res) => {
     });
 
     // Check password
-    console.log('Verifying password...');
+    //console.log('Verifying password...');
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    console.log('Password verification result:', isMatch);
+    //console.log('Password verification result:', isMatch);
     
     if (!isMatch) {
-      console.log('Login failed: Invalid password');
+      //console.log('Login failed: Invalid password');
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
     // Generate token
-    console.log('Generating JWT token...');
+    //console.log('Generating JWT token...');
     const token = jwt.sign(
       { id: user.id, email: user.email, coupleId: user.couple_id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
 
-    console.log('Login successful for user:', { 
+    //console.log('Login successful for user:', { 
       id: user.id, 
       email: user.email,
       coupleId: user.couple_id 

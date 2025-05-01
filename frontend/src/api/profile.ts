@@ -3,9 +3,10 @@ import { ApiResponse, UserInfo, CoupleInfo } from './types';
 import { getAuthHeaders } from './auth';
 import { AuthResponse } from './auth';
 import { resizeAndConvertToBase64 } from './imageUtils';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export const getUserInfo = async (userId: number): Promise<UserInfo> => {
-  const response = await fetch(`${API_URLS.base}/api/users/${userId}`, {
+  const response = await fetchWithAuth(`${API_URLS.base}/api/users/${userId}`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
@@ -17,7 +18,7 @@ export const getUserInfo = async (userId: number): Promise<UserInfo> => {
 
 export const getCoupleInfo = async (coupleId: number): Promise<CoupleInfo> => {
   try {
-    const response = await fetch(`${API_URLS.base}/api/couples/${coupleId}`, {
+    const response = await fetchWithAuth(`${API_URLS.base}/api/couples/${coupleId}`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) {
@@ -36,7 +37,7 @@ export const getCoupleInfo = async (coupleId: number): Promise<CoupleInfo> => {
 
 export const updateUserInfo = async (data: Partial<UserInfo>): Promise<UserInfo> => {
   try {
-    const response = await fetch(`${API_URLS.base}/api/users/profile`, {
+    const response = await fetchWithAuth(`${API_URLS.base}/api/users/profile`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
@@ -59,7 +60,7 @@ export const uploadProfilePicture = async (file: File): Promise<AuthResponse['us
     // Ridimensiona e converti l'immagine in base64
     const base64Image = await resizeAndConvertToBase64(file, 300, 300);
     const headers = getAuthHeaders();
-    const response = await fetch(`${API_URLS.base}/api/users/profile-picture`, {
+    const response = await fetchWithAuth(`${API_URLS.base}/api/users/profile-picture`, {
       method: 'PUT',
       headers,
       body: JSON.stringify({
@@ -80,7 +81,7 @@ export const uploadProfilePicture = async (file: File): Promise<AuthResponse['us
 };
 
 export const updatePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
-  const response = await fetch(`${API_URLS.base}/api/users/edit-password`, {
+  const response = await fetchWithAuth(`${API_URLS.base}/api/users/edit-password`, {
     method: 'PUT',
     headers: {
       ...getAuthHeaders(),

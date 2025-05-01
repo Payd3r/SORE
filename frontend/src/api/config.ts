@@ -17,4 +17,25 @@ export const STATIC_URLS = {
   // images: 'https://believe-totally-mines-houston.trycloudflare.com',
 };
 
-export default API_URLS; 
+import axios from 'axios';
+
+// Crea un'istanza axios custom
+const axiosInstance = axios.create();
+
+// Interceptor di risposta per gestire il 403 (token scaduto)
+axiosInstance.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 403) {
+      // Logout globale e redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('darkMode');
+      localStorage.removeItem('lastVisit');
+      window.location.href = '/welcome';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default axiosInstance; 

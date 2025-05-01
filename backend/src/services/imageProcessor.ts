@@ -239,8 +239,8 @@ export async function deleteImageFiles(files: ImageFilesToDelete): Promise<void>
 
 export async function processProfilePicture(file: Express.Multer.File): Promise<string> {
   try {
-    console.log('=== PROCESSING PROFILE PICTURE ===');
-    console.log('Original file:', file);
+    //console.log('=== PROCESSING PROFILE PICTURE ===');
+    //console.log('Original file:', file);
 
     // Leggi il file
     let buffer = await fs.promises.readFile(file.path);
@@ -262,7 +262,7 @@ export async function processProfilePicture(file: Express.Multer.File): Promise<
     const fileName = `profile_${Date.now()}_${uuidv4()}.webp`;
     const filePath = path.join(profileDir, fileName);
 
-    console.log('Saving to:', filePath);
+    //console.log('Saving to:', filePath);
 
     // Processa l'immagine con sharp
     await sharp(buffer)
@@ -288,7 +288,7 @@ export async function processProfilePicture(file: Express.Multer.File): Promise<
       throw new Error('Il file creato è vuoto');
     }
 
-    console.log('File processed successfully:', {
+    //console.log('File processed successfully:', {
       path: filePath,
       size: stats.size,
       format: 'webp'
@@ -299,7 +299,7 @@ export async function processProfilePicture(file: Express.Multer.File): Promise<
 
     // Restituisci il percorso relativo del file con il prefisso /media/
     const relativePath = `/media/profilo/${fileName}`;
-    console.log('Returning relative path:', relativePath);
+    //console.log('Returning relative path:', relativePath);
     return relativePath;
   } catch (error) {
     console.error('Error processing profile picture:', error);

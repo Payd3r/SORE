@@ -50,7 +50,7 @@ router.get('/images/bounds', auth, async (req: any, res) => {
       [coupleId, south, north, west, east]
     );
 
-    console.log('Immagini trovate nei limiti:', images.length);
+    //console.log('Immagini trovate nei limiti:', images.length);
 
     // Converti ogni immagine in base64
     const imagesWithBase64 = await Promise.all(
@@ -84,7 +84,7 @@ router.get('/images/bounds', auth, async (req: any, res) => {
 
     // Filtra eventuali immagini non convertite correttamente
     const validImages = imagesWithBase64.filter((img): img is MapImage => img !== null);
-    console.log('Immagini valide nei limiti:', validImages.length);
+    //console.log('Immagini valide nei limiti:', validImages.length);
 
     res.json({
       success: true,
@@ -104,7 +104,7 @@ router.get('/images/bounds', auth, async (req: any, res) => {
 router.get('/images', auth, async (req: any, res) => {
   try {
     const coupleId = req.user.coupleId;
-    console.log('Couple ID:', coupleId);
+    //console.log('Couple ID:', coupleId);
 
     // Recupera tutte le immagini con coordinate per la coppia
     const [images] = await pool.promise().query<MapImage[]>(
@@ -123,8 +123,8 @@ router.get('/images', auth, async (req: any, res) => {
       [coupleId]
     );
 
-    console.log('Immagini trovate:', images.length);
-    console.log('Prima immagine:', images[0]);
+    //console.log('Immagini trovate:', images.length);
+    //console.log('Prima immagine:', images[0]);
 
     // Converti ogni immagine in base64
     const imagesValide = await Promise.all(
@@ -145,7 +145,7 @@ router.get('/images', auth, async (req: any, res) => {
         }
       })
     );
-    console.log('Immagini valide:', imagesValide);
+    //console.log('Immagini valide:', imagesValide);
     res.json({
       success: true,
       data: imagesValide

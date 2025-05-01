@@ -6,7 +6,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
   let needToRelease = false;
 
   try {
-    console.log('\x1b[36m%s\x1b[0m', `[Memory] Starting date update for memory ${memoryId}`);
+    //console.log('\x1b[36m%s\x1b[0m', `[Memory] Starting date update for memory ${memoryId}`);
 
     // Se non è stata fornita una connessione, ne creiamo una nuova
     if (!conn) {
@@ -25,15 +25,15 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
     );
 
     if (!imagesResult || imagesResult.length === 0) {
-      console.log('\x1b[33m%s\x1b[0m', `[Memory] No images found for memory ${memoryId}`);
+      //console.log('\x1b[33m%s\x1b[0m', `[Memory] No images found for memory ${memoryId}`);
       return;
     }
 
-    console.log('\x1b[32m%s\x1b[0m', `[Memory] Found ${imagesResult.length} images`);
+    //console.log('\x1b[32m%s\x1b[0m', `[Memory] Found ${imagesResult.length} images`);
 
     // Converti le date in timestamp per calcoli più facili
     const dates = imagesResult.map(img => new Date(img.created_at).getTime());
-    console.log('\x1b[36m%s\x1b[0m', '[Memory] Original dates:', dates.map(d => new Date(d).toISOString()));
+    //console.log('\x1b[36m%s\x1b[0m', '[Memory] Original dates:', dates.map(d => new Date(d).toISOString()));
 
     // Se abbiamo solo una immagine, usala come riferimento
     if (dates.length === 1) {
@@ -50,7 +50,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], memoryId]
       );
 
-      console.log('\x1b[32m%s\x1b[0m', `[Memory] Single image case - Updated memory ${memoryId}:`, {
+      //console.log('\x1b[32m%s\x1b[0m', `[Memory] Single image case - Updated memory ${memoryId}:`, {
         date: singleDate.toISOString(),
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString()
@@ -68,18 +68,18 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
     const maxDiff = Math.max(...dateDiffs);
     const maxDiffIndex = dateDiffs.indexOf(maxDiff);
 
-    console.log('\x1b[36m%s\x1b[0m', '[Memory] Date differences:', dateDiffs.map(d => Math.round(d / (24 * 60 * 60 * 1000)) + ' days'));
+    //console.log('\x1b[36m%s\x1b[0m', '[Memory] Date differences:', dateDiffs.map(d => Math.round(d / (24 * 60 * 60 * 1000)) + ' days'));
 
     // Se la differenza massima è maggiore di 5 giorni, consideriamo le immagini prima e dopo come gruppi separati
     const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
     if (maxDiff > FIVE_DAYS) {
-      console.log('\x1b[33m%s\x1b[0m', `[Memory] Found significant gap of ${Math.round(maxDiff / (24 * 60 * 60 * 1000))} days at index ${maxDiffIndex}`);
+      //console.log('\x1b[33m%s\x1b[0m', `[Memory] Found significant gap of ${Math.round(maxDiff / (24 * 60 * 60 * 1000))} days at index ${maxDiffIndex}`);
 
       // Prendi il gruppo più numeroso
       const group1Size = maxDiffIndex + 1;
       const group2Size = dates.length - (maxDiffIndex + 1);
 
-      console.log('\x1b[36m%s\x1b[0m', '[Memory] Group sizes:', {
+      //console.log('\x1b[36m%s\x1b[0m', '[Memory] Group sizes:', {
         group1: group1Size,
         group2: group2Size
       });
@@ -91,7 +91,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         validDates = dates.slice(group1Size);
       }
 
-      console.log('\x1b[32m%s\x1b[0m', '[Memory] Selected group dates:', validDates.map(d => new Date(d).toISOString()));
+      //console.log('\x1b[32m%s\x1b[0m', '[Memory] Selected group dates:', validDates.map(d => new Date(d).toISOString()));
 
       // Calcola il range per il gruppo selezionato
       const startDate = new Date(validDates[0]);
@@ -103,7 +103,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
 
       if (duration > maxDuration) {
         endDate.setTime(startDate.getTime() + maxDuration);
-        console.log('\x1b[33m%s\x1b[0m', '[Memory] Range exceeded 20 days, adjusted end date to:', endDate.toISOString());
+        //console.log('\x1b[33m%s\x1b[0m', '[Memory] Range exceeded 20 days, adjusted end date to:', endDate.toISOString());
       }
 
       // Identifica le immagini outlier (quelle non nel gruppo selezionato)
@@ -112,7 +112,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         return validDates.indexOf(imgDate) === -1;
       });
 
-      console.log('\x1b[36m%s\x1b[0m', `[Memory] Found ${outlierImages.length} outlier images:`, 
+      //console.log('\x1b[36m%s\x1b[0m', `[Memory] Found ${outlierImages.length} outlier images:`, 
         outlierImages.map(img => ({
           id: img.id,
           date: new Date(img.created_at).toISOString()
@@ -121,7 +121,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
 
       // Aggiorna le date delle immagini outlier
       if (outlierImages.length > 0) {
-        console.log('\x1b[33m%s\x1b[0m', `[Memory] Updating ${outlierImages.length} outlier images`);
+        //console.log('\x1b[33m%s\x1b[0m', `[Memory] Updating ${outlierImages.length} outlier images`);
         
         for (const img of outlierImages) {
           const randomDate = new Date(
@@ -135,7 +135,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
             [randomDate.toISOString(), img.id]
           );
 
-          console.log('\x1b[32m%s\x1b[0m', `[Memory] Updated image ${img.id}:`, {
+          //console.log('\x1b[32m%s\x1b[0m', `[Memory] Updated image ${img.id}:`, {
             oldDate: new Date(img.created_at).toISOString(),
             newDate: randomDate.toISOString()
           });
@@ -152,7 +152,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], memoryId]
       );
 
-      console.log('\x1b[32m%s\x1b[0m', `[Memory] Successfully updated memory ${memoryId}:`, {
+      //console.log('\x1b[32m%s\x1b[0m', `[Memory] Successfully updated memory ${memoryId}:`, {
         totalImages: dates.length,
         validImages: validDates.length,
         outlierImages: outlierImages.length,
@@ -169,7 +169,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
 
       if (duration > maxDuration) {
         endDate.setTime(startDate.getTime() + maxDuration);
-        console.log('\x1b[33m%s\x1b[0m', '[Memory] Range exceeded 20 days, adjusted end date to:', endDate.toISOString());
+        //console.log('\x1b[33m%s\x1b[0m', '[Memory] Range exceeded 20 days, adjusted end date to:', endDate.toISOString());
       }
 
       await conn.query(
@@ -181,7 +181,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], memoryId]
       );
 
-      console.log('\x1b[32m%s\x1b[0m', `[Memory] No significant gaps found - Updated memory ${memoryId}:`, {
+      //console.log('\x1b[32m%s\x1b[0m', `[Memory] No significant gaps found - Updated memory ${memoryId}:`, {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         duration: Math.round(duration / (24 * 60 * 60 * 1000)) + ' days'

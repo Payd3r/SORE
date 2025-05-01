@@ -118,7 +118,7 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
     const memoryId = req.body.memory_id || req.body.memoryId || req.body['memory_id'];
     const type = req.body.type;
 
-    console.log(`[Upload] Starting upload for ${req.files.length} images`);
+    //console.log(`[Upload] Starting upload for ${req.files.length} images`);
 
     if (memoryId) {
       const [memoryResult] = await pool.promise().query<Memory[]>(
@@ -127,7 +127,7 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
       );
 
       if (memoryResult.length === 0) {
-        console.log(`[Upload] Memory not found: ${memoryId}`);
+        //console.log(`[Upload] Memory not found: ${memoryId}`);
         return res.status(404).json({ error: 'Memory not found or unauthorized' });
       }
     }
@@ -163,7 +163,7 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
 
     const results = await Promise.all(uploadPromises);
     const successCount = results.filter(r => r.success).length;
-    console.log(`[Upload] Queued ${successCount}/${results.length} images for processing`);
+    //console.log(`[Upload] Queued ${successCount}/${results.length} images for processing`);
 
     res.status(202).json({ 
       message: 'Images queued for processing',
@@ -294,14 +294,14 @@ router.put('/:imageId/type', auth, async (req: any, res) => {
 
     // Valida il tipo in input
     if (!type) {
-      console.log(`[UpdateImageType] Validazione fallita - Type mancante`);
+      //console.log(`[UpdateImageType] Validazione fallita - Type mancante`);
       return res.status(400).json({ error: 'Il campo \'type\' è mancante.' });
     }
 
     // Converti il tipo in minuscolo per confrontarlo con i valori dell'enum
     const normalizedType = type.toLowerCase();
     if (!Object.values(ImageType).includes(normalizedType as ImageType)) {
-      console.log(`[UpdateImageType] Validazione fallita - Type: ${type}, Type normalizzato: ${normalizedType}, Valori validi:`, Object.values(ImageType));
+      //console.log(`[UpdateImageType] Validazione fallita - Type: ${type}, Type normalizzato: ${normalizedType}, Valori validi:`, Object.values(ImageType));
       return res.status(400).json({ error: 'Il campo \'type\' non è valido.' });
     }
 
@@ -313,7 +313,7 @@ router.put('/:imageId/type', auth, async (req: any, res) => {
     );
 
     if (!images || (images as any[]).length === 0) {
-      console.log(`[UpdateImageType] Immagine non trovata o non autorizzata - ImageId: ${imageId}, CoupleId: ${coupleId}`);
+      //console.log(`[UpdateImageType] Immagine non trovata o non autorizzata - ImageId: ${imageId}, CoupleId: ${coupleId}`);
       return res.status(404).json({ error: 'Immagine non trovata' });
     }
     
@@ -343,13 +343,13 @@ router.put('/:imageId/type', auth, async (req: any, res) => {
 router.get('/status/:jobId', auth, async (req: any, res) => {
   try {
     const { jobId } = req.params;
-    console.log(`[Status] Checking status for job ${jobId}`);
+    //console.log(`[Status] Checking status for job ${jobId}`);
 
     const jobState = await imageQueue.getJobState(jobId);
     const job = await imageQueue.getJob(jobId);
 
     if (!job) {
-      console.log(`[Status] Job not found: ${jobId}`);
+      //console.log(`[Status] Job not found: ${jobId}`);
       return res.status(404).json({ error: 'Job not found' });
     }
 

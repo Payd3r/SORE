@@ -141,7 +141,7 @@ router.post('/', auth, async (req: any, res) => {
             result.insertId,
             recipientIds
           );
-          console.log(`[Idea] Notification created for idea ${result.insertId}`);
+          //console.log(`[Idea] Notification created for idea ${result.insertId}`);
         } catch (notificationError) {
           console.error('[Idea] Error creating notification:', notificationError instanceof Error ? notificationError.message : 'Unknown error');
           // We continue even if notification fails
@@ -309,7 +309,7 @@ router.put('/:ideaId/check', auth, async (req: any, res) => {
               parseInt(ideaId),
               allUserIds
             );
-            console.log(`[Idea] Completion notification created for idea ${ideaId}`);
+            //console.log(`[Idea] Completion notification created for idea ${ideaId}`);
           } catch (notificationError) {
             console.error('[Idea] Error creating completion notification:', notificationError instanceof Error ? notificationError.message : 'Unknown error');
             // We continue even if notification fails

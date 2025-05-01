@@ -13,9 +13,9 @@ const router = express.Router();
 
 // Modifica password
 router.put('/edit-password', auth, async (req: any, res) => {
-  console.log('=== EDIT PASSWORD ROUTE ===');
-  console.log('Request body:', req.body);
-  console.log('User from token:', req.user);
+  //console.log('=== EDIT PASSWORD ROUTE ===');
+  //console.log('Request body:', req.body);
+  //console.log('User from token:', req.user);
   try {
     const { old_password, new_password } = req.body;
     const userId = req.user.id;
@@ -89,7 +89,7 @@ router.put('/profile-picture', auth, async (req: any, res: any) => {
       const oldImagePath = path.join(process.cwd(), userResult[0].profile_picture_url);
       if (fs.existsSync(oldImagePath)) {
         await fs.promises.unlink(oldImagePath);
-        console.log('Vecchia foto profilo eliminata:', oldImagePath);
+        //console.log('Vecchia foto profilo eliminata:', oldImagePath);
       }
     }
 
@@ -117,7 +117,7 @@ router.put('/profile-picture', auth, async (req: any, res: any) => {
     const fileName = `profile_${Date.now()}_${uuidv4()}.webp`;
     const filePath = path.join(profileDir, fileName);
 
-    console.log('Saving to:', filePath);
+    //console.log('Saving to:', filePath);
 
     // Processa l'immagine con sharp
     await sharp(imageBuffer)
@@ -189,7 +189,7 @@ router.put('/profile', auth, async (req: any, res) => {
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'Nessun dato da aggiornare' });
     }
-    console.log(updateData);
+    //console.log(updateData);
     // Costruisci la query di aggiornamento dinamicamente
     const updateFields = [];
     const updateValues = [];
