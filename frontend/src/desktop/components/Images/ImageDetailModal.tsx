@@ -2,7 +2,6 @@ import { useEffect, useState, useRef, MouseEvent, TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl } from '../../../api/images';
-import { IoChevronUp } from 'react-icons/io5';
 import { format } from 'date-fns';
 import { it, Locale } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
@@ -53,7 +52,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   const [fullImageData, setFullImageData] = useState<ImageResponse | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
+  const [_showInfo, setShowInfo] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const imageRef = useRef<HTMLImageElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -65,7 +64,6 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   });
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
-  const infoToggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -218,12 +216,6 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
     } finally {
       setIsSaving(false);
     }
-  };
-
-  // Funzione dedicata per gestire il toggle delle info
-  const handleInfoToggle = (e: MouseEvent) => {
-    e.stopPropagation();
-    setShowInfo(prev => !prev);
   };
 
   if (!isOpen || !image) return null;
