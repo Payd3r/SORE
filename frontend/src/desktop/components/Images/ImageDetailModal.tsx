@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, MouseEvent, TouchEvent } from 'react';
+import { useEffect, useState, useRef, TouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl } from '../../../api/images';
