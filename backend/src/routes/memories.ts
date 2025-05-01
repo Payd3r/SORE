@@ -14,10 +14,13 @@ const router = express.Router();
 router.get('/', auth, async (req: any, res) => {
   const imagesQuery = `
       SELECT 
-        id, thumb_big_path, webp_path, memory_id, created_at
+        id, thumb_big_path, webp_path, memory_id, created_at, display_order
       FROM images
       WHERE memory_id IN (?)
-      ORDER BY memory_id, created_at DESC
+      ORDER BY memory_id, 
+        CASE WHEN display_order IS NULL THEN 1 ELSE 0 END, 
+        display_order ASC, 
+        created_at DESC
     `;
   const memoriesQuery = `
       SELECT 
@@ -57,9 +60,9 @@ router.get('/', auth, async (req: any, res) => {
     const [images] = await pool.promise().query<Image[]>(imagesQuery, [memoryIds]);
 
     const memoriesWithImages = await Promise.all(memories.map(async (memory: Memory) => {
+      // Ordina già per display_order ASC NULLS LAST, poi created_at DESC
       const relatedImages = (images as Image[])
         .filter((img: Image) => img.memory_id === memory.id)
-        .sort((a: Image, b: Image) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, memory.img_limit);
 
       const imgagesConParametri = await Promise.all(

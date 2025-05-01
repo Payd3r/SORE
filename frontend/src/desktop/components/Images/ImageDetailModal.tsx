@@ -19,7 +19,7 @@ interface ImageDetailModalProps {
 
 // TouchDatePicker: un wrapper per il DatePicker per gestire meglio gli eventi touch
 const TouchDatePicker = ({ selected, onChange, dateFormat, locale }: {
-  selected: Date;
+  selected: Date | null;
   onChange: (date: Date | null) => void;
   dateFormat: string;
   locale: Locale;
@@ -60,7 +60,8 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     type: image?.type || '',
-    created_at: new Date(image?.created_at || '')
+    created_at: image?.created_at && !isNaN(Date.parse(image.created_at)) ? new Date(image.created_at) : null,
+    display_order: image?.display_order ?? ''
   });
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -101,6 +102,16 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
         });
     }
   }, [isOpen, image?.id]);
+
+  useEffect(() => {
+    console.log('[ImageDetailModal] editData aggiornato:', editData);
+  }, [editData]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsEditing(false);
+    }
+  }, [isOpen]);
 
   const handleImageLoad = () => {
     if (imageRef.current) {
@@ -145,9 +156,17 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   };
 
   const handleEdit = () => {
+    console.log('[ImageDetailModal] handleEdit - image?.created_at:', image?.created_at);
+    let parsedDate = null;
+    if (image?.created_at && !isNaN(Date.parse(image.created_at))) {
+      parsedDate = new Date(image.created_at);
+    } else {
+      parsedDate = new Date(); // fallback: data attuale
+    }
     setEditData({
       type: image?.type || '',
-      created_at: new Date(image?.created_at || '')
+      created_at: parsedDate,
+      display_order: image?.display_order ?? ''
     });
     setIsEditing(true);
   };
@@ -155,13 +174,18 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Imposta l'ora a mezzogiorno
-      const date = new Date(editData.created_at);
+      // Usa la data selezionata o la data attuale se null
+      const date = editData.created_at instanceof Date && !isNaN(editData.created_at.getTime()) ? new Date(editData.created_at) : new Date();
       date.setHours(12, 0, 0, 0);
 
+      // Calcola il nuovo ordine
+      const newOrder = editData.display_order === '' ? null : Number(editData.display_order);
+
+      // Aggiorna tutti i metadati in un'unica chiamata
       await updateImageMetadata(image?.id || '', {
         type: editData.type,
-        created_at: date.toISOString()
+        created_at: date.toISOString(),
+        display_order: newOrder
       });
 
       // Invalida tutte le query relative alle immagini per aggiornare i dati
@@ -172,14 +196,23 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
       if (image) {
         image.type = editData.type;
         image.created_at = date.toISOString();
+        image.display_order = newOrder;
         // Aggiorna anche fullImageData se esiste
         if (fullImageData?.data) {
           fullImageData.data.type = editData.type;
           fullImageData.data.created_at = date.toISOString();
+          fullImageData.data.display_order = newOrder;
         }
       }
       
       setIsEditing(false);
+
+      // Resetto editData ai valori aggiornati
+      setEditData({
+        type: image?.type || '',
+        created_at: image?.created_at && !isNaN(Date.parse(image.created_at)) ? new Date(image.created_at) : null,
+        display_order: image?.display_order ?? ''
+      });
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
     } finally {
@@ -337,8 +370,8 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 <div>
                   {isEditing ? (
                     <TouchDatePicker
-                      selected={editData.created_at}
-                      onChange={(date) => setEditData({ ...editData, created_at: date || new Date() })}
+                      selected={editData.created_at instanceof Date && !isNaN(editData.created_at.getTime()) ? editData.created_at : null}
+                      onChange={(date) => setEditData({ ...editData, created_at: date })}
                       dateFormat="dd/MM/yyyy"
                       locale={it}
                     />
@@ -374,6 +407,20 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 </div>
               </div>
             )}
+            {isEditing && (
+              <div className="mb-3">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ordine (1-8)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  value={editData.display_order}
+                  onChange={e => setEditData({ ...editData, display_order: e.target.value })}
+                  className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="Lascia vuoto per nessun ordine"
+                />
+              </div>
+            )}
 
             {/* Card Posizione */}
             {hasLocation && (
@@ -400,14 +447,14 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                   >
                     {isSaving ? 'Salvataggio...' : 'Salva'}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
                     type="button"
-                    className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-white focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700"
                   >
                     Annulla
                   </button>
@@ -415,9 +462,9 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
               ) : (
                 <>
                   <button
-                    onClick={() => setIsEditing(true)}
+                    onClick={handleEdit}
                     type="button"
-                    className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-white focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700"
                   >
                     Modifica
                   </button>
@@ -447,161 +494,8 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 </>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Versione mobile dei dettagli */}
-        <div className="lg:hidden">
-          {/* Toggle per le info su mobile */}
-          <button
-            ref={infoToggleRef}
-            onClick={handleInfoToggle}
-            className={`w-full py-3 px-4 flex items-center justify-between text-sm font-medium bg-white dark:bg-gray-800  ${showInfo ? 'border-none rounded-none' : 'border-t border-gray-200 dark:border-gray-700 rounded-t-lg'}`}
-          >
-            <div className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Informazioni immagine</span>
-            </div>
-            <div className={`flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 transition-transform duration-300 ${showInfo ? 'rotate-180' : ''}`}>
-              <IoChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-            </div>
-          </button>
-
-          <div 
-            className={`w-full overflow-y-auto bg-white dark:bg-gray-800 transition-all duration-300 ${showInfo ? 'max-h-[50vh]' : 'max-h-0'}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4">
-              {/* Info base - Riduci margine inferiore */}
-              <div className="flex items-center justify-between mb-4">
-                {isEditing ? (
-                  <select
-                    value={editData.type}
-                    onChange={(e) => setEditData({ ...editData, type: e.target.value })}
-                    className="px-2 me-3 py-3 ps-4 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full uppercase border-none focus:ring-2 focus:ring-blue-500 cursor-pointer appearance-none"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em',
-                      paddingRight: '2.5rem'
-                    }}
-                  >
-                    <option value="cibo" className="py-2 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700">CIBO</option>
-                    <option value="coppia" className="py-2 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700">COPPIA</option>
-                    <option value="singolo" className="py-2 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700">SINGOLO</option>
-                    <option value="paesaggio" className="py-2 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700">LUOGO</option>
-                  </select>
-                ) : (
-                  <span className="px-2 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded-full uppercase">
-                    {displayImage.type}
-                  </span>
-                )}
-                <div className="text-right">
-                  {isEditing ? (
-                    <TouchDatePicker
-                      selected={editData.created_at}
-                      onChange={(date) => setEditData({ ...editData, created_at: date || new Date() })}
-                      dateFormat="dd/MM/yyyy"
-                      locale={it}
-                    />
-                  ) : (
-                    <>
-                      <span className="block text-xs text-gray-500 dark:text-gray-400">
-                        {format(new Date(displayImage.created_at), 'dd/MM/yyyy', { locale: it })}
-                      </span>
-                      <span className="block text-xs text-gray-400 dark:text-gray-500">
-                        {format(new Date(displayImage.created_at), 'HH:mm', { locale: it })}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Creatore */}
-              {displayImage.created_by_name && (
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">
-                      {displayImage.created_by_name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                  <div>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">Caricata da</span>
-                    <span className="block text-sm font-medium text-gray-900 dark:text-white">
-                      {displayImage.created_by_name}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Posizione */}
-              {hasLocation && (
-                <button
-                  onClick={handleMapClick}
-                  className="w-full flex items-center justify-center gap-2 py-2 mb-4 text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors bg-transparent"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Visualizza sulla mappa
-                </button>
-              )}
-
-              {/* Azioni */}
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {isSaving ? 'Salvando...' : 'Salva'}
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleEdit}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Modifica
-                    </button>
-                    <button
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = imageUrl;
-                        link.download = `immagine-${image.id}.webp`;
-                        link.click();
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Scarica
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-white rounded-lg ${isDeleting ? 'bg-red-400' : 'bg-red-600 hover:bg-red-700'}`}
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      {isDeleting ? '...' : 'Elimina'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+            
           </div>
         </div>
       </div>

@@ -69,21 +69,23 @@ router.get('/:imageId', auth, async (req: any, res) => {
     const { imageId } = req.params;
     const coupleId = req.user.coupleId;
 
-    const [rows] = await pool.promise().query<Image[]>((
-      `SELECT 
-        i.id,
-        i.webp_path,
-        i.latitude,
-        i.longitude,
-        i.created_by_user_id,
-        i.created_at,
-        i.type,
-        i.couple_id,
-        u.name as created_by_name
-      FROM images i 
-      LEFT JOIN users u ON i.created_by_user_id = u.id 
-      WHERE i.id = ?`
-    ) as any,
+    const [rows] = await pool.promise().query<Image[]>(
+      (
+        `SELECT 
+          i.id,
+          i.webp_path,
+          i.latitude,
+          i.longitude,
+          i.created_by_user_id,
+          i.created_at,
+          i.type,
+          i.couple_id,
+          i.display_order,
+          u.name as created_by_name
+        FROM images i 
+        LEFT JOIN users u ON i.created_by_user_id = u.id 
+        WHERE i.id = ?`
+      ) as any,
       [imageId]
     );
 
@@ -225,50 +227,61 @@ router.put('/:imageId/metadata', auth, async (req: any, res) => {
   try {
     const imageId = req.params.imageId;
     const coupleId = req.user.coupleId;
-    const { type, created_at } = req.body;
+    const { type, created_at, display_order } = req.body;
+
+    // LOG: input ricevuto
+    console.log('[PUT /:imageId/metadata] body:', req.body);
+    console.log('[PUT /:imageId/metadata] type:', type, 'created_at:', created_at, 'display_order:', display_order, 'typeof display_order:', typeof display_order);
 
     // Valida i dati in input manualmente
     if (!type || !Object.values(ImageType).includes(type)) {
-      return res.status(400).json({ error: 'Il campo \'type\' è mancante o non valido.' });
+      console.log('[PUT /:imageId/metadata] Validazione fallita: type non valido', type);
+      return res.status(400).json({ error: "Il campo 'type' è mancante o non valido." });
     }
-
     if (!created_at || isNaN(Date.parse(created_at))) {
-      return res.status(400).json({ error: 'Il campo \'created_at\' è mancante o non è una data valida.' });
+      console.log('[PUT /:imageId/metadata] Validazione fallita: created_at non valido', created_at);
+      return res.status(400).json({ error: "Il campo 'created_at' è mancante o non è una data valida." });
+    }
+    if (display_order !== undefined && display_order !== null && isNaN(Number(display_order))) {
+      console.log('[PUT /:imageId/metadata] Validazione fallita: display_order non valido', display_order, 'typeof:', typeof display_order);
+      return res.status(400).json({ error: "display_order deve essere un numero o null" });
     }
 
     // Verifica che l'immagine esista e appartenga alla coppia
-    const [images] = await pool.promise().query((
-      'SELECT id FROM images WHERE id = ? AND couple_id = ?'
-    ) as any,
+    const [images] = await pool.promise().query(
+      'SELECT id FROM images WHERE id = ? AND couple_id = ?',
       [imageId, coupleId]
     );
-
     if (!images || (images as any[]).length === 0) {
+      console.log('[PUT /:imageId/metadata] Immagine non trovata', imageId, coupleId);
       return res.status(404).json({ error: 'Immagine non trovata' });
     }
 
-    // Aggiorna i metadati
-    await pool.promise().query(
-      `UPDATE images 
-       SET 
-        type = ?,
-        created_at = ?
-       WHERE id = ? AND couple_id = ?`,
-      [type, created_at, imageId, coupleId]
-    );
+    // Aggiorna i metadati (incluso display_order se presente)
+    let updateQuery = `UPDATE images SET type = ?, created_at = ?`;
+    let updateParams: any[] = [type, created_at];
+    if (display_order !== undefined) {
+      updateQuery += `, display_order = ?`;
+      updateParams.push(display_order);
+    }
+    updateQuery += ` WHERE id = ? AND couple_id = ?`;
+    updateParams.push(imageId, coupleId);
 
-    res.json({ 
+    console.log('[PUT /:imageId/metadata] Eseguo query:', updateQuery, updateParams);
+    await pool.promise().query(updateQuery, updateParams);
+
+    res.json({
       message: 'Metadati aggiornati con successo',
       data: {
         id: imageId,
         type,
-        created_at
+        created_at,
+        ...(display_order !== undefined ? { display_order } : {})
       }
     });
-
   } catch (error) {
     console.error('Error updating image metadata:', error);
-    res.status(500).json({ error: 'Errore durante l\'aggiornamento dei metadati' });
+    res.status(500).json({ error: "Errore durante l'aggiornamento dei metadati" });
   }
 });
 
