@@ -198,13 +198,6 @@ router.post('/', auth, async (req: any, res) => {
       return res.status(400).json({ error: 'Titolo e tipo sono obbligatori' });
     }
 
-    //console.log(`[Memory] Creating new memory for couple ${coupleId}`, {
-      title,
-      type,
-      hasLocation: !!location,
-      hasSong: !!song
-    });
-
     // Start a transaction
     const connection = await pool.promise().getConnection();
     try {
