@@ -34,6 +34,130 @@ interface SpotifyTrack {
   };
 }
 
+// COMPONENTE SPOSTATO FUORI
+import React from 'react';
+
+interface SpotifySearchComponentProps {
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  songSuggestions: SpotifyTrack[];
+  setSongSuggestions: React.Dispatch<React.SetStateAction<SpotifyTrack[]>>;
+  showSuggestions: boolean;
+  setShowSuggestions: React.Dispatch<React.SetStateAction<boolean>>;
+  isLoadingSongs: boolean;
+  handleSongInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  suggestionsRef: React.RefObject<HTMLDivElement | null>;
+  isSearchMode: boolean;
+  setIsSearchMode: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function SpotifySearchComponent({
+  searchQuery,
+  setSearchQuery,
+  songSuggestions,
+  setSongSuggestions,
+  showSuggestions,
+  setShowSuggestions,
+  isLoadingSongs,
+  handleSongInputChange,
+  searchInputRef,
+  suggestionsRef,
+  setIsSearchMode
+}: SpotifySearchComponentProps) {
+  // Solo input e suggerimenti
+  return (
+    <div className="relative" style={{ zIndex: 9999 }}>
+      <input
+        ref={searchInputRef}
+        type="search"
+        id="spotify-search"
+        value={searchQuery}
+        onChange={handleSongInputChange}
+        onBlur={() => {
+          setTimeout(() => {
+            setShowSuggestions(false);
+          }, 300);
+        }}
+        onFocus={() => {
+          if (searchQuery.trim().length >= 2) {
+            setShowSuggestions(true);
+          }
+        }}
+        className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
+        placeholder="Cerca una canzone su Spotify"
+        autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck="false"
+      />
+      {isLoadingSongs && (
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+        </div>
+      )}
+      {showSuggestions && searchQuery.trim().length >= 2 && (
+        <div
+          ref={suggestionsRef}
+          className="absolute bottom-[100%] left-0 right-0 mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-2xl max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700"
+          style={{ zIndex: 9999 }}
+        >
+          {isLoadingSongs ? (
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              <div className="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-2"></div>
+              Ricerca in corso...
+            </div>
+          ) : songSuggestions && songSuggestions.length > 0 ? (
+            <ul className="py-1">
+              {songSuggestions.map((track) => (
+                track && (
+                  <li
+                    key={track.id}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    onClick={() => {
+                      const testo = `${track.name} - ${track.artists.map(a => a.name).join(', ')} - ${track.album.name}`;
+                      setSearchQuery(testo);
+                      setShowSuggestions(false);
+                      setSongSuggestions([]);
+                      setIsSearchMode(false);
+                    }}
+                    className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
+                  >
+                    <div className="h-8 w-8 flex-shrink-0">
+                      {track.album && track.album.images && track.album.images[0] && (
+                        <img 
+                          src={track.album.images[0].url} 
+                          alt={track.name}
+                          className="h-full w-full object-cover rounded" 
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-gray-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400 truncate">
+                        {track.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {track.artists && track.artists.map(a => a.name).join(', ')}
+                        {track.album && ` • ${track.album.name}`}
+                      </div>
+                    </div>
+                  </li>
+                )
+              ))}
+            </ul>
+          ) : (
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              Nessun risultato trovato
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UploadMobile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -51,12 +175,12 @@ export default function UploadMobile() {
   const [memoryType, setMemoryType] = useState<MemoryType>('SEMPLICE');
   const [futureDate, setFutureDate] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [spotifyTrack, setSpotifyTrack] = useState<SpotifyTrack | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [songSuggestions, setSongSuggestions] = useState<SpotifyTrack[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSongs, setIsLoadingSongs] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement | null>(null);
   
   // Stati per il caricamento delle idee
   const [ideaTitle, setIdeaTitle] = useState('');
@@ -69,7 +193,7 @@ export default function UploadMobile() {
   
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Ricerca di canzoni su Spotify con debounce
   const searchSongs = useRef(
@@ -110,13 +234,6 @@ export default function UploadMobile() {
     }
   }, []);
 
-  // Selezione di una canzone dai suggerimenti
-  const handleSongSelect = (track: SpotifyTrack) => {
-    setSpotifyTrack(track);
-    setSearchQuery('');
-    setShowSuggestions(false);
-    setSongSuggestions([]);
-  };
   // Chiudi i suggerimenti quando si clicca fuori
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -136,7 +253,6 @@ export default function UploadMobile() {
     setMemoryType('SEMPLICE');
     setFutureDate('');
     setSelectedFiles([]);
-    setSpotifyTrack(null);
     setSearchQuery('');
     setSongSuggestions([]);
     setShowSuggestions(false);
@@ -210,14 +326,13 @@ export default function UploadMobile() {
             return;
           }
           
-          // Prepariamo l'ID della canzone Spotify se selezionata
-          const spotifyId = spotifyTrack ? spotifyTrack.id : undefined;
+          const songData = searchQuery.trim() ? searchQuery.trim() : undefined;
           
           // Preparo i dati del ricordo
           const memoryData: any = {
             title: title.trim(),
             type: memoryType,
-            song: spotifyId,
+            song: songData,
             location: location.trim() || undefined
           };
           if (memoryType === 'FUTURO' && futureDate) {
@@ -287,162 +402,6 @@ export default function UploadMobile() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Componente di ricerca Spotify completamente riscritto
-  const SpotifySearchComponent = () => {
-    // Stato per la modalità di ricerca attiva
-    const [isSearchMode, setIsSearchMode] = useState(false);
-    
-    // Se c'è già una traccia selezionata
-    if (spotifyTrack && !isSearchMode) {
-      return (
-        <div className="flex items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-          <div className="h-12 w-12 flex-shrink-0">
-            <img 
-              src={spotifyTrack.album.images[0]?.url}
-              alt={spotifyTrack.name}
-              className="h-full w-full object-cover rounded" 
-            />
-          </div>
-          <div className="ml-3 flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {spotifyTrack.name}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {spotifyTrack.artists.map(a => a.name).join(', ')}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setIsSearchMode(true)}
-              className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSpotifyTrack(null)}
-              className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // Se siamo in modalità ricerca o non abbiamo una traccia selezionata
-    return (
-      <div className="relative" style={{ zIndex: 9999 }}>
-        {isSearchMode && spotifyTrack && (
-          <button
-            type="button" 
-            className="absolute right-2 top-2 z-10 p-1 bg-gray-200 dark:bg-gray-700 rounded-full"
-            onClick={() => setIsSearchMode(false)}
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-        
-        <input
-          ref={searchInputRef}
-          type="search"
-          id="spotify-search"
-          value={searchQuery}
-          onChange={handleSongInputChange}
-          onBlur={() => {
-            // Ritardo la chiusura per permettere il click sui suggerimenti
-            setTimeout(() => {
-              if (spotifyTrack && !showSuggestions) {
-                setIsSearchMode(false);
-              }
-            }, 300);
-          }}
-          onFocus={() => {
-            if (searchQuery.trim().length >= 2) {
-              setShowSuggestions(true);
-            }
-          }}
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 placeholder-gray-500 dark:placeholder-gray-400"
-          placeholder="Cerca una canzone su Spotify"
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck="false"
-        />
-        
-        {isLoadingSongs && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-        
-        {showSuggestions && searchQuery.trim().length >= 2 && (
-          <div
-            ref={suggestionsRef}
-            className="absolute bottom-[100%] left-0 right-0 mb-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-2xl max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700"
-            style={{ zIndex: 9999 }}
-          >
-            {isLoadingSongs ? (
-              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                <div className="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-                Ricerca in corso...
-              </div>
-            ) : songSuggestions && songSuggestions.length > 0 ? (
-              <ul className="py-1">
-                {songSuggestions.map((track) => (
-                  track && (
-                    <li
-                      key={track.id}
-                      onMouseDown={(e) => {
-                        // Previene la perdita di focus
-                        e.preventDefault();
-                      }}
-                      onClick={() => {
-                        handleSongSelect(track);
-                        setIsSearchMode(false);
-                      }}
-                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-3 group transition-colors"
-                    >
-                      <div className="h-8 w-8 flex-shrink-0">
-                        {track.album && track.album.images && track.album.images[0] && (
-                          <img 
-                            src={track.album.images[0].url} 
-                            alt={track.name}
-                            className="h-full w-full object-cover rounded" 
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium text-gray-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400 truncate">
-                          {track.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {track.artists && track.artists.map(a => a.name).join(', ')}
-                          {track.album && ` • ${track.album.name}`}
-                        </div>
-                      </div>
-                    </li>
-                  )
-                ))}
-              </ul>
-            ) : (
-              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                Nessun risultato trovato
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Blocca le gesture di scorrimento laterale del PwaLayout e qualsiasi swipe nativo
@@ -708,7 +667,20 @@ export default function UploadMobile() {
                 Canzone (opzionale)
               </label>
               
-              <SpotifySearchComponent />
+              <SpotifySearchComponent
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                songSuggestions={songSuggestions}
+                setSongSuggestions={setSongSuggestions}
+                showSuggestions={showSuggestions}
+                setShowSuggestions={setShowSuggestions}
+                isLoadingSongs={isLoadingSongs}
+                handleSongInputChange={handleSongInputChange}
+                searchInputRef={searchInputRef}
+                suggestionsRef={suggestionsRef}
+                isSearchMode={isSearchMode}
+                setIsSearchMode={setIsSearchMode}
+              />
             </div>
             
             {/* Upload immagini */}
