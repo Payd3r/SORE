@@ -7,18 +7,18 @@ const router = express.Router();
 
 // Get couple details
 router.get('/:coupleId', auth, async (req: any, res) => {
-  console.log('=== COUPLES ROUTE ===');
-  console.log('Route /:coupleId chiamata con ID:', req.params.coupleId);
-  console.log('User:', req.user);
+  //console.log('=== COUPLES ROUTE ===');
+  //console.log('Route /:coupleId chiamata con ID:', req.params.coupleId);
+  //console.log('User:', req.user);
   try {
     const coupleId = parseInt(req.params.coupleId, 10);
     const userCoupleId = parseInt(req.user.coupleId, 10);
-    console.log('coupleId convertito:', coupleId);
-    console.log('userCoupleId convertito:', userCoupleId);
+    //console.log('coupleId convertito:', coupleId);
+    //console.log('userCoupleId convertito:', userCoupleId);
 
     // Verify user belongs to the couple
     if (userCoupleId !== coupleId) {
-      console.log('Utente non autorizzato:', userCoupleId, 'vs', coupleId);
+      //console.log('Utente non autorizzato:', userCoupleId, 'vs', coupleId);
       return res.status(403).json({ error: 'Non autorizzato a visualizzare i dettagli di questa coppia' });
     }
 
@@ -35,10 +35,10 @@ router.get('/:coupleId', auth, async (req: any, res) => {
       [coupleId]
     );
 
-    console.log('Risultato query:', coupleResult);
+    //console.log('Risultato query:', coupleResult);
 
     if (!coupleResult || coupleResult.length === 0) {
-      console.log('Coppia non trovata');
+      //console.log('Coppia non trovata');
       return res.status(404).json({ error: 'Coppia non trovata' });
     }
 
@@ -50,7 +50,7 @@ router.get('/:coupleId', auth, async (req: any, res) => {
       [coupleId]
     );
 
-    console.log('Membri trovati:', membersResult);
+    //console.log('Membri trovati:', membersResult);
 
     const response = { 
       data: {
@@ -59,7 +59,7 @@ router.get('/:coupleId', auth, async (req: any, res) => {
       }
     };
 
-    console.log('Risposta finale:', response);
+    //console.log('Risposta finale:', response);
     res.json(response);
   } catch (error) {
     console.error('Errore nel recupero dei dettagli della coppia:', error);
@@ -119,7 +119,7 @@ router.put('/:coupleId', auth, async (req: any, res) => {
       }
     };
 
-    console.log('Risposta couple:', JSON.stringify(response, null, 2));
+    //console.log('Risposta couple:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
     console.error('Error updating couple details:', error);

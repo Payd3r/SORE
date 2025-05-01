@@ -1,5 +1,5 @@
 import { API_URLS } from './config';
-import axios from 'axios';
+import axiosInstance from './config';
 
 export interface HomeStats {
   data: {
@@ -50,7 +50,7 @@ const getAuthHeaders = () => {
 export const getHomeData = async (): Promise<HomeStats> => {
   try {
     const headers = getAuthHeaders();
-    const response = await axios.get(`${API_URLS.base}/api/home`, {
+    const response = await axiosInstance.get(`${API_URLS.base}/api/home`, {
       headers
     });
     return response.data;

@@ -180,9 +180,9 @@ export default function Gallery() {
     // Applica prima il filtro di associazione ai ricordi
     let filteredByMemory = images;
     if (memoryFilter === 'NOT_IN_MEMORY') {
-      console.log("prima", filteredByMemory);
+      //console.log("prima", filteredByMemory);
       filteredByMemory = images.filter(image => image.memory_id === null);
-      console.log("dopo", filteredByMemory);
+      //console.log("dopo", filteredByMemory);
     }
 
     // Poi applica il filtro per tipo di immagine

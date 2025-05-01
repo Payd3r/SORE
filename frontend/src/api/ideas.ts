@@ -1,6 +1,7 @@
 import { API_URLS } from './config';
 import { ApiResponse } from './types';
-import axios from 'axios';
+import axiosInstance from './config';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export type IdeaType = 'RISTORANTI' | 'VIAGGI' | 'SFIDE' | 'SEMPLICI';
 
@@ -34,7 +35,7 @@ const getAuthHeaders = () => {
 
 export const getIdeas = async (): Promise<Idea[]> => {
     try {
-        const response = await axios.get<ApiResponse<Idea[]>>(
+        const response = await axiosInstance.get<ApiResponse<Idea[]>>(
             `${API_URLS.base}/api/ideas`,
             { headers: getAuthHeaders() }
         );
@@ -47,7 +48,7 @@ export const getIdeas = async (): Promise<Idea[]> => {
 
 export const createIdea = async (data: CreateIdeaData): Promise<Idea> => {
     try {
-        const response = await axios.post<ApiResponse<Idea>>(
+        const response = await axiosInstance.post<ApiResponse<Idea>>(
             `${API_URLS.base}/api/ideas`,
             data,
             { headers: getAuthHeaders() }
@@ -61,7 +62,7 @@ export const createIdea = async (data: CreateIdeaData): Promise<Idea> => {
 
 export const deleteIdea = async (ideaId: number): Promise<void> => {
     try {
-        const response = await fetch(`${API_URLS.base}/api/ideas/${ideaId}`, {
+        const response = await fetchWithAuth(`${API_URLS.base}/api/ideas/${ideaId}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
         });
@@ -77,7 +78,7 @@ export const deleteIdea = async (ideaId: number): Promise<void> => {
 
 export const checkIdea = async (ideaId: number, checked: boolean): Promise<Idea> => {
     try {
-        const response = await fetch(`${API_URLS.base}/api/ideas/${ideaId}/check`, {
+        const response = await fetchWithAuth(`${API_URLS.base}/api/ideas/${ideaId}/check`, {
             method: 'PUT',
             headers: {
                 ...getAuthHeaders(),
@@ -100,7 +101,7 @@ export const checkIdea = async (ideaId: number, checked: boolean): Promise<Idea>
 
 export const updateIdea = async (ideaId: number, data: { title: string; description: string }): Promise<Idea> => {
     try {
-        const response = await fetch(`${API_URLS.base}/api/ideas/${ideaId}`, {
+        const response = await fetchWithAuth(`${API_URLS.base}/api/ideas/${ideaId}`, {
             method: 'PUT',
             headers: {
                 ...getAuthHeaders(),

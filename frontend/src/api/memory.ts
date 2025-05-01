@@ -1,7 +1,8 @@
 import { API_URLS } from './config';
 import { ApiResponse } from './types';
-import axios from 'axios';
+import axiosInstance from './config';
 import type { CarouselImage } from '../desktop/pages/DetailMemory';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 
@@ -73,7 +74,7 @@ const getAuthHeaders = () => {
 export const getMemories = async (): Promise<Memory[]> => {
   try {
     const headers = getAuthHeaders();
-    const response = await fetch(`${API_URLS.base}/api/memories/`, {
+    const response = await fetchWithAuth(`${API_URLS.base}/api/memories/`, {
       headers,
     });
 
@@ -92,7 +93,7 @@ export const getMemories = async (): Promise<Memory[]> => {
 export const createMemory = async (data: CreateMemoryRequest): Promise<CreateMemoryResponse> => {
   try {
     const headers = getAuthHeaders();
-    const response = await axios.post(`${API_URLS.base}/api/memories/`, data, {
+    const response = await axiosInstance.post(`${API_URLS.base}/api/memories/`, data, {
       headers
     });
     return response.data;
@@ -104,7 +105,7 @@ export const createMemory = async (data: CreateMemoryRequest): Promise<CreateMem
 export const getMemory = async (id: string): Promise<MemoryResponse> => {
   try {
     const headers = getAuthHeaders();
-    const response = await axios.get(`${API_URLS.base}/api/memories/${id}`, {
+    const response = await axiosInstance.get(`${API_URLS.base}/api/memories/${id}`, {
       headers
     });
     return response.data;
@@ -120,7 +121,7 @@ export const getMemoryCarousel = async (id: string): Promise<CarouselResponse> =
   }
 
   try {
-    const response = await fetch(`${API_URLS.base}/api/memories/carousel/${id}`, {
+    const response = await fetchWithAuth(`${API_URLS.base}/api/memories/carousel/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -140,7 +141,7 @@ export const getMemoryCarousel = async (id: string): Promise<CarouselResponse> =
 export const updateMemory = async (id: string, data: Partial<Memory>): Promise<ApiResponse<Memory>> => {
   try {
     const headers = getAuthHeaders();
-    const response = await axios.put(`${API_URLS.base}/api/memories/${id}`, data, {
+    const response = await axiosInstance.put(`${API_URLS.base}/api/memories/${id}`, data, {
       headers
     });
     return response.data;
@@ -152,7 +153,7 @@ export const updateMemory = async (id: string, data: Partial<Memory>): Promise<A
 export const deleteMemory = async (id: string): Promise<void> => {
   try {
     const headers = getAuthHeaders();
-    const response = await axios.delete(`${API_URLS.base}/api/memories/${id}`, {
+    const response = await axiosInstance.delete(`${API_URLS.base}/api/memories/${id}`, {
       headers
     });
     return response.data;

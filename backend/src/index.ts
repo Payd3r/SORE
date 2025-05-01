@@ -44,17 +44,17 @@ app.use(cors({
   maxAge: 86400
 }));
 
-// Middleware per il logging delle richieste
-app.use((req, res, next) => {
-  console.log('\n=== INCOMING REQUEST ===');
-  console.log('Time:', new Date().toISOString());
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  console.log('Headers:', req.headers);
-  console.log('Content-Type:', req.get('content-type'));
-  console.log('=======================\n');
-  next();
-});
+// // Middleware per il logging delle richieste
+// app.use((req, res, next) => {
+//   //console.log('\n=== INCOMING REQUEST ===');
+//   //console.log('Time:', new Date().toISOString());
+//   //console.log('Method:', req.method);
+//   //console.log('URL:', req.url);
+//   //console.log('Headers:', req.headers);
+//   //console.log('Content-Type:', req.get('content-type'));
+//   //console.log('=======================\n');
+//   next();
+// });
 
 // Gestione delle richieste OPTIONS
 app.options('*', cors());
@@ -107,7 +107,6 @@ app.use('/api/recap', recapRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-console.log('=== ROUTES MOUNTED ===');
 
 // Inizializza i cron job
 setupNotificationCron();
@@ -122,28 +121,28 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // 404 handler
 app.use((req: express.Request, res: express.Response) => {
-  console.log('=== 404 NOT FOUND ===');
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  console.log('===================');
+  //console.log('=== 404 NOT FOUND ===');
+  //console.log('Method:', req.method);
+  //console.log('URL:', req.url);
+  //console.log('===================');
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Access the API at http://localhost:${PORT}`);
-  console.log('Available routes:');
-  console.log('- /media/*');
-  console.log('- /api/auth/*');
-  console.log('- /api/home/*');
-  console.log('- /api/users/*');
-  console.log('- /api/couples/*');
-  console.log('- /api/memories/*');
-  console.log('- /api/images/*');
-  console.log('- /api/ideas/*');
-  console.log('- /api/spotify/*');
-  console.log('- /api/recap/*');
-  console.log('- /api/map/*');
-  console.log('- /api/notifications/*');
-  console.log('=================================');
-});
+// app.listen(PORT, '0.0.0.0', () => {
+//   //console.log(`Server is running on port ${PORT}`);
+//   //console.log(`Access the API at http://localhost:${PORT}`);
+//   //console.log('Available routes:');
+//   //console.log('- /media/*');
+//   //console.log('- /api/auth/*');
+//   //console.log('- /api/home/*');
+//   //console.log('- /api/users/*');
+//   //console.log('- /api/couples/*');
+//   //console.log('- /api/memories/*');
+//   //console.log('- /api/images/*');
+//   //console.log('- /api/ideas/*');
+//   //console.log('- /api/spotify/*');
+//   //console.log('- /api/recap/*');
+//   //console.log('- /api/map/*');
+//   //console.log('- /api/notifications/*');
+//   //console.log('=================================');
+// });

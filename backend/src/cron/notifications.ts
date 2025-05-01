@@ -8,11 +8,11 @@ import { generateTimeBasedNotifications } from '../services/notificationService'
 export function setupNotificationCron(): void {
   // Esegui ogni giorno alle 00:00
   cron.schedule('0 0 * * *', async () => {
-    console.log('🔔 Executing scheduled notification generation job...');
+    //console.log('🔔 Executing scheduled notification generation job...');
     try {
       const result = await generateTimeBasedNotifications();
       if (result) {
-        console.log('✅ Time-based notifications generated successfully');
+        //console.log('✅ Time-based notifications generated successfully');
       } else {
         console.error('❌ Failed to generate time-based notifications');
       }
@@ -21,5 +21,5 @@ export function setupNotificationCron(): void {
     }
   });
   
-  console.log('🔔 Notification cron job scheduled successfully');
+  //console.log('🔔 Notification cron job scheduled successfully');
 } 

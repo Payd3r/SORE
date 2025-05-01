@@ -42,7 +42,7 @@ router.get('/', auth, async (req: any, res) => {
 
   try {
     const coupleId = req.user.coupleId;
-    console.log(`[Memories] Fetching memories for couple ${coupleId}`);
+    //console.log(`[Memories] Fetching memories for couple ${coupleId}`);
 
     // 1. Prendi le memories
     const [memories] = await pool.promise().query<Memory[]>(memoriesQuery, [coupleId]);
@@ -102,7 +102,7 @@ router.get('/', auth, async (req: any, res) => {
       };
     }));
 
-    console.log(`[Memories] Found ${memoriesWithImages.length} memories`);
+    //console.log(`[Memories] Found ${memoriesWithImages.length} memories`);
     res.json({ data: memoriesWithImages });
   } catch (error) {
     console.error('[Memories] Error fetching memories:', error instanceof Error ? error.message : 'Unknown error');
@@ -116,7 +116,7 @@ router.get('/:memoryId', auth, async (req: any, res) => {
     const { memoryId } = req.params;
     const coupleId = req.user.coupleId;
 
-    console.log(`[Memory] Fetching memory ${memoryId} for couple ${coupleId}`);
+    //console.log(`[Memory] Fetching memory ${memoryId} for couple ${coupleId}`);
 
     // Prima recuperiamo la memory
     const [memoryRows] = await pool.promise().query<Memory[]>(
@@ -130,7 +130,7 @@ router.get('/:memoryId', auth, async (req: any, res) => {
     );
 
     if (memoryRows.length === 0) {
-      console.log(`[Memory] Not found: ${memoryId}`);
+      //console.log(`[Memory] Not found: ${memoryId}`);
       return res.status(404).json({ error: 'Memory not found' });
     }
 
@@ -138,7 +138,7 @@ router.get('/:memoryId', auth, async (req: any, res) => {
 
     // Verify user belongs to the couple that owns the memory
     if (req.user.coupleId !== memory.couple_id) {
-      console.log(`[Memory] Unauthorized access: ${memoryId}`);
+      //console.log(`[Memory] Unauthorized access: ${memoryId}`);
       return res.status(403).json({ error: 'Not authorized to view this memory' });
     }
 
@@ -176,7 +176,7 @@ router.get('/:memoryId', auth, async (req: any, res) => {
     // Filtra le immagini valide
     processedMemory.images = processedImages.filter((img): img is NonNullable<typeof img> => img !== null);
 
-    console.log(`[Memory] Found ${processedMemory.images.length} images for memory ${memoryId}`);
+    //console.log(`[Memory] Found ${processedMemory.images.length} images for memory ${memoryId}`);
     res.json({ data: processedMemory });
   } catch (error) {
     console.error('[Memory] Error fetching memory:', error instanceof Error ? error.message : 'Unknown error');
@@ -195,7 +195,7 @@ router.post('/', auth, async (req: any, res) => {
       return res.status(400).json({ error: 'Titolo e tipo sono obbligatori' });
     }
 
-    console.log(`[Memory] Creating new memory for couple ${coupleId}`, {
+    //console.log(`[Memory] Creating new memory for couple ${coupleId}`, {
       title,
       type,
       hasLocation: !!location,
@@ -228,7 +228,7 @@ router.post('/', auth, async (req: any, res) => {
       );
 
       const memoryId = memoryResult.insertId;
-      console.log(`[Memory] Created memory ${memoryId}`);
+      //console.log(`[Memory] Created memory ${memoryId}`);
 
       // Get user name for notification
       const [userResult] = await connection.query<RowDataPacket[]>(
@@ -252,7 +252,7 @@ router.post('/', auth, async (req: any, res) => {
             memoryId,
             recipientIds
           );
-          console.log(`[Memory] Notification created for memory ${memoryId}`);
+          //console.log(`[Memory] Notification created for memory ${memoryId}`);
         } catch (notificationError) {
           console.error('[Memory] Error creating notification:', notificationError instanceof Error ? notificationError.message : 'Unknown error');
           // We continue even if notification fails
@@ -281,7 +281,7 @@ router.put('/:memoryId', auth, async (req: any, res) => {
     const { title, start_date, end_date, location, song } = req.body;
     const coupleId = req.user.coupleId;
 
-    console.log(`[Memory] Updating memory ${memoryId}`);
+    //console.log(`[Memory] Updating memory ${memoryId}`);
 
     // Get memory details
     const [memoryResult] = await pool.promise().query<Memory[]>(
@@ -290,7 +290,7 @@ router.put('/:memoryId', auth, async (req: any, res) => {
     );
 
     if (memoryResult.length === 0) {
-      console.log(`[Memory] Not found: ${memoryId}`);
+      //console.log(`[Memory] Not found: ${memoryId}`);
       return res.status(404).json({ error: 'Memory not found' });
     }
 
@@ -298,7 +298,7 @@ router.put('/:memoryId', auth, async (req: any, res) => {
 
     // Verify user belongs to the couple that owns the memory
     if (req.user.coupleId !== memory.couple_id) {
-      console.log(`[Memory] Unauthorized update: ${memoryId}`);
+      //console.log(`[Memory] Unauthorized update: ${memoryId}`);
       return res.status(403).json({ error: 'Not authorized to update this memory' });
     }
 
@@ -315,7 +315,7 @@ router.put('/:memoryId', auth, async (req: any, res) => {
       [title, start_date, end_date, location, song, memoryId]
     );
 
-    console.log(`[Memory] Updated memory ${memoryId}`);
+    //console.log(`[Memory] Updated memory ${memoryId}`);
     res.json({ message: 'Memory updated successfully' });
   } catch (error) {
     console.error('[Memory] Error updating memory:', error instanceof Error ? error.message : 'Unknown error');
@@ -329,7 +329,7 @@ router.delete('/:memoryId', auth, async (req: any, res) => {
     const { memoryId } = req.params;
     const coupleId = req.user.coupleId;
 
-    console.log(`[Memory] Deleting memory ${memoryId}`);
+    //console.log(`[Memory] Deleting memory ${memoryId}`);
 
     // Get memory details
     const [memoryResult] = await pool.promise().query<Memory[]>(
@@ -338,7 +338,7 @@ router.delete('/:memoryId', auth, async (req: any, res) => {
     );
 
     if (memoryResult.length === 0) {
-      console.log(`[Memory] Not found: ${memoryId}`);
+      //console.log(`[Memory] Not found: ${memoryId}`);
       return res.status(404).json({ error: 'Memory not found' });
     }
 
@@ -346,7 +346,7 @@ router.delete('/:memoryId', auth, async (req: any, res) => {
 
     // Verify user belongs to the couple that owns the memory
     if (req.user.coupleId !== memory.couple_id) {
-      console.log(`[Memory] Unauthorized delete: ${memoryId}`);
+      //console.log(`[Memory] Unauthorized delete: ${memoryId}`);
       return res.status(403).json({ error: 'Not authorized to delete this memory' });
     }
 
@@ -402,7 +402,7 @@ router.delete('/:memoryId', auth, async (req: any, res) => {
       );
 
       await connection.commit();
-      console.log(`[Memory] Deleted memory ${memoryId} and ${deleteImagesResult.affectedRows} images`);
+      //console.log(`[Memory] Deleted memory ${memoryId} and ${deleteImagesResult.affectedRows} images`);
 
       res.json({ message: 'Memory deleted successfully' });
     } catch (error) {
@@ -423,7 +423,7 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
     const { memoryId } = req.params;
     const coupleId = req.user.coupleId;
 
-    console.log(`[Carousel] Fetching images for memory ${memoryId}`);
+    //console.log(`[Carousel] Fetching images for memory ${memoryId}`);
 
     // Verifica che la memory esista e appartenga alla coppia
     const [memoryRows] = await pool.promise().query<Memory[]>(
@@ -432,7 +432,7 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
     );
 
     if (memoryRows.length === 0) {
-      console.log(`[Carousel] Memory not found or unauthorized: ${memoryId}`);
+      //console.log(`[Carousel] Memory not found or unauthorized: ${memoryId}`);
       return res.status(404).json({ error: 'Memory not found or not authorized' });
     }
 

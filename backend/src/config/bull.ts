@@ -37,7 +37,7 @@ class FileSystemQueue {
   private constructor() {
     this.startProcessing();
     this.startCleanup();
-    console.log(`[Queue] Initialized with maximum ${MAX_CONCURRENT_JOBS} concurrent jobs`);
+    //console.log(`[Queue] Initialized with maximum ${MAX_CONCURRENT_JOBS} concurrent jobs`);
   }
 
   public static getInstance(): FileSystemQueue {
@@ -65,7 +65,7 @@ class FileSystemQueue {
 
         if (age > COMPLETED_JOB_RETENTION) {
           fs.unlinkSync(filePath);
-          console.log(`[Queue] Cleaned up old completed job: ${file}`);
+          //console.log(`[Queue] Cleaned up old completed job: ${file}`);
         }
       }
     } catch (error) {
@@ -114,7 +114,7 @@ class FileSystemQueue {
     const filePath = path.join(PROCESSING_DIR, file);
     
     try {
-      console.log(`[Queue] Processing job ${jobData.id}`);
+      //console.log(`[Queue] Processing job ${jobData.id}`);
       
       // Aggiungi l'ID del job ai dati
       jobData.data.id = jobData.id;
@@ -128,7 +128,7 @@ class FileSystemQueue {
       // Sposta il file nella directory completed
       fs.writeFileSync(path.join(COMPLETED_DIR, file), JSON.stringify(jobData));
       fs.unlinkSync(filePath);
-      console.log(`[Queue] Job ${jobData.id} completed successfully`);
+      //console.log(`[Queue] Job ${jobData.id} completed successfully`);
     } catch (error) {
       console.error(`[Queue] Error processing job ${jobData.id}:`, error);
       // Aggiorna il job con lo stato di errore
@@ -152,15 +152,12 @@ class FileSystemQueue {
     const fileName = `${job.id}.json`;
     const filePath = path.join(PROCESSING_DIR, fileName);
     
-    fs.writeFileSync(filePath, JSON.stringify(job));
-    console.log(`[Queue] Added job ${job.id} to queue with initial progress 0%`);
+    fs.writeFileSync(filePath, JSON.stringify(job));  
 
     return job;
   }
 
   public async getJob(jobId: string): Promise<QueueJob | null> {
-    console.log(`[GetJob] Looking for job ${jobId}`);
-    
     // Cerca il job in tutte le directory
     const directories = [PROCESSING_DIR, COMPLETED_DIR, FAILED_DIR];
     
@@ -170,61 +167,54 @@ class FileSystemQueue {
       
       if (file) {
         const filePath = path.join(dir, file);
-        console.log(`[GetJob] Found job ${jobId} in directory ${dir}`);
-        const jobData = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as QueueJob;
-        console.log(`[GetJob] Job data:`, {
-          id: jobData.id,
-          progress: jobData.progress,
-          status: jobData.status
-        });
+        //console.log(`[GetJob] Found job ${jobId} in directory ${dir}`);
+        const jobData = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as QueueJob;        
         return jobData;
       }
     }
 
-    console.log(`[GetJob] Job ${jobId} not found in any directory`);
+    //console.log(`[GetJob] Job ${jobId} not found in any directory`);
     return null;
   }
 
   public async getJobState(jobId: string): Promise<{ state: string; progress?: number; status?: string }> {
-    console.log(`\n[JobState] Checking state for job ${jobId}`);
-    
+
     const job = await this.getJob(jobId);
     if (!job) {
-      console.log(`[JobState] Job ${jobId} not found in any directory`);
       return { state: 'notfound' };
     }
 
-    console.log(`[JobState] Found job ${jobId} with current progress: ${job.progress}%, status: "${job.status}"`);
+    //console.log(`[JobState] Found job ${jobId} with current progress: ${job.progress}%, status: "${job.status}"`);
 
     // Se il job è in processing, restituisci il progresso corrente
     if (fs.existsSync(path.join(PROCESSING_DIR, `${jobId}.json`))) {
-      console.log(`[JobState] Job ${jobId} is in processing directory`);
+      //console.log(`[JobState] Job ${jobId} is in processing directory`);
       const state = { 
         state: 'processing',
         progress: job.progress || 0,
         status: job.status || 'In elaborazione'
       };
-      console.log(`[JobState] Returning state:`, state);
+      //console.log(`[JobState] Returning state:`, state);
       return state;
     }
 
     // Se il job è completato
     if (fs.existsSync(path.join(COMPLETED_DIR, `${jobId}.json`))) {
-      console.log(`[JobState] Job ${jobId} is in completed directory`);
+      //console.log(`[JobState] Job ${jobId} is in completed directory`);
       const state = { state: 'completed', progress: 100, status: 'Completato' };
-      console.log(`[JobState] Returning state:`, state);
+      //console.log(`[JobState] Returning state:`, state);
       return state;
     }
 
     // Se il job è fallito
     if (fs.existsSync(path.join(FAILED_DIR, `${jobId}.json`))) {
-      console.log(`[JobState] Job ${jobId} is in failed directory`);
+      //console.log(`[JobState] Job ${jobId} is in failed directory`);
       const state = { state: 'failed', progress: 0, status: job.status || 'Fallito' };
-      console.log(`[JobState] Returning state:`, state);
+      //console.log(`[JobState] Returning state:`, state);
       return state;
     }
 
-    console.log(`[JobState] Job ${jobId} not found in any directory`);
+    //console.log(`[JobState] Job ${jobId} not found in any directory`);
     return { state: 'notfound' };
   }
 
@@ -238,7 +228,7 @@ class FileSystemQueue {
       if (file) {
         const filePath = path.join(dir, file);
         fs.writeFileSync(filePath, JSON.stringify(job));
-        console.log(`[Queue] Updated job ${job.id} with progress ${job.progress}% and status "${job.status}"`);
+        //console.log(`[Queue] Updated job ${job.id} with progress ${job.progress}% and status "${job.status}"`);
         return;
       }
     }

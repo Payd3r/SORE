@@ -8,7 +8,7 @@ const vision = new ImageAnnotatorClient({
 
 export async function classifyImage(buffer: Buffer): Promise<ImageType> {
   try {
-    console.log('Inizio classificazione immagine...');
+    //console.log('Inizio classificazione immagine...');
     
     // Richiediamo più tipi di analisi contemporaneamente
     const [result] = await vision.annotateImage({
@@ -21,7 +21,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
       ]
     });
 
-    console.log('Risultati analisi:', {
+    //console.log('Risultati analisi:', {
       objects: result.localizedObjectAnnotations?.length || 0,
       labels: result.labelAnnotations?.length || 0,
       faces: result.faceAnnotations?.length || 0,
@@ -33,7 +33,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
       return sources.reduce((score, item) => {
         if (!item?.description || !item?.score) return score;
         if (keywords.some(keyword => item.description?.toLowerCase().includes(keyword))) {
-          console.log(`Keyword trovata: "${item.description}" con confidenza ${item.score}`);
+          //console.log(`Keyword trovata: "${item.description}" con confidenza ${item.score}`);
           return score + item.score;
         }
         return score;
@@ -56,7 +56,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
     // Verifichiamo la presenza di volti
     const faces = result.faceAnnotations || [];
     const numberOfFaces = faces.length;
-    console.log('Numero di volti rilevati:', numberOfFaces);
+    //console.log('Numero di volti rilevati:', numberOfFaces);
 
     // Keywords per ogni categoria
     const personKeywords = [
@@ -81,7 +81,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
     const foodScore = calculateScore(foodKeywords, allSources as Array<{ description?: string; score?: number }>);
     const landscapeScore = calculateScore(landscapeKeywords, allSources as Array<{ description?: string; score?: number }>);
 
-    console.log('Punteggi:', {
+    //console.log('Punteggi:', {
       persona: personScore,
       cibo: foodScore,
       paesaggio: landscapeScore,
@@ -94,16 +94,16 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
     // Logica di classificazione migliorata
     if (numberOfFaces > 0) {
       if (numberOfFaces >= 2) {
-        console.log('Rilevati più volti, classificazione come COPPIA');
+        //console.log('Rilevati più volti, classificazione come COPPIA');
         return ImageType.COUPLE;
       } else {
-        console.log('Rilevato un volto, classificazione come SINGOLO');
+        //console.log('Rilevato un volto, classificazione come SINGOLO');
         return ImageType.SINGLE;
       }
     }
 
     if (foodScore > CONFIDENCE_THRESHOLD && foodScore > personScore && foodScore > landscapeScore) {
-      console.log('Punteggio cibo più alto, classificazione come CIBO');
+      //console.log('Punteggio cibo più alto, classificazione come CIBO');
       return ImageType.FOOD;
     }
 
@@ -113,21 +113,21 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
         entity.description?.toLowerCase().includes('together') ||
         entity.description?.toLowerCase().includes('wedding')
       )) {
-        console.log('Rilevata coppia dalle entità web, classificazione come COPPIA');
+        //console.log('Rilevata coppia dalle entità web, classificazione come COPPIA');
         return ImageType.COUPLE;
       }
-      console.log('Punteggio persona alto, classificazione come SINGOLO');
+      //console.log('Punteggio persona alto, classificazione come SINGOLO');
       return ImageType.SINGLE;
     }
 
-    console.log('Classificazione default come PAESAGGIO');
+    //console.log('Classificazione default come PAESAGGIO');
     return ImageType.LANDSCAPE;
 
   } catch (error) {
     console.error('Errore nella classificazione dell\'immagine:', error);
     const imageTypes = Object.values(ImageType);
     const randomType = imageTypes[Math.floor(Math.random() * imageTypes.length)];
-    console.log('Errore nella classificazione, tipo casuale:', randomType);
+    //console.log('Errore nella classificazione, tipo casuale:', randomType);
     return randomType;
   }
 } 

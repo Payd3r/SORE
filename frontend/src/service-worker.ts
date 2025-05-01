@@ -133,16 +133,16 @@ const handleNetworkFirst = async (request: Request): Promise<Response> => {
       throw fetchError; // Rilancia l'errore per gestirlo sotto
     }
   } catch (error) {
-    console.log(`[SW] Errore di rete per ${request.url}. Cerco nella cache...`);
+    //console.log(`[SW] Errore di rete per ${request.url}. Cerco nella cache...`);
     
     const cachedResponse = await cache.match(request);
     if (cachedResponse) {
-      console.log(`[SW] Risposta trovata nella cache per ${request.url}`);
+      //console.log(`[SW] Risposta trovata nella cache per ${request.url}`);
       return cachedResponse;
     }
     
     // Se non c'è risposta nella cache, restituisci una risposta generica di errore
-    console.log(`[SW] Nessuna risposta nella cache per ${request.url}`);
+    //console.log(`[SW] Nessuna risposta nella cache per ${request.url}`);
     
     // Se la richiesta è per un'API, restituisci un JSON di errore
     if (request.url.includes('/api/')) {
