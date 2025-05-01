@@ -14,6 +14,7 @@ export interface ImageType {
   thumb_big_path: string;
   webp_path?: string;  // Il percorso dell'immagine in alta risoluzione
   memory_id: number | -1; // -1 indica che l'immagine non è associata a nessun ricordo
+  display_order?: number | null;
 }
 
 export interface ImageResponse {
@@ -192,8 +193,8 @@ export const deleteImage = async (imageId: string): Promise<void> => {
 interface ImageMetadata {
   type: string;
   created_at: string;
+  display_order?: number | null;
 }
-
 
 export const updateImageMetadata = async (imageId: string, metadata: ImageMetadata): Promise<void> => {
   try {

@@ -2,10 +2,9 @@ import { useState, useRef, useEffect, TouchEvent, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { useQueryClient } from '@tanstack/react-query';
-import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl, updateImageMetadata, getGalleryImages } from '../../api/images';
+import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl, getGalleryImages } from '../../api/images';
+import EditImageModalMobile from './EditImageModalMobile';
 
 interface ImageDetailMobileProps {
   isOpen: boolean;
@@ -14,34 +13,9 @@ interface ImageDetailMobileProps {
   onImageDeleted?: () => void;
 }
 
-// TouchDatePicker wrapper per gestire il datepicker su mobile
-const TouchDatePicker = ({ selected, onChange, dateFormat }: {
-  selected: Date;
-  onChange: (date: Date | null) => void;
-  dateFormat: string;
-}) => {
-  const handleWrapperTouch = (e: TouchEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-  };
 
-  return (
-    <div onTouchStart={handleWrapperTouch} style={{ touchAction: 'manipulation' }}>
-      <DatePicker
-        selected={selected}
-        onChange={onChange}
-        dateFormat={dateFormat}
-        locale={it}
-        className="block text-sm font-medium text-gray-900 dark:text-white bg-transparent border-none p-0"
-      />
-    </div>
-  );
-};
 
 export default function ImageDetailMobile({ isOpen, onClose, image, onImageDeleted }: ImageDetailMobileProps) {
-  const queryClient = useQueryClient();
   
   // Stati per i dati dell'immagine
   const [fullImageData, setFullImageData] = useState<ImageResponse | null>(null);
@@ -55,12 +29,7 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
   
   // Stati per le azioni e UI
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editData, setEditData] = useState({
-    type: image?.type || '',
-    created_at: new Date(image?.created_at || '')
-  });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   // Stati per gestire lo zoom e swipe
   const [scale, setScale] = useState(1);
@@ -604,67 +573,6 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
       setIsDeleting(false);
     }
   };
-
-
-  const handleSave = async () => {
-    if (!currentImage) return;
-    
-    setIsSaving(true);
-    try {
-      // Imposta l'ora a mezzogiorno
-      const date = new Date(editData.created_at);
-      date.setHours(12, 0, 0, 0);
-
-      await updateImageMetadata(currentImage.id || '', {
-        type: editData.type,
-        created_at: date.toISOString()
-      });
-
-      // Invalida la cache
-      await queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
-      
-      // Aggiorna i dati locali
-      setCurrentImage(prev => {
-        if (!prev) return null;
-        
-        const updated = {
-          ...prev,
-          type: editData.type,
-          created_at: date.toISOString()
-        };
-        
-        // Aggiorna anche l'immagine nella galleria
-        setGalleryImages(prevGallery => {
-          return prevGallery.map(img => 
-            img.id === currentImage.id ? {...img, type: editData.type, created_at: date.toISOString()} : img
-          );
-        });
-        
-        return updated;
-      });
-      
-      if (fullImageData?.data) {
-        setFullImageData(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            data: {
-              ...prev.data,
-              type: editData.type,
-              created_at: date.toISOString()
-            }
-          };
-        });
-      }
-      
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Errore durante il salvataggio:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
   // Seleziona un'immagine dal carosello delle anteprime
   const handleThumbnailClick = (image: ImageType, index: number) => {
     // Reset degli stati
@@ -757,10 +665,11 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
         {/* Pulsante tre puntini in alto a destra */}
         <button
           className="absolute right-2 p-2 rounded-full bg-black/50 text-white"
-          aria-label="Opzioni"
+          aria-label="Modifica"
+          onClick={() => setIsEditModalOpen(true)}
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
         </button>
       </div>
@@ -868,17 +777,6 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
         <div className="flex justify-center">
           {/* Toggle centrale in stile iOS con i tre pulsanti */}
           <div className="inline-flex items-center rounded-full bg-white/10 p-1 shadow-inner">
-            {/* Pulsante Modifica */}
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-white hover:bg-white/20 active:bg-white/30 transition-colors text-sm font-medium"
-            >
-              <svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span className="text-white">Modifica</span>
-            </button>
-            
             {/* Pulsante Elimina */}
             <button
               onClick={handleDelete}
@@ -911,60 +809,24 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
       </div>
       
       {/* Modale per la modifica */}
-      {isEditing && (
-        <div className="absolute inset-0 bg-black/90 z-20 flex flex-col items-center justify-center">
-          <div className="bg-gray-800 rounded-xl p-6 w-[90%] max-w-md">
-            <h3 className="text-white text-lg font-medium mb-4">Modifica immagine</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Tipo di immagine
-                </label>
-                <select
-                  value={editData.type}
-                  onChange={(e) => setEditData({...editData, type: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="cibo">CIBO</option>
-                  <option value="coppia">COPPIA</option>
-                  <option value="singolo">SINGOLO</option>
-                  <option value="paesaggio">LUOGO</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Data
-                </label>
-                <div className="bg-gray-700 rounded-lg px-3 py-2 border border-gray-600">
-                  <TouchDatePicker
-                    selected={editData.created_at}
-                    onChange={(date) => setEditData({...editData, created_at: date || new Date()})}
-                    dateFormat="dd/MM/yyyy"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex-1 py-2 rounded-lg bg-gray-600 text-white font-medium"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-medium"
-                >
-                  {isSaving ? 'Salvando...' : 'Salva'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditImageModalMobile
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        image={currentImage ? {
+          id: currentImage.id,
+          type: currentImage.type,
+          created_at: currentImage.created_at,
+          display_order: currentImage.display_order ?? null
+        } : null}
+        onSave={(updated) => {
+          // Aggiorna i dati locali dopo il salvataggio
+          setCurrentImage(prev => prev ? { ...prev, ...updated } : prev);
+          setGalleryImages(prev => prev.map(img => img.id === currentImage?.id ? { ...img, ...updated } : img));
+          if (fullImageData?.data) {
+            setFullImageData(prev => prev ? { ...prev, data: { ...prev.data, ...updated } } : prev);
+          }
+        }}
+      />
     </div>,
     document.body
   );
