@@ -247,6 +247,12 @@ router.put('/:imageId/metadata', auth, async (req: any, res) => {
       return res.status(400).json({ error: "display_order deve essere un numero o null" });
     }
 
+    // Se display_order è 0, salvalo come null
+    let displayOrderToSave = display_order;
+    if (display_order === 0) {
+      displayOrderToSave = null;
+    }
+
     // Verifica che l'immagine esista e appartenga alla coppia
     const [images] = await pool.promise().query(
       'SELECT id FROM images WHERE id = ? AND couple_id = ?',
@@ -262,7 +268,7 @@ router.put('/:imageId/metadata', auth, async (req: any, res) => {
     let updateParams: any[] = [type, created_at];
     if (display_order !== undefined) {
       updateQuery += `, display_order = ?`;
-      updateParams.push(display_order);
+      updateParams.push(displayOrderToSave);
     }
     updateQuery += ` WHERE id = ? AND couple_id = ?`;
     updateParams.push(imageId, coupleId);
@@ -276,7 +282,7 @@ router.put('/:imageId/metadata', auth, async (req: any, res) => {
         id: imageId,
         type,
         created_at,
-        ...(display_order !== undefined ? { display_order } : {})
+        ...(display_order !== undefined ? { display_order: displayOrderToSave } : {})
       }
     });
   } catch (error) {

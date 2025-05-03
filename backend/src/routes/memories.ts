@@ -55,15 +55,21 @@ router.get('/', auth, async (req: any, res) => {
     }
 
     const memoryIds = memories.map((m: Memory) => m.id);
+    console.log('[MEMORIES-DEBUG] Id delle memories trovate:', memoryIds);
 
     // 2. Prendi tutte le immagini associate
     const [images] = await pool.promise().query<Image[]>(imagesQuery, [memoryIds]);
+    console.log(`[MEMORIES-DEBUG] Numero immagini totali trovate: ${(images as Image[]).length}`);
+    (images as Image[]).forEach(img => {
+      console.log(`[MEMORIES-DEBUG] Image id=${img.id}, memory_id=${img.memory_id}, display_order=${img.display_order}`);
+    });
 
     const memoriesWithImages = await Promise.all(memories.map(async (memory: Memory) => {
       // Ordina già per display_order ASC NULLS LAST, poi created_at DESC
       const relatedImages = (images as Image[])
         .filter((img: Image) => img.memory_id === memory.id)
         .slice(0, memory.img_limit);
+      console.log(`[MEMORIES-DEBUG] Memory id=${memory.id} (${memory.title}) - immagini associate (dopo filtro per memory_id e slice):`, relatedImages.map(img => ({id: img.id, display_order: img.display_order})));
 
       const imgagesConParametri = await Promise.all(
         relatedImages.map(async (img: Image, index: number) => {
@@ -98,6 +104,10 @@ router.get('/', auth, async (req: any, res) => {
       const validImages = imgagesConParametri.filter(img => 
         (img.thumb_big_path !== null || img.webp_path !== null)
       );
+      console.log(`[MEMORIES-DEBUG] Memory id=${memory.id} - immagini restituite dopo filtro validità:`, validImages.map(img => img.id));
+      if (!relatedImages.some(img => img.display_order !== null && img.display_order !== undefined)) {
+        console.log(`[MEMORIES-DEBUG] ATTENZIONE: Nessuna immagine con display_order prioritario per memory id=${memory.id}`);
+      }
 
       return {
         ...memory,

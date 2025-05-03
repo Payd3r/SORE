@@ -86,6 +86,7 @@ export const getMemories = async (): Promise<Memory[]> => {
     }
 
     const data: ApiResponse<Memory[]> = await response.json();
+    console.log(data.data);
     return data.data;
   } catch (error) {
     throw error;
