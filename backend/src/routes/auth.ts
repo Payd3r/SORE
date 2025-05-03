@@ -286,12 +286,7 @@ router.post('/login', async (req, res) => {
     }
 
     const user = userResult[0];
-    //console.log('User found:', { 
-      id: user.id, 
-      email: user.email, 
-      hasPasswordHash: !!user.password_hash,
-      coupleId: user.couple_id 
-    });
+
 
     // Check password
     //console.log('Verifying password...');
@@ -310,12 +305,6 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
-
-    //console.log('Login successful for user:', { 
-      id: user.id, 
-      email: user.email,
-      coupleId: user.couple_id 
-    });
 
     res.json({
       token,

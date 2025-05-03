@@ -128,21 +128,21 @@ app.use((req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// app.listen(PORT, '0.0.0.0', () => {
-//   //console.log(`Server is running on port ${PORT}`);
-//   //console.log(`Access the API at http://localhost:${PORT}`);
-//   //console.log('Available routes:');
-//   //console.log('- /media/*');
-//   //console.log('- /api/auth/*');
-//   //console.log('- /api/home/*');
-//   //console.log('- /api/users/*');
-//   //console.log('- /api/couples/*');
-//   //console.log('- /api/memories/*');
-//   //console.log('- /api/images/*');
-//   //console.log('- /api/ideas/*');
-//   //console.log('- /api/spotify/*');
-//   //console.log('- /api/recap/*');
-//   //console.log('- /api/map/*');
-//   //console.log('- /api/notifications/*');
-//   //console.log('=================================');
-// });
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Access the API at http://localhost:${PORT}`);
+  console.log('Available routes:');
+  console.log('- /media/*');
+  console.log('- /api/auth/*');
+  console.log('- /api/home/*');
+  console.log('- /api/users/*');
+  console.log('- /api/couples/*');
+  console.log('- /api/memories/*');
+  console.log('- /api/images/*');
+  console.log('- /api/ideas/*');
+  console.log('- /api/spotify/*');
+  console.log('- /api/recap/*');
+  console.log('- /api/map/*');
+  console.log('- /api/notifications/*');
+  console.log('=================================');
+});

@@ -50,11 +50,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], memoryId]
       );
 
-      //console.log('\x1b[32m%s\x1b[0m', `[Memory] Single image case - Updated memory ${memoryId}:`, {
-        date: singleDate.toISOString(),
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      });
+      
       return;
     }
 
@@ -79,10 +75,6 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
       const group1Size = maxDiffIndex + 1;
       const group2Size = dates.length - (maxDiffIndex + 1);
 
-      //console.log('\x1b[36m%s\x1b[0m', '[Memory] Group sizes:', {
-        group1: group1Size,
-        group2: group2Size
-      });
 
       let validDates;
       if (group1Size >= group2Size) {
@@ -112,12 +104,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         return validDates.indexOf(imgDate) === -1;
       });
 
-      //console.log('\x1b[36m%s\x1b[0m', `[Memory] Found ${outlierImages.length} outlier images:`, 
-        outlierImages.map(img => ({
-          id: img.id,
-          date: new Date(img.created_at).toISOString()
-        }))
-      );
+      
 
       // Aggiorna le date delle immagini outlier
       if (outlierImages.length > 0) {
@@ -134,11 +121,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
              WHERE id = ?`,
             [randomDate.toISOString(), img.id]
           );
-
-          //console.log('\x1b[32m%s\x1b[0m', `[Memory] Updated image ${img.id}:`, {
-            oldDate: new Date(img.created_at).toISOString(),
-            newDate: randomDate.toISOString()
-          });
+         
         }
       }
 
@@ -152,14 +135,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], memoryId]
       );
 
-      //console.log('\x1b[32m%s\x1b[0m', `[Memory] Successfully updated memory ${memoryId}:`, {
-        totalImages: dates.length,
-        validImages: validDates.length,
-        outlierImages: outlierImages.length,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        duration: Math.round(duration / (24 * 60 * 60 * 1000)) + ' days'
-      });
+     
     } else {
       // Se non ci sono gap significativi, usa tutte le date
       const startDate = new Date(dates[0]);
@@ -181,11 +157,7 @@ export async function updateMemoryDates(memoryId: number, connection?: PoolConne
         [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], memoryId]
       );
 
-      //console.log('\x1b[32m%s\x1b[0m', `[Memory] No significant gaps found - Updated memory ${memoryId}:`, {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        duration: Math.round(duration / (24 * 60 * 60 * 1000)) + ' days'
-      });
+      
     }
   } catch (error) {
     console.error('\x1b[31m%s\x1b[0m', '[Memory] Error updating dates:', error instanceof Error ? error.message : 'Unknown error');

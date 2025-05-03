@@ -152,6 +152,7 @@ router.get('/:memoryId', auth, async (req: any, res) => {
         thumb_big_path,
         webp_path,
         created_at,
+        display_order,
         type
       FROM images 
       WHERE memory_id = ?
@@ -171,7 +172,8 @@ router.get('/:memoryId', auth, async (req: any, res) => {
           thumb_big_path: img.thumb_big_path || null,
           webp_path: img.webp_path || null,
           created_at: img.created_at,
-          type: img.type
+          type: img.type,
+          display_order: img.display_order
         };
       })
     );

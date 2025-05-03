@@ -62,6 +62,7 @@ export default function ImageUploadModal({ isOpen, onClose, onUpload }: ImageUpl
     setIsLoading(true);
     try {
       await onUpload(selectedFiles);
+      onClose();
       setSelectedFiles([]);
     } catch (error) {
       console.error('Errore durante l\'upload:', error);

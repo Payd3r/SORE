@@ -136,7 +136,17 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
     });
   };
 
-  const filteredImages = getFilteredImages(memory.images || []);
+  // Immagini con display_order valorizzato (da mostrare in alto, sempre visibili, ordinate per display_order ASC)
+  const highlightImages = (memory.images || [])
+    .filter(img => img.display_order !== null && img.display_order !== undefined)
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
+  // Immagini normali (quelle senza display_order), da mostrare nella galleria normale
+  const normalImages = (memory.images || [])
+    .filter(img => img.display_order === null || img.display_order === undefined);
+
+  // Applichiamo i filtri solo alle immagini normali
+  const filteredImages = getFilteredImages(normalImages);
 
   const getFilterButtonText = () => {
     return selectedTypes.size > 0 ? `Filtro (${selectedTypes.size})` : 'Filtro';
@@ -387,6 +397,31 @@ export default function GalleriaRicordo({ memory, onImagesUploaded }: GalleriaRi
           <span className="hidden sm:inline">Carica</span>
         </button>
       </div>
+
+      {/* Zona evidenziata per immagini con display_order */}
+      {highlightImages.length > 0 && (
+        <div
+          className="grid grid-cols-4 sm:grid-cols-8 gap-2 p-2 sm:p-0 mb-2 items-center"
+          style={{ maxWidth: '100%' }}
+        >
+          {highlightImages.slice(0, 8).map((image: any) => (
+            <div
+              key={image.id}
+              onClick={() => handleImageClick(image)}
+              className="relative aspect-square w-full h-full rounded-lg overflow-hidden cursor-pointer border-2 border-yellow-300 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all duration-200 group"
+              style={{ minWidth: 0 }}
+            >
+              <img
+                src={getImageUrl(image.thumb_big_path)}
+                alt={`Immagine ${image.id}`}
+                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
+              <span className="absolute top-1 left-1 bg-yellow-300 text-xs font-bold text-yellow-900 rounded px-1.5 py-0.5 shadow">{image.display_order}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Gallery Grid con supporto per pinch-to-zoom */}
       {!memory.images || memory.images.length === 0 ? (

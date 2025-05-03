@@ -288,12 +288,6 @@ export async function processProfilePicture(file: Express.Multer.File): Promise<
       throw new Error('Il file creato è vuoto');
     }
 
-    //console.log('File processed successfully:', {
-      path: filePath,
-      size: stats.size,
-      format: 'webp'
-    });
-
     // Elimina il file temporaneo
     await fs.promises.unlink(file.path);
 

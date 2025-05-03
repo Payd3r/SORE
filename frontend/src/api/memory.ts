@@ -19,6 +19,7 @@ export interface Memory {
     thumb_big_path: string | null;
     webp_path: string | null;
     created_at: string;
+    display_order: number | null;
   }[];
   created_at: string;
   updated_at: string;
@@ -52,6 +53,7 @@ export interface MemoryImage {
   thumb_big_path: string | null;
   webp_path: string | null;
   created_at: string;
+  display_order: number | null;
   width: number;
   height: number;
 }

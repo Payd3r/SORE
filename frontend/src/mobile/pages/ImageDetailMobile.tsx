@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import "react-datepicker/dist/react-datepicker.css";
 import { ImageType, ImageResponse, getOriginalImage, deleteImage, getImageUrl, getGalleryImages } from '../../api/images';
-import EditImageModalMobile from './EditImageModalMobile';
 
 interface ImageDetailMobileProps {
   isOpen: boolean;
@@ -29,7 +28,6 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
   
   // Stati per le azioni e UI
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   // Stati per gestire lo zoom e swipe
   const [scale, setScale] = useState(1);
@@ -614,6 +612,7 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
     };
   }, []);
   
+
   // Se il modale non è aperto o non c'è un'immagine, non renderizzare nulla
   if (!isOpen || !currentImage) return null;
   
@@ -662,16 +661,7 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
           {imageDate}
         </h2>
         
-        {/* Pulsante tre puntini in alto a destra */}
-        <button
-          className="absolute right-2 p-2 rounded-full bg-black/50 text-white"
-          aria-label="Modifica"
-          onClick={() => setIsEditModalOpen(true)}
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
+        
       </div>
 
       {/* Contenitore principale per l'immagine */}
@@ -806,27 +796,7 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
             </button>
           </div>
         </div>
-      </div>
-      
-      {/* Modale per la modifica */}
-      <EditImageModalMobile
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        image={currentImage ? {
-          id: currentImage.id,
-          type: currentImage.type,
-          created_at: currentImage.created_at,
-          display_order: currentImage.display_order ?? null
-        } : null}
-        onSave={(updated) => {
-          // Aggiorna i dati locali dopo il salvataggio
-          setCurrentImage(prev => prev ? { ...prev, ...updated } : prev);
-          setGalleryImages(prev => prev.map(img => img.id === currentImage?.id ? { ...img, ...updated } : img));
-          if (fullImageData?.data) {
-            setFullImageData(prev => prev ? { ...prev, data: { ...prev.data, ...updated } } : prev);
-          }
-        }}
-      />
+      </div>     
     </div>,
     document.body
   );

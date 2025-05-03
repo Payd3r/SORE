@@ -1,13 +1,16 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   FunnelIcon, 
   ListBulletIcon,
-  Squares2X2Icon
+  Squares2X2Icon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 import { IoImagesOutline } from 'react-icons/io5';
 import { Memory } from '../../api/memory';
 import ImageDetailModal from '../pages/ImageDetailMobile';
-import { getImageUrl } from '../../api/images';
+import { getImageUrl, updateImageMetadata, uploadImages, pollImageStatus } from '../../api/images';
+import ImageUploadModal from '../../desktop/components/Images/ImageUploadModal';
+import { useUpload } from '../../contexts/UploadContext';
 
 // Definizione del tipo ImageTypeFilter
 type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'CIBO' | 'PAESAGGIO';
@@ -18,7 +21,7 @@ interface GalleriaRicordoMobileProps {
   containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-export default function GalleriaRicordoMobile({ memory, onImagesUploaded, containerRef }: GalleriaRicordoMobileProps) {
+export default function GalleriaRicordoMobile({ memory, onImagesUploaded }: GalleriaRicordoMobileProps) {
   const [isCompactGrid, setIsCompactGrid] = useState(true);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -26,24 +29,43 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
   const [selectedTypes, setSelectedTypes] = useState<Set<ImageTypeFilter>>(new Set());
   const typeMenuRef = useRef<HTMLDivElement>(null);
   const localContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Stati per la gestione del pinch-to-zoom
-  const [initialTouchDistance, setInitialTouchDistance] = useState<number | null>(null);
-  const [pinchScale, setPinchScale] = useState<number>(1);
-  const [isPinching, setIsPinching] = useState(false);
-  const lastPinchTimeRef = useRef<number>(0);
-  
-  // Flag per tracciare se il tocco iniziale è su un elemento interattivo
-  const touchStartedOnInteractiveRef = useRef<boolean>(false);
-  const currentTouchRef = useRef<React.Touch | null>(null);
+  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [quickEditImage, setQuickEditImage] = useState<any | null>(null);
+  const [quickEditTimeout, setQuickEditTimeout] = useState<any>(null);
+  const [showQuickEditSuccess, setShowQuickEditSuccess] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const { setUploadingFiles, setShowUploadStatus } = useUpload();
+  // Per distinguere tra scroll e long-press
+  const touchStartPos = useRef<{x: number, y: number} | null>(null);
+  const MOVE_THRESHOLD = 10; // pixel
 
-  // Filtro le immagini in base ai tipi selezionati
-  const filteredImages = (memory.images || []).filter((image: any) => {
-    if (selectedTypes.size === 0 || selectedTypes.has('all')) return true;
-    // Standardizziamo il tipo dell'immagine in maiuscolo per un confronto uniforme
-    const imageType = (image.type || '').toUpperCase() as ImageTypeFilter;
-    return selectedTypes.has(imageType);
+  // --- LOGICA PER SEPARARE LE IMMAGINI ---
+  // Unifica tutte le immagini in un'unica galleria, ordinando prima per display_order (ASC, null/undefined in fondo), poi per id DESC
+  let allImages = (memory.images || []).slice();
+  allImages.sort((a: any, b: any) => {
+    // Prima per display_order (null/undefined in fondo)
+    if ((a.display_order ?? null) !== (b.display_order ?? null)) {
+      if (a.display_order == null) return 1;
+      if (b.display_order == null) return -1;
+      return (a.display_order ?? 0) - (b.display_order ?? 0);
+    }
+    // Poi per id DESC (più recenti prima)
+    return (b.id ?? 0) - (a.id ?? 0);
   });
+
+  // Applichiamo i filtri SOLO alle immagini senza display_order, ma mostriamo tutte se nessun filtro è attivo
+  let filteredImages: any[];
+  if (selectedTypes.size === 0 || selectedTypes.has('all')) {
+    filteredImages = allImages;
+  } else {
+    filteredImages = allImages.filter((image: any) => {
+      // Se l'immagine è highlight (display_order valorizzato), la mostriamo sempre
+      if (image.display_order !== null && image.display_order !== undefined) return true;
+      // Altrimenti applichiamo il filtro
+      const imageType = (image.type || '').toUpperCase() as ImageTypeFilter;
+      return selectedTypes.has(imageType);
+    });
+  }
   
   // Chiudi il menu quando si clicca fuori
   useEffect(() => {
@@ -65,123 +87,6 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
     };
   }, [isTypeMenuOpen]);
 
-  // Funzione helper per verificare se un elemento è interattivo
-  const isInteractiveElement = useCallback((element: Element): boolean => {
-    // Controlla se l'elemento o qualsiasi suo genitore è un pulsante o un'immagine
-    const isButton = element.closest('button') !== null;
-    const isImage = element.tagName === 'IMG';
-    const isInteractive = isButton || isImage || element.classList.contains('interactive');
-    return isInteractive;
-  }, []);
-  
-  // Gestione del tocco iniziale globale
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    // Se stiamo toccando un elemento interattivo, segnalo
-    if (e.target instanceof Element) {
-      touchStartedOnInteractiveRef.current = isInteractiveElement(e.target);
-      
-      // Se è un tocco singolo, lo salviamo per tracciare i movimenti
-      if (e.touches.length === 1) {
-        currentTouchRef.current = e.touches[0];
-      }
-      
-      // Se è un tocco su elemento interattivo, non facciamo altro
-      if (touchStartedOnInteractiveRef.current) {
-        e.stopPropagation();
-        return;
-      }
-    }
-    
-    // Gestione del pinch-to-zoom (solo se non è su elemento interattivo)
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      
-      setInitialTouchDistance(distance);
-      setIsPinching(true);
-      setPinchScale(1);
-    }
-  }, [isInteractiveElement]);
-
-  // Gestione del movimento del tocco
-  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    // Se il tocco è iniziato su un elemento interattivo, non gestiamo il movimento
-    if (touchStartedOnInteractiveRef.current) {
-      e.stopPropagation();
-      return;
-    }
-    
-    // Gestione del pinch
-    if (e.touches.length === 2 && initialTouchDistance !== null) {
-      // Calcola la distanza attuale tra le dita
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const currentDistance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      
-      // Calcola il fattore di scala
-      const newScale = currentDistance / initialTouchDistance;
-      setPinchScale(newScale);
-      
-      // Throttle il cambio di modalità per evitare cambi troppo rapidi
-      const now = Date.now();
-      if (now - lastPinchTimeRef.current > 300) {
-        if (newScale < 0.8 && isCompactGrid === false) {
-          setIsCompactGrid(true);
-          lastPinchTimeRef.current = now;
-        } else if (newScale > 1.2 && isCompactGrid === true) {
-          setIsCompactGrid(false);
-          lastPinchTimeRef.current = now;
-        }
-      }
-    }
-  }, [initialTouchDistance, isCompactGrid]);
-
-  // Gestione del rilascio del tocco
-  const handleTouchEnd = useCallback(() => {
-    // Resetta i flag e gli stati
-    touchStartedOnInteractiveRef.current = false;
-    currentTouchRef.current = null;
-    setInitialTouchDistance(null);
-    setIsPinching(false);
-    setPinchScale(1);
-  }, []);
-  
-  // Gestione nativa dei tocchi sui pulsanti
-  const handleNativeTouchStart = useCallback((e: Event) => {
-    // Assicuriamoci che sia un evento touch
-    if (e instanceof TouchEvent && e.target instanceof Element && isInteractiveElement(e.target)) {
-      e.stopPropagation();
-    }
-  }, [isInteractiveElement]);
-  
-  // Effetto per aggiungere listener nativi per i tocchi
-  useEffect(() => {
-    // Cattura gli elementi interattivi nel componente
-    const container = containerRef?.current || localContainerRef.current;
-    if (!container) return;
-    
-    // Tutti i pulsanti e immagini nel componente
-    const interactiveElements = container.querySelectorAll('button, img, .interactive');
-    
-    // Aggiunge listener a ciascun elemento interattivo
-    interactiveElements.forEach(element => {
-      element.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
-    });
-    
-    return () => {
-      interactiveElements.forEach(element => {
-        element.removeEventListener('touchstart', handleNativeTouchStart);
-      });
-    };
-  }, [handleNativeTouchStart, containerRef]);
-  
   const handleTypeClick = (type: ImageTypeFilter, e: React.MouseEvent) => {
     e.stopPropagation();
     e.nativeEvent.stopImmediatePropagation();
@@ -250,15 +155,112 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
   // Array dei tipi disponibili
   const imageTypes: ImageTypeFilter[] = ['all', 'COPPIA', 'SINGOLO', 'CIBO', 'PAESAGGIO'];
 
+  // Handler per long-press (sia mouse che touch)
+  const handleImageLongPress = (image: any, event: any) => {
+    event.preventDefault();
+    setQuickEditImage(image);
+    setShowQuickEdit(true);
+  };
+
+  // Touch handlers per distinguere tra scroll e long-press
+  const handleTouchStartImage = (image: any, e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    const timeout = setTimeout(() => {
+      setQuickEditImage(image);
+      setShowQuickEdit(true);
+    }, 500);
+    setQuickEditTimeout(timeout);
+  };
+
+  const handleTouchMoveImage = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPos.current.x;
+    const dy = touch.clientY - touchStartPos.current.y;
+    if (Math.abs(dx) > MOVE_THRESHOLD || Math.abs(dy) > MOVE_THRESHOLD) {
+      if (quickEditTimeout) clearTimeout(quickEditTimeout);
+      setQuickEditTimeout(null);
+    }
+  };
+
+  const handleTouchEndImage = () => {
+    if (quickEditTimeout) clearTimeout(quickEditTimeout);
+    setQuickEditTimeout(null);
+    touchStartPos.current = null;
+  };
+
+  // Funzione di upload immagini (come desktop)
+  const handleUpload = async (files: File[]) => {
+    setShowUploadStatus(true);
+    const initialUploadState = files.reduce((acc, file) => {
+      acc[file.name] = {
+        fileName: file.name,
+        status: 'queued' as const,
+        progress: 0,
+        message: 'In coda...'
+      };
+      return acc;
+    }, {} as any);
+    setUploadingFiles(initialUploadState);
+    try {
+      const response = await uploadImages(files, memory.id);
+      setUploadingFiles((prev: any) => {
+        const newState = { ...prev };
+        response.data.forEach(({ file }: any) => {
+          if (newState[file]) {
+            newState[file].status = 'processing';
+            newState[file].progress = 0;
+            newState[file].message = 'Inizio processamento';
+          }
+        });
+        return newState;
+      });
+      response.data.forEach(({ jobId, file }: any) => {
+        pollImageStatus(jobId, (status: any) => {
+          setUploadingFiles((prev: any) => {
+            const newState = { ...prev };
+            if (newState[file]) {
+              newState[file].status = status.state;
+              newState[file].progress = status.progress || 0;
+              newState[file].message = status.status || '';
+              if (status.state === 'completed') {
+                setTimeout(() => {
+                  setUploadingFiles((prev2: any) => {
+                    const ns = { ...prev2 };
+                    delete ns[file];
+                    if (Object.keys(ns).length === 0) {
+                      setShowUploadStatus(false);
+                    }
+                    return ns;
+                  });
+                }, 2000);
+                if (onImagesUploaded) onImagesUploaded();
+              }
+            }
+            return newState;
+          });
+        });
+      });
+    } catch (error) {
+      setUploadingFiles((prev: any) => {
+        const newState = { ...prev };
+        Object.keys(newState).forEach(fileName => {
+          newState[fileName].status = 'failed';
+          newState[fileName].progress = 0;
+          newState[fileName].message = 'Errore durante il caricamento';
+        });
+        return newState;
+      });
+    }
+  };
 
   return (
-    <div 
+    <div
       ref={localContainerRef}
       className="w-full h-full flex flex-col"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
+      onTouchStart={e => e.stopPropagation()}
     >
       {/* Header con controlli in stile iOS */}
       <div className="grid grid-cols-2 items-center mb-3 mt-1">
@@ -284,7 +286,7 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
           {isTypeMenuOpen && (
             <div 
               ref={typeMenuRef}
-              className="absolute left-0 top-12 mt-1 bg-gray-200/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-sm overflow-hidden z-10 w-64 interactive"
+              className="absolute left-4 top-36 mt-1 bg-gray-200/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-sm overflow-hidden z-10 w-64 interactive"
               onClick={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
             >              
@@ -310,8 +312,8 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
           )}
         </div>
         
-        {/* Pulsante vista compatta/espansa a destra */}
-        <div className="flex justify-end">
+        {/* Pulsante vista compatta/espansa e Carica a destra */}
+        <div className="flex justify-end gap-2">
           <button
             className="p-2 rounded-full bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-xl text-[#007AFF] dark:text-[#0A84FF] interactive"
             onClick={(e) => handleButtonClick(e, () => setIsCompactGrid(!isCompactGrid))}
@@ -323,11 +325,19 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
               <ListBulletIcon className="w-5 h-5" />
             )}
           </button>
+          <button
+            className="p-2 rounded-full bg-blue-500 text-white interactive shadow-md"
+            onClick={() => setIsUploadModalOpen(true)}
+            title="Carica immagini"
+            onTouchStart={(e) => e.stopPropagation()}
+          >
+            <PlusIcon className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
       {/* Gallery Grid con supporto per pinch-to-zoom */}
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className="flex-1 overflow-y-auto pb-28" onTouchStart={e => e.stopPropagation()}>
         {!memory.images || memory.images.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-600">
             <IoImagesOutline className="w-8 h-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
@@ -340,11 +350,7 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
                 ? 'grid-cols-3 gap-1'
                 : 'grid-cols-2 gap-3'
             }`}
-            style={{ 
-              touchAction: 'pan-y',
-              transform: isPinching ? `scale(${pinchScale > 1 ? 1 + (pinchScale - 1) * 0.1 : 1 - (1 - pinchScale) * 0.1})` : 'scale(1)',
-              transition: isPinching ? 'none' : 'transform 0.3s ease-out',
-            }}
+            onTouchStart={e => e.stopPropagation()}
           >
             {filteredImages.length === 0 && (
               <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
@@ -356,7 +362,10 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
                 key={image.id}
                 className="relative aspect-square overflow-hidden rounded-lg cursor-pointer group touch-manipulation transition-all duration-200"
                 onClick={(e) => handleImageClick(image, e)}
-                onTouchStart={(e) => e.stopPropagation()}
+                onContextMenu={(e) => handleImageLongPress(image, e)}
+                onTouchStart={(e) => handleTouchStartImage(image, e)}
+                onTouchMove={handleTouchMoveImage}
+                onTouchEnd={handleTouchEndImage}
               >
                 <img
                   src={getImageUrl(image.thumb_big_path)}
@@ -364,6 +373,9 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
                   className="object-cover w-full h-full duration-300"
                 />
                 <div className="absolute inset-0 bg-black/0 duration-200" />
+                {image.display_order !== null && image.display_order !== undefined && (
+                  <span className="absolute top-1 left-1 bg-yellow-300 text-xs font-bold text-yellow-900 rounded px-1.5 py-0.5 shadow">{image.display_order}</span>
+                )}
               </div>
             ))}
           </div>
@@ -376,6 +388,99 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded, contai
         image={selectedImage}
         onImageDeleted={onImagesUploaded}
       />
+
+      <ImageUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onUpload={handleUpload}
+      />
+
+      {/* Overlay per quick edit */}
+      {showQuickEdit && quickEditImage && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/30 flex items-center justify-center"
+          onClick={() => setShowQuickEdit(false)}
+        >
+          <div
+            className="bg-white rounded-xl p-3 shadow-xl"
+            style={{ minWidth: 280, maxWidth: 300, maxHeight: 340, overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            onTouchMove={e => e.stopPropagation()}
+            onTouchEnd={e => e.stopPropagation()}
+          >
+            <div className="mb-1 font-semibold text-center">Tipo</div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {['CIBO', 'COPPIA', 'SINGOLO', 'PAESAGGIO'].map(type => {
+                const isActive = (quickEditImage.type || '').toLowerCase() === type.toLowerCase();
+                return (
+                  <button
+                    key={type}
+                    className={`block w-full text-center px-2 py-2 rounded text-sm font-medium border transition-colors duration-150 ${isActive ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-blue-50'}`}
+                    onClick={async () => {
+                      await updateImageMetadata(quickEditImage.id, {
+                        type: type.toLowerCase(),
+                        created_at: quickEditImage.created_at,
+                        display_order: quickEditImage.display_order ?? null
+                      });
+                      setShowQuickEdit(false);
+                      setShowQuickEditSuccess(true);
+                      setTimeout(() => setShowQuickEditSuccess(false), 1500);
+                      if (onImagesUploaded) onImagesUploaded();
+                    }}
+                  >
+                    {type}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mb-1 font-semibold text-center">Ordine</div>
+            <button
+              className={`block w-full text-center px-2 py-2 mb-2 rounded text-base font-semibold border transition-colors duration-150 ${!quickEditImage.display_order ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-blue-50'}`}
+              onClick={async () => {
+                await updateImageMetadata(quickEditImage.id, {
+                  type: quickEditImage.type,
+                  created_at: quickEditImage.created_at,
+                  display_order: null
+                });
+                setShowQuickEdit(false);
+                setShowQuickEditSuccess(true);
+                setTimeout(() => setShowQuickEditSuccess(false), 1500);
+                if (onImagesUploaded) onImagesUploaded();
+              }}
+            >
+              Nessun ordine
+            </button>
+            <div className="grid grid-cols-4 gap-2">
+              {[1,2,3,4,5,6,7,8].map(n => (
+                <button
+                  key={n}
+                  className={`block w-full text-center px-2 py-2 rounded text-sm font-medium border transition-colors duration-150 ${quickEditImage.display_order == n ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-blue-50'}`}
+                  onClick={async () => {
+                    await updateImageMetadata(quickEditImage.id, {
+                      type: quickEditImage.type,
+                      created_at: quickEditImage.created_at,
+                      display_order: n
+                    });
+                    setShowQuickEdit(false);
+                    setShowQuickEditSuccess(true);
+                    setTimeout(() => setShowQuickEditSuccess(false), 1500);
+                    if (onImagesUploaded) onImagesUploaded();
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQuickEditSuccess && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 rounded-full bg-green-500 text-white text-sm shadow-lg animate-fade-in-out">
+          Modifica salvata!
+        </div>
+      )}
     </div>
   );
 }

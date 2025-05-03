@@ -21,12 +21,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
       ]
     });
 
-    //console.log('Risultati analisi:', {
-      objects: result.localizedObjectAnnotations?.length || 0,
-      labels: result.labelAnnotations?.length || 0,
-      faces: result.faceAnnotations?.length || 0,
-      web: result.webDetection?.webEntities?.length || 0
-    });
+ 
 
     // Funzione helper per calcolare il punteggio
     const calculateScore = (keywords: string[], sources: Array<{ description?: string, score?: number } | null | undefined>): number => {
@@ -81,12 +76,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
     const foodScore = calculateScore(foodKeywords, allSources as Array<{ description?: string; score?: number }>);
     const landscapeScore = calculateScore(landscapeKeywords, allSources as Array<{ description?: string; score?: number }>);
 
-    //console.log('Punteggi:', {
-      persona: personScore,
-      cibo: foodScore,
-      paesaggio: landscapeScore,
-      volti: numberOfFaces
-    });
+
 
     // Soglie di confidenza
     const CONFIDENCE_THRESHOLD = 0.6;
