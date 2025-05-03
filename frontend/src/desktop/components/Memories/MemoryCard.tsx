@@ -15,6 +15,7 @@ interface MemoryImage {
   created_at: string;
   width: number;
   height: number;
+  display_order: number | null;
 }
 
 interface MemoryWithImages extends Memory {
