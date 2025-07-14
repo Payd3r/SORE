@@ -99,7 +99,7 @@ router.post('/register/join', async (req, res) => {
     const token = jwt.sign(
       { id: userResult[0].id, email, coupleId },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.status(201).json({
@@ -211,7 +211,7 @@ router.post('/register/new', async (req, res) => {
       const token = jwt.sign(
         { id: createdUser[0].id, email, coupleId },
         process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '7d' }
+        { expiresIn: '30d' }
       );
 
       res.status(201).json({
@@ -303,7 +303,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, coupleId: user.couple_id },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({
