@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Database MySQL
+  db:
+    image: mysql:8.0
+    container_name: sore_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sore}
+      MYSQL_USER: ${MYSQL_USER:-sore_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-sore_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - web_proxy
+      - internal
+    ports:
+      - "3306:3306"
+
+  # Backend Node.js
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sore_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      DB_HOST: db
+      DB_USER: ${MYSQL_USER:-sore_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-sore_password}
+      DB_NAME: ${MYSQL_DATABASE:-sore}
+      DB_PORT: 3306
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_here}
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/google-vision-credentials.json
+    volumes:
+      - backend_media:/app/media
+      - backend_config:/app/config
+      - backend_queue:/app/queue
+    depends_on:
+      - db
+    networks:
+      - web_proxy
+      - internal
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sore_frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://backend:3002}
+    volumes:
+      - frontend_build:/app/dist
+    depends_on:
+      - backend
+    networks:
+      - web_proxy
+
+volumes:
+  mysql_data:
+    driver: local
+  backend_media:
+    driver: local
+  backend_config:
+    driver: local
+  backend_queue:
+    driver: local
+  frontend_build:
+    driver: local
+
+networks:
+  web_proxy:
+    external: true
+  internal:
+    driver: bridge 

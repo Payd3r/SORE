@@ -1,6 +1,6 @@
-// const API_BASE_URL = 'http://192.168.0.23:3002';
-const API_BASE_URL = 'http://101.58.39.17:3002';
-// const API_BASE_URL = 'https://believe-totally-mines-houston.trycloudflare.com';
+// Configurazione dinamica per Docker
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
+const STATIC_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
 
 export const API_URLS = {
   base: API_BASE_URL,
@@ -12,9 +12,7 @@ export const API_URLS = {
 };
 
 export const STATIC_URLS = {
-  // images: 'http://192.168.0.23:3002',
-  images: 'http://101.58.39.17:3002',
-  // images: 'https://believe-totally-mines-houston.trycloudflare.com',
+  images: STATIC_BASE_URL,
 };
 
 import axios from 'axios';
