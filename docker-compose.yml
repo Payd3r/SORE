@@ -61,11 +61,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://backend:3002}
     container_name: sore_frontend
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://backend:3002}
     volumes:
       - frontend_build:/app/dist
     depends_on:
