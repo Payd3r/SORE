@@ -26,7 +26,7 @@ const PORT = Number(process.env.PORT) || 3002;
 
 // Configurazione CORS
 app.use(cors({
-  origin: true,
+  origin: ['https://sore.andrea-mauri.duckdns.org', 'http://localhost:3000', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
     'Content-Type',
