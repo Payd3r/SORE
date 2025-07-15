@@ -74,6 +74,22 @@ services:
       - sore-internal
       - web-proxy
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: sore_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${MYSQL_USER:-sore_user}
+      PMA_PASSWORD: ${MYSQL_PASSWORD:-sore_password}
+      PMA_ARBITRARY: 1
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - sore-internal
+
 volumes:
   mysql_data:
     driver: local
