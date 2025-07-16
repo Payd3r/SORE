@@ -203,21 +203,28 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
     
     // Trova i ricordi creati esattamente un anno fa
     const [memories] = await pool.promise().query(
-      `SELECT m.id, m.title, m.user_id, u.name as creator_name
+      `SELECT m.id, m.title, m.couple_id
        FROM memories m 
-       JOIN users u ON m.user_id = u.id
        WHERE DATE(m.created_at) = ?`,
       [formattedDate]
     );
     
     // Crea notifiche per ogni ricordo trovato
     for (const memory of (memories as any[])) {
-      await createNotification({
-        user_id: memory.user_id,
-        title: '1 anno fa oggi...',
-        body: `Ricordi "${memory.title}" di un anno fa?`,
-        url: `/ricordo/${memory.id}`
-      });
+      // Prendi tutti gli utenti della coppia
+      const [users] = await pool.promise().query(
+        'SELECT id FROM users WHERE couple_id = ?',
+        [memory.couple_id]
+      );
+      const userIds = (users as any[]).map((u: any) => u.id);
+      for (const userId of userIds) {
+        await createNotification({
+          user_id: userId,
+          title: '1 anno fa oggi...',
+          body: `Ricordi "${memory.title}" di un anno fa?`,
+          url: `/ricordo/${memory.id}`
+        });
+      }
     }
     
     // 2. Compleanni (controlla utenti con compleanno oggi)
@@ -239,7 +246,6 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
         body: `Tanti auguri ${user.name}! Speriamo che tu abbia un meraviglioso compleanno.`,
         url: `/profilo`
       });
-      
       // TODO: Invia notifiche anche agli altri membri del gruppo/coppia
     }
     

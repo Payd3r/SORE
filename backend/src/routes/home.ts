@@ -37,7 +37,7 @@ router.get('/', auth, async (req: any, res) => {
         m.title,
         m.start_date as data_inizio,
         m.end_date as data_fine,
-        i.thumb_big_path as image
+        MIN(i.thumb_big_path) as image
        FROM memories m
        LEFT JOIN images i ON i.memory_id = m.id
        WHERE m.couple_id = ?
