@@ -64,7 +64,7 @@ router.get('/', auth, async (req: AuthRequest, res: Response) => {
     );
     
     const [unreadResult] = await pool.promise().query<RowDataPacket[]>(
-      'SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND status = "unread"', 
+      'SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND status = 0',
       [userId]
     );
     
@@ -91,7 +91,7 @@ router.put('/:id/read', auth, async (req: AuthRequest, res: Response) => {
     }
     
     const [result] = await pool.promise().query<ResultSetHeader>(
-      'UPDATE notifications SET status = "read" WHERE id = ? AND user_id = ?',
+      'UPDATE notifications SET status = 1 WHERE id = ? AND user_id = ?',
       [id, userId]
     );
     
@@ -118,7 +118,7 @@ router.put('/read-all', auth, async (req: AuthRequest, res: Response) => {
     }
     
     await pool.promise().query<ResultSetHeader>(
-      'UPDATE notifications SET status = "read" WHERE user_id = ? AND status = "unread"',
+      'UPDATE notifications SET status = 1 WHERE user_id = ? AND status = 0',
       [userId]
     );
     

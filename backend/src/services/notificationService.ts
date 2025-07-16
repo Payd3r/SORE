@@ -287,7 +287,7 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
 export async function countUnreadNotifications(userId: number | string): Promise<number> {
   try {
     const [result] = await pool.promise().query(
-      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND status = "unread"',
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND status = 0',
       [userId]
     );
     
