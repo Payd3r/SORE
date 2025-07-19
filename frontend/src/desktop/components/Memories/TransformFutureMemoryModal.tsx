@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { IoCalendarOutline, IoClose } from 'react-icons/io5';
 import { updateMemoryType } from '../../../api/memory';
 import { useQueryClient } from '@tanstack/react-query';
