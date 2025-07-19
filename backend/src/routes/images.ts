@@ -263,9 +263,12 @@ router.put('/:imageId/metadata', auth, async (req: any, res) => {
       return res.status(404).json({ error: 'Immagine non trovata' });
     }
 
+    // Converti la data in formato MySQL compatibile
+    const mysqlDate = new Date(created_at).toISOString().slice(0, 19).replace('T', ' ');
+    
     // Aggiorna i metadati (incluso display_order se presente)
     let updateQuery = `UPDATE images SET type = ?, created_at = ?`;
-    let updateParams: any[] = [type, created_at];
+    let updateParams: any[] = [type, mysqlDate];
     if (display_order !== undefined) {
       updateQuery += `, display_order = ?`;
       updateParams.push(displayOrderToSave);
