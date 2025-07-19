@@ -7,6 +7,7 @@ import { FaSpotify } from 'react-icons/fa';
 import { getImageUrl } from '../../api/images';
 import { Memory } from '../../api/memory';
 import { getTrackDetails, SpotifyTrack } from '../../api/spotify';
+import TransformFutureMemoryModal from './TransformFutureMemoryModal';
 
 // Interfacce
 interface MemoryCardMobileProps {
@@ -24,6 +25,7 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [showTransformModal, setShowTransformModal] = useState(false);
 
   // Carica i dati Spotify solo se presente una canzone e solo per viaggi
   useEffect(() => {
@@ -423,13 +425,14 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
 
   if (isFuturo) {
     return (
-      <div
-        className={
-          'col-span-2 bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex items-center min-h-[110px] h-full p-3 gap-3 transition-all duration-200 touch-manipulation active:scale-[0.98]'
-        }
-        onClick={handleClick}
-        style={{ WebkitTapHighlightColor: 'transparent', willChange: 'transform', contain: 'content' }}
-      >
+      <>
+        <div
+          className={
+            'col-span-2 bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex items-center min-h-[110px] h-full p-3 gap-3 transition-all duration-200 touch-manipulation active:scale-[0.98]'
+          }
+          onClick={() => setShowTransformModal(true)}
+          style={{ WebkitTapHighlightColor: 'transparent', willChange: 'transform', contain: 'content' }}
+        >
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800">
           <IoCalendarOutline className="w-8 h-8 text-blue-600 dark:text-blue-300" />
         </div>
@@ -447,6 +450,13 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
           <p className="text-xs text-blue-800 dark:text-blue-200 opacity-80 mt-1">Presto potrai aggiungere foto e dettagli!</p>
         </div>
       </div>
+      
+      <TransformFutureMemoryModal
+        isOpen={showTransformModal}
+        onClose={() => setShowTransformModal(false)}
+        memory={memory}
+      />
+      </>
     );
   }
 

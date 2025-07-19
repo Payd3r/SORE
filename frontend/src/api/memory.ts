@@ -153,6 +153,19 @@ export const updateMemory = async (id: string, data: Partial<Memory>): Promise<A
   }
 };
 
+// Funzione specifica per aggiornare il tipo di un ricordo
+export const updateMemoryType = async (id: string, type: MemoryType): Promise<ApiResponse<Memory>> => {
+  try {
+    const headers = getAuthHeaders();
+    const response = await axiosInstance.put(`${API_URLS.base}/api/memories/${id}`, { type }, {
+      headers
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const deleteMemory = async (id: string): Promise<void> => {
   try {
     const headers = getAuthHeaders();

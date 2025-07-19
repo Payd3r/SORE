@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getTrackDetails, SpotifyTrack } from '../../../api/spotify';
 import { FaSpotify } from 'react-icons/fa';
 import { IoCalendarOutline, IoLocationOutline, IoMusicalNotesOutline } from 'react-icons/io5';
+import TransformFutureMemoryModal from './TransformFutureMemoryModal';
 
 interface MemoryImage {
   id: number;
@@ -33,6 +34,7 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
   const [trackInfo, setTrackInfo] = useState<SpotifyTrack | null>(null);
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
   const [optimizedImages, setOptimizedImages] = useState<MemoryImage[]>([]);
+  const [showTransformModal, setShowTransformModal] = useState(false);
 
   // Ottimizza il layout delle immagini
   const optimizeImageLayout = useMemo(() => {
@@ -202,13 +204,14 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
 
   if (isFuturo) {
     return (
-      <div
-        className={
-          'group bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border-2 border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer transition-all duration-300 h-full flex flex-col items-center justify-center p-6 text-center relative'
-        }
-        onClick={handleClick}
-        style={{ minHeight: 220 }}
-      >
+      <>
+        <div
+          className={
+            'group bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border-2 border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer transition-all duration-300 h-full flex flex-col items-center justify-center p-6 text-center relative'
+          }
+          onClick={() => setShowTransformModal(true)}
+          style={{ minHeight: 220 }}
+        >
         <div className="flex flex-col items-center gap-2 w-full">
           <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800 mb-2">
             <IoCalendarOutline className="w-9 h-9 text-blue-600 dark:text-blue-300" />
@@ -224,6 +227,13 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
           <p className="text-sm text-blue-800 dark:text-blue-200 opacity-80 mt-2">Presto potrai aggiungere foto e dettagli a questo ricordo!</p>
         </div>
       </div>
+      
+      <TransformFutureMemoryModal
+        isOpen={showTransformModal}
+        onClose={() => setShowTransformModal(false)}
+        memory={memory}
+      />
+      </>
     );
   }
 

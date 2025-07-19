@@ -286,7 +286,7 @@ router.post('/', auth, async (req: any, res) => {
 router.put('/:memoryId', auth, async (req: any, res) => {
   try {
     const { memoryId } = req.params;
-    const { title, start_date, end_date, location, song } = req.body;
+    const { title, start_date, end_date, location, song, type } = req.body;
     const coupleId = req.user.coupleId;
 
     //console.log(`[Memory] Updating memory ${memoryId}`);
@@ -318,9 +318,10 @@ router.put('/:memoryId', auth, async (req: any, res) => {
            end_date = IFNULL(?, end_date),
            location = IFNULL(?, location),
            song = IFNULL(?, song),
+           type = IFNULL(?, type),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [title, start_date, end_date, location, song, memoryId]
+      [title, start_date, end_date, location, song, type, memoryId]
     );
 
     //console.log(`[Memory] Updated memory ${memoryId}`);
