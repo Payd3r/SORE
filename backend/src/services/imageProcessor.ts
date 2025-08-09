@@ -59,9 +59,13 @@ export async function processImage(file: Express.Multer.File): Promise<Processed
     const metadata = await extractMetadata(buffer, originalFormat);
 
     if (originalFormat === 'heic' || originalFormat === 'heif') {
-      const outputBuffer = await heicConvert({ buffer, format: 'JPEG', quality: 0.92 }) as Buffer;
-      buffer = outputBuffer;
-      originalFormat = 'jpg';
+      try {
+        const outputBuffer = await heicConvert({ buffer, format: 'JPEG', quality: 0.92 }) as Buffer;
+        buffer = outputBuffer;
+        originalFormat = 'jpg';
+      } catch (heicError) {
+        // Fallback: prova a lasciare il buffer originale e lasciare che sharp gestisca HEIC; se fallirà, verrà catturato più avanti
+      }
     }
 
     // Converti in WebP
