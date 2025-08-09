@@ -345,9 +345,11 @@ export default function UploadMobile() {
           // Invalida la cache dei ricordi per aggiornare subito la HomeMobile
           queryClient.invalidateQueries({ queryKey: ['memories'] });
           
-          // Se ci sono file da caricare, li associamo al ricordo
+          // Se ci sono file da caricare, avvia l'upload in background (non bloccante)
           if (selectedFiles.length > 0) {
-            await handleUploadProcess(selectedFiles, memoryResponse.data.id);
+            handleUploadProcess(selectedFiles, memoryResponse.data.id).catch(() => {
+              // lo stato di errore viene già gestito internamente da handleUploadProcess
+            });
           }
           
           // Se è Futuro, non obbligare immagini
@@ -356,7 +358,7 @@ export default function UploadMobile() {
             return;
           }
           
-          // Reset form e navigazione verso la home
+          // Reset form e navigazione verso la home (subito, upload continua in background)
           resetForm();
           navigate('/');
           break;

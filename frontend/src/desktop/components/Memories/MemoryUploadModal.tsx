@@ -214,70 +214,69 @@ export default function MemoryUploadModal({
       // per aggiornare la UI senza aspettare il completamento degli upload
       onSuccess?.();
 
-      // Se ci sono immagini, avvio l'upload in background
+      // Se ci sono immagini, avvio l'upload in background (non bloccante)
       if (selectedFiles.length > 0) {
         try {
-          const uploadResponse = await uploadImages(selectedFiles, response.data.id);
+          const uploadResponsePromise = uploadImages(selectedFiles, response.data.id);
 
-          // Aggiorna lo stato dei file a "processing"
-          setUploadingFiles(prev => {
-            const newState = { ...prev };
-            uploadResponse.data.forEach(({ file }) => {
-              if (newState[file]) {
-                newState[file].status = 'processing';
-                newState[file].progress = 0;
-                newState[file].message = 'Inizio processamento';
-              }
-            });
-            localStorage.setItem('uploadingFiles', JSON.stringify(newState));
-            return newState;
-          });
-
-          // Invalida subito la cache per mostrare il ricordo vuoto
-          queryClient.invalidateQueries({ queryKey: ['memories'] });
-
-          // Avvia il polling per ogni immagine
-          uploadResponse.data.forEach(({ jobId, file }) => {
-            pollImageStatus(jobId, (status: ImageStatusResponse) => {
-              setUploadingFiles(prev => {
-                const newState = { ...prev };
+          // Non attendiamo il risultato; gestiamo lo stato quando arriva
+          uploadResponsePromise.then(uploadResponse => {
+            setUploadingFiles(prev => {
+              const newState = { ...prev };
+              uploadResponse.data.forEach(({ file }) => {
                 if (newState[file]) {
-                  newState[file].status = status.state;
-                  newState[file].progress = status.progress;
-                  newState[file].message = status.status;
-                  
-                  // Invalida la cache anche durante il processing quando c'è un progresso significativo
-                  if (status.state === 'processing' && status.progress > 0) {
-                    if (status.progress % 20 === 0 || status.progress === 100) {
+                  newState[file].status = 'processing';
+                  newState[file].progress = 0;
+                  newState[file].message = 'Inizio processamento';
+                }
+              });
+              localStorage.setItem('uploadingFiles', JSON.stringify(newState));
+              return newState;
+            });
+
+            // Invalida subito la cache per mostrare il ricordo vuoto
+            queryClient.invalidateQueries({ queryKey: ['memories'] });
+
+            // Avvia il polling per ogni immagine
+            uploadResponse.data.forEach(({ jobId, file }) => {
+              pollImageStatus(jobId, (status: ImageStatusResponse) => {
+                setUploadingFiles(prev => {
+                  const newState = { ...prev };
+                  if (newState[file]) {
+                    newState[file].status = status.state;
+                    newState[file].progress = status.progress;
+                    newState[file].message = status.status;
+                    if (status.state === 'processing' && status.progress > 0) {
+                      if (status.progress % 20 === 0 || status.progress === 100) {
+                        queryClient.invalidateQueries({ queryKey: ['memories'] });
+                      }
+                    }
+                    if (status.state === 'completed') {
                       queryClient.invalidateQueries({ queryKey: ['memories'] });
+                      setTimeout(() => {
+                        setUploadingFiles(prev2 => {
+                          const newState2 = { ...prev2 };
+                          delete newState2[file];
+                          localStorage.setItem('uploadingFiles', JSON.stringify(newState2));
+                          if (Object.keys(newState2).length === 0) {
+                            setShowUploadStatus(false);
+                            localStorage.removeItem('uploadingFiles');
+                            localStorage.removeItem('isUploading');
+                          }
+                          return newState2;
+                        });
+                      }, 2000);
+                    } else if (status.state === 'failed' || status.state === 'notfound') {
+                      newState[file].message = status.state === 'failed' ? 'Errore durante il caricamento' : 'File non trovato';
                     }
                   }
-                  
-                  if (status.state === 'completed') {
-                    // Invalida la cache quando un'immagine viene completata
-                    queryClient.invalidateQueries({ queryKey: ['memories'] });
-                    
-                    setTimeout(() => {
-                      setUploadingFiles(prev => {
-                        const newState = { ...prev };
-                        delete newState[file];
-                        localStorage.setItem('uploadingFiles', JSON.stringify(newState));
-                        if (Object.keys(newState).length === 0) {
-                          setShowUploadStatus(false);
-                          localStorage.removeItem('uploadingFiles');
-                          localStorage.removeItem('isUploading');
-                        }
-                        return newState;
-                      });
-                    }, 2000);
-                  } else if (status.state === 'failed' || status.state === 'notfound') {
-                    newState[file].message = status.state === 'failed' ? 'Errore durante il caricamento' : 'File non trovato';
-                  }
-                }
-                localStorage.setItem('uploadingFiles', JSON.stringify(newState));
-                return newState;
+                  localStorage.setItem('uploadingFiles', JSON.stringify(newState));
+                  return newState;
+                });
               });
             });
+          }).catch(() => {
+            // stato di errore gestito di seguito
           });
         } catch (uploadError) {
           setUploadingFiles(prev => {
