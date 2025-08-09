@@ -51,6 +51,7 @@ export async function processImageJob(job: ImageJob) {
   let conn;
   
   try {
+    console.log('[Worker] Start', { id: job.id, originalName: job.originalName, coupleId: job.coupleId, userId: job.userId, memoryId: job.memoryId });
     //console.log(`[Worker] Processing image: ${job.originalName} (Job ID: ${job.id})`);
 
     // Aggiorna lo stato iniziale
@@ -65,6 +66,12 @@ export async function processImageJob(job: ImageJob) {
       size: 0,
       fieldname: 'images'
     } as any);
+    console.log('[Worker] Processed paths', {
+      original: processedImage.original_path,
+      webp: processedImage.webp_path,
+      thumbBig: processedImage.thumb_big_path,
+      thumbSmall: processedImage.thumb_small_path
+    });
 
     // Aggiorna lo stato dopo il processamento base
     await updateJobProgress(job.id, 20, 'File letto');
@@ -169,11 +176,13 @@ export async function processImageJob(job: ImageJob) {
         metadata.country
       ]
     );
+    console.log('[Worker] Inserted image', { insertId: (result as any).insertId, type });
     
     // Se c'è un memory_id, aggiorna le date del memory
     if (job.memoryId) {
       try {
         await updateMemoryDates(job.memoryId, conn);
+        console.log('[Worker] Updated memory dates', { memoryId: job.memoryId });
       } catch (error) {
         console.error(`[Worker] Error updating memory dates for memory ${job.memoryId}:`, error);
         // Continua comunque senza far fallire l'intero job
@@ -234,11 +243,15 @@ export async function processImageJob(job: ImageJob) {
     return result.insertId;
   } catch (error) {
     console.error(`[Worker] Error processing image ${job.originalName} (Job ID: ${job.id}):`, error instanceof Error ? error.message : 'Unknown error');
+    if (error instanceof Error) {
+      console.error('[Worker] Stack:', error.stack);
+    }
     
     // Rollback della transazione se necessario
     if (conn) {
       try {
         await conn.rollback();
+        console.log('[Worker] Transaction rolled back');
       } catch (rollbackError) {
         console.error('Error during rollback:', rollbackError);
       }

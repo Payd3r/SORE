@@ -79,6 +79,12 @@ app.use('/media', express.static(path.join(__dirname, '../media'), {
 
 // Middleware per il parsing del body (solo per le richieste non multipart)
 app.use((req, res, next) => {
+  if (req.path.startsWith('/api/images/upload')) {
+    console.log('[Server] Upload route hit', {
+      contentLength: req.get('content-length'),
+      contentType: req.get('content-type')
+    });
+  }
   if (!req.is('multipart/form-data')) {
     express.json({ limit: '100mb' })(req, res, next);
   } else {

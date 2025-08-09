@@ -111,6 +111,15 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
   // Disabilita timeout per upload lunghi
   req.setTimeout(10 * 60 * 1000);
   res.setTimeout(10 * 60 * 1000);
+  try {
+    console.log('[Upload] Incoming upload request', {
+      userId: req.user?.id,
+      coupleId: req.user?.coupleId,
+      memoryId: req.body?.memory_id || req.body?.memoryId || req.body?.['memory_id'],
+      contentLength: req.headers['content-length'],
+      contentType: req.headers['content-type']
+    });
+  } catch {}
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
   }
@@ -136,6 +145,13 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
     }
 
     // Aggiungi i job alla coda
+    try {
+      const sizes = (req.files as Express.Multer.File[]).map(f => {
+        try { return fs.statSync(f.path).size; } catch { return f.size || 0; }
+      });
+      console.log('[Upload] Files received:', (req.files as Express.Multer.File[]).map(f => f.originalname));
+      console.log('[Upload] Files sizes (bytes):', sizes);
+    } catch {}
     const uploadPromises = req.files.map(async (file: Express.Multer.File) => {
       try {
         const job = await imageQueue.add({
@@ -146,6 +162,7 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
           userId,
           type
         });
+        try { console.log('[Upload] Job queued', { file: file.originalname, jobId: job.id }); } catch {}
 
         return {
           success: true,
@@ -183,6 +200,7 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
         jobId: '',
         status: 'failed'
       }));
+      try { console.log('[Upload] Fallback response for failed queueing'); } catch {}
       res.status(202).json({
         message: 'Images queued with fallback',
         data: results
