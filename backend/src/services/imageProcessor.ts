@@ -78,8 +78,12 @@ export async function processImage(file: Express.Multer.File): Promise<Processed
       throw new Error('La conversione ha prodotto file vuoti o non validi');
     }
 
-    // Classifichiamo l'immagine dopo la conversione
-    metadata.type = await classifyImage(buffer);
+    // Classifichiamo l'immagine dopo la conversione con fallback sicuro
+    try {
+      metadata.type = await classifyImage(buffer);
+    } catch {
+      metadata.type = ImageType.LANDSCAPE;
+    }
 
     // Crea la directory per l'immagine
     if (!fs.existsSync(imageDir)) {

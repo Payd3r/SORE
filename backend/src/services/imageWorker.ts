@@ -115,9 +115,20 @@ export async function processImageJob(job: ImageJob) {
       })
       .toBuffer();
 
-    // Classificazione immagine
+    // Classificazione immagine con fallback all'eventuale type passato dal client o default LANDSCAPE
     await updateJobProgress(job.id, 70, 'Classificazione immagine');
-    const type = await classifyImage(imageBuffer);
+    let type: ImageType;
+    try {
+      type = await classifyImage(imageBuffer);
+    } catch {
+      // Se fallisce la classificazione, prova a usare il type passato dal job (se valido)
+      const normalized = (job.type || '').toLowerCase();
+      if (normalized && Object.values(ImageType).includes(normalized as ImageType)) {
+        type = normalized as ImageType;
+      } else {
+        type = ImageType.LANDSCAPE;
+      }
+    }
 
     // Aggiorna il database con i percorsi delle immagini processate
     await updateJobProgress(job.id, 80, 'Salvataggio nel database');
@@ -154,7 +165,7 @@ export async function processImageJob(job: ImageJob) {
         job.coupleId,
         job.userId,
         metadata.taken_at,
-        type,
+        type || metadata.type || ImageType.LANDSCAPE,
         metadata.country
       ]
     );

@@ -34,7 +34,7 @@ export async function createNotification(data: NotificationData): Promise<number
   try {
     const [result] = await pool.promise().query<ResultSetHeader>(
       `INSERT INTO notifications (user_id, title, body, url, icon, status, created_at) 
-       VALUES (?, ?, ?, ?, ?, 'unread', NOW())`,
+       VALUES (?, ?, ?, ?, ?, 0, NOW())`,
       [data.user_id, data.title, data.body, data.url || null, data.icon || null]
     );
     
@@ -227,26 +227,33 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
       }
     }
     
-    // 2. Compleanni (controlla utenti con compleanno oggi)
-    const today = new Date().toISOString().split('T')[0].substring(5); // MM-DD
-    const [users] = await pool.promise().query(
-      `SELECT id, name, CONCAT(
-        MONTH(birthdate), '-', DAY(birthdate)
-      ) as birthday_day
-       FROM users
-       WHERE CONCAT(MONTH(birthdate), '-', DAY(birthdate)) = CONCAT(MONTH(CURDATE()), '-', DAY(CURDATE()))`
-    );
-    
-    // Crea notifiche di buon compleanno
-    for (const user of (users as any[])) {
-      // Notifica all'utente stesso
-      await createNotification({
-        user_id: user.id,
-        title: 'Buon compleanno!',
-        body: `Tanti auguri ${user.name}! Speriamo che tu abbia un meraviglioso compleanno.`,
-        url: `/profilo`
-      });
-      // TODO: Invia notifiche anche agli altri membri del gruppo/coppia
+    // 2. Compleanni (controlla utenti con compleanno oggi) — esegui solo se la colonna esiste
+    try {
+      const [cols] = await pool
+        .promise()
+        .query(
+          `SELECT COUNT(*) AS cnt
+           FROM INFORMATION_SCHEMA.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'birthdate'`
+        );
+      const hasBirthdate = (cols as any[])[0]?.cnt > 0;
+      if (hasBirthdate) {
+        const [birthdayUsers] = await pool.promise().query(
+          `SELECT id, name
+             FROM users
+            WHERE MONTH(birthdate) = MONTH(CURDATE()) AND DAY(birthdate) = DAY(CURDATE())`
+        );
+        for (const user of birthdayUsers as any[]) {
+          await createNotification({
+            user_id: user.id,
+            title: 'Buon compleanno!',
+            body: `Tanti auguri ${user.name}! Speriamo che tu abbia un meraviglioso compleanno.`,
+            url: `/profilo`
+          });
+        }
+      }
+    } catch (birthdateErr) {
+      // Se qualcosa va storto (es. colonna mancante), salta silenziosamente i compleanni
     }
     
     // 3. Ricordi futuri che scadono tra 7 giorni
@@ -257,8 +264,8 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
 
     const [futureMemories] = await pool.promise().query(
       `SELECT m.id, m.title, m.start_date, m.couple_id
-       FROM memories m
-       WHERE m.type = 'FUTURO' AND DATE(m.start_date) = ?`,
+         FROM memories m
+        WHERE m.type = 'futuro' AND DATE(m.start_date) = ?`,
       [weekAheadStr]
     );
 

@@ -1,17 +1,25 @@
 import { ImageType } from '../types/db';
-import { ImageAnnotatorClient, protos } from '@google-cloud/vision';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
 
-// Inizializza il client di Google Cloud Vision
-const vision = new ImageAnnotatorClient({
-  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
-});
+// Inizializza il client di Google Cloud Vision in modo resiliente
+let vision: ImageAnnotatorClient | null = null;
+try {
+  vision = new ImageAnnotatorClient({
+    keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
+  });
+} catch (e) {
+  vision = null;
+}
 
 export async function classifyImage(buffer: Buffer): Promise<ImageType> {
   try {
-    //console.log('Inizio classificazione immagine...');
-    
-    // Richiediamo più tipi di analisi contemporaneamente
-    const [result] = await vision.annotateImage({
+    // Se il client non è disponibile, fallback immediato
+    if (!vision) {
+      return ImageType.LANDSCAPE;
+    }
+
+    // Richiesta con timeout per evitare blocchi
+    const annotatePromise = vision.annotateImage({
       image: { content: buffer },
       features: [
         { type: 'OBJECT_LOCALIZATION' },
@@ -20,6 +28,12 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
         { type: 'WEB_DETECTION' }
       ]
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Vision API timeout')), 3500)
+    );
+
+    const [result] = await Promise.race([annotatePromise, timeoutPromise]) as any;
 
  
 
@@ -37,12 +51,12 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
 
     // Combiniamo oggetti, label e entità web per l'analisi
     const allSources = [
-      ...(result.localizedObjectAnnotations || []).map(obj => ({ 
+      ...(result.localizedObjectAnnotations || []).map((obj: any) => ({ 
         description: obj.name, 
         score: obj.score 
       })),
       ...(result.labelAnnotations || []),
-      ...(result.webDetection?.webEntities || []).map(entity => ({ 
+      ...(result.webDetection?.webEntities || []).map((entity: any) => ({ 
         description: entity.description, 
         score: entity.score ? entity.score / 1.0 : 0 
       }))
@@ -98,7 +112,7 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
     }
 
     if (personScore > CONFIDENCE_THRESHOLD) {
-      if (result.webDetection?.webEntities?.some(entity => 
+      if (result.webDetection?.webEntities?.some((entity: any) => 
         entity.description?.toLowerCase().includes('couple') ||
         entity.description?.toLowerCase().includes('together') ||
         entity.description?.toLowerCase().includes('wedding')
@@ -110,14 +124,10 @@ export async function classifyImage(buffer: Buffer): Promise<ImageType> {
       return ImageType.SINGLE;
     }
 
-    //console.log('Classificazione default come PAESAGGIO');
     return ImageType.LANDSCAPE;
 
   } catch (error) {
-    console.error('Errore nella classificazione dell\'immagine:', error);
-    const imageTypes = Object.values(ImageType);
-    const randomType = imageTypes[Math.floor(Math.random() * imageTypes.length)];
-    //console.log('Errore nella classificazione, tipo casuale:', randomType);
-    return randomType;
+    // In caso di errore o timeout, fallback sicuro
+    return ImageType.LANDSCAPE;
   }
 } 
