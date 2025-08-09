@@ -133,7 +133,7 @@ const PwaLayout = () => {
       {unreadNotificationsCount > 0 && !location.pathname.startsWith('/upload') && (
         <button 
           onClick={() => setIsNotificationsModalOpen(true)}
-          className="fixed bottom-24 right-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-blue-500 text-white"
+          className="fixed bottom-20 right-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-blue-500 text-white"
           aria-label="Notifiche"
         >
           <svg 
