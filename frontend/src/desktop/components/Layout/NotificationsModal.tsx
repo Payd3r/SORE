@@ -65,8 +65,10 @@ export default function NotificationsDesktopModal({ isOpen, onClose }: Notificat
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
+      // Svuota lista, azzera contatore e chiudi il modal
+      setNotifications([]);
       setUnreadCount(0);
+      onClose();
     } catch (error) {}
   };
 

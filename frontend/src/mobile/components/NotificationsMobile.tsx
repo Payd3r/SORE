@@ -174,12 +174,10 @@ export default function NotificationsMobile({ isOpen, onClose }: NotificationsMo
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
-      
-      // Aggiorna lo stato locale
-      setNotifications(prevNotifications => 
-        prevNotifications.map(n => ({ ...n, status: 'read' }))
-      );
+      // Aggiorna lo stato locale: svuota lista, azzera counter e chiudi bottom sheet
+      setNotifications([]);
       setUnreadCount(0);
+      onClose();
     } catch (error) {
       console.error('Errore nel segnare tutte le notifiche come lette:', error);
     }
