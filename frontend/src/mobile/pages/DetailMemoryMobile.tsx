@@ -468,7 +468,7 @@ export default function DetailMemoryMobile() {
         }
     }, []);
 
-    const handleCarouselTouchEnd = useCallback((e: React.TouchEvent) => {
+    const handleCarouselTouchEnd = useCallback(() => {
         if (!carouselSwipeStarted.current) return;
 
         const swipeDistanceX = carouselTouchEndX.current - carouselTouchStartX.current;
