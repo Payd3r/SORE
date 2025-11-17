@@ -439,16 +439,16 @@ export default function DetailMemoryMobile() {
     }, [carouselImages.length]);
 
     // Gestione dello swipe per navigare tra le immagini
-    const touchStartX = useRef(0);
-    const touchStartY = useRef(0);
-    const touchEndX = useRef(0);
-    const touchEndY = useRef(0);
+    const carouselTouchStartX = useRef(0);
+    const carouselTouchStartY = useRef(0);
+    const carouselTouchEndX = useRef(0);
+    const carouselTouchEndY = useRef(0);
     const isCarouselSwipe = useRef(false);
     const carouselSwipeStarted = useRef(false);
 
     const handleCarouselTouchStart = useCallback((e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchStartY.current = e.touches[0].clientY;
+        carouselTouchStartX.current = e.touches[0].clientX;
+        carouselTouchStartY.current = e.touches[0].clientY;
         carouselSwipeStarted.current = true;
         isCarouselSwipe.current = false;
         e.stopPropagation();
@@ -457,11 +457,11 @@ export default function DetailMemoryMobile() {
     const handleCarouselTouchMove = useCallback((e: React.TouchEvent) => {
         if (!carouselSwipeStarted.current) return;
         
-        touchEndX.current = e.touches[0].clientX;
-        touchEndY.current = e.touches[0].clientY;
+        carouselTouchEndX.current = e.touches[0].clientX;
+        carouselTouchEndY.current = e.touches[0].clientY;
 
-        const deltaX = Math.abs(touchEndX.current - touchStartX.current);
-        const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+        const deltaX = Math.abs(carouselTouchEndX.current - carouselTouchStartX.current);
+        const deltaY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
 
         // Determina se lo swipe è principalmente orizzontale o verticale
         // Se il movimento orizzontale è maggiore del verticale, è uno swipe orizzontale
@@ -478,8 +478,8 @@ export default function DetailMemoryMobile() {
     const handleCarouselTouchEnd = useCallback((e: React.TouchEvent) => {
         if (!carouselSwipeStarted.current) return;
 
-        const swipeDistanceX = touchEndX.current - touchStartX.current;
-        const swipeDistanceY = Math.abs(touchEndY.current - touchStartY.current);
+        const swipeDistanceX = carouselTouchEndX.current - carouselTouchStartX.current;
+        const swipeDistanceY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
         const swipeDistance = Math.abs(swipeDistanceX);
 
         // Solo se lo swipe è principalmente orizzontale e supera la distanza minima
