@@ -24,7 +24,7 @@ function calculateFileHash(filePath: string): Promise<string> {
 }
 
 /**
- * Normalizza un percorso rimuovendo prefissi /media/ o media/
+ * Normalizza un percorso rimuovendo prefissi /media/ o media/ e convertendo backslash in forward slash
  */
 function normalizePath(filePath: string): string {
   let cleanPath = filePath;
@@ -33,6 +33,8 @@ function normalizePath(filePath: string): string {
   } else if (cleanPath.startsWith('media\\') || cleanPath.startsWith('media/')) {
     cleanPath = cleanPath.substring(6);
   }
+  // Converti tutti i backslash in forward slash (per compatibilità Windows -> Linux)
+  cleanPath = cleanPath.replace(/\\/g, '/');
   return cleanPath;
 }
 
