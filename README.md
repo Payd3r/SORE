@@ -5,6 +5,14 @@
   <h3>L'app per condividere e organizzare i vostri momenti speciali</h3>
 </div>
 
+## 🔧 Script di Gestione Duplicati
+
+```bash
+npm run populate-hashes
+npm run remove-duplicates
+npm run remove-duplicates:execute
+```
+
 ## 📱 Cos'è SORE?
 
 SORE è un'applicazione web moderna che trasforma il modo in cui le coppie gestiscono e condividono i loro ricordi fotografici. È un **album digitale intelligente** che organizza automaticamente le vostre foto, le associa a luoghi specifici e permette di collegarle alla musica che ha accompagnato quei momenti speciali.
