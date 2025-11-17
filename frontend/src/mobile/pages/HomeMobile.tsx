@@ -355,18 +355,18 @@ const HomeMobile = () => {
       return;
     }
 
-    // Attiva pull-to-refresh solo se:
-    // 1. Il movimento verticale supera 50px (soglia alta per evitare interferenze)
-    // 2. OPPURE se il movimento è > 30px E il tempo trascorso è > 100ms (per distinguere tap da drag)
-    const isSignificantPull = deltaY > 50 || (deltaY > 30 && elapsedTime > 100);
+    // Attiva pull-to-refresh se:
+    // 1. Il movimento verticale supera 20px E il tempo trascorso è > 50ms (per distinguere tap veloce da drag)
+    // 2. OPPURE se il movimento è > 35px (anche se veloce, è chiaramente un drag)
+    const isSignificantPull = (deltaY > 20 && elapsedTime > 50) || deltaY > 35;
     
     if (isSignificantPull) {
       setIsPulling(true);
       setHasMovedEnough(true);
       const distance = deltaY > 120 ? 120 : deltaY;
       setPullDistance(distance);
-      // Previeni lo scroll SOLO quando siamo molto sicuri che è un pull-to-refresh (distance > 60)
-      if (distance > 60) {
+      // Previeni lo scroll SOLO quando siamo sicuri che è un pull-to-refresh (distance > 40)
+      if (distance > 40) {
         e.preventDefault();
       }
     } else {
@@ -378,7 +378,7 @@ const HomeMobile = () => {
   };
   const handleTouchEnd = async () => {
     // Se non era un pull valido, resetta tutto
-    if (!isPulling || !hasMovedEnough || pullDistance < 50) {
+    if (!isPulling || !hasMovedEnough || pullDistance < 30) {
       setIsPulling(false);
       setPullDistance(0);
       setTouchStartY(null);
@@ -389,7 +389,7 @@ const HomeMobile = () => {
     }
     
     // Se il pull era abbastanza forte, attiva il refresh
-    if (pullDistance > 60) {
+    if (pullDistance > 50) {
       setIsRefreshing(true);
       await handleRefreshRicordi();
       setIsRefreshing(false);
@@ -842,11 +842,11 @@ const HomeMobile = () => {
         style={activeTab === 'ricordi' && isPulling && pullDistance > 40 ? { touchAction: 'pan-y' } : {}}
       >
         {/* Indicatore di pull-to-refresh - Container fisso con overflow hidden */}
-        {activeTab === 'ricordi' && (
+        {activeTab === 'ricordi' && (pullDistance > 0 || isRefreshing) && (
           <div
             className="absolute top-0 left-0 right-0 overflow-hidden pointer-events-none z-10"
             style={{
-              height: Math.max(pullDistance, 0),
+              height: Math.max(pullDistance, isRefreshing ? 60 : 0),
               transition: isPulling || isRefreshing ? 'none' : 'height 0.3s ease-out',
             }}
           >
@@ -854,9 +854,9 @@ const HomeMobile = () => {
               className="flex flex-col items-center justify-end w-full h-full px-4"
               style={{
                 paddingBottom: 8,
-                transform: `translateY(${Math.max(0, pullDistance - 60)}px)`,
+                transform: `translateY(${Math.max(0, (pullDistance || (isRefreshing ? 60 : 0)) - 60)}px)`,
                 transition: isPulling || isRefreshing ? 'none' : 'transform 0.3s ease-out',
-                opacity: pullDistance > 0 ? Math.min(1, pullDistance / 40) : 0,
+                opacity: pullDistance > 0 || isRefreshing ? Math.min(1, (pullDistance || (isRefreshing ? 60 : 0)) / 30) : 0,
               }}
             >
               <svg 
@@ -865,14 +865,14 @@ const HomeMobile = () => {
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
                 style={{
-                  transform: isRefreshing ? 'rotate(0deg)' : `rotate(${Math.min(180, (pullDistance / 120) * 180)}deg)`,
+                  transform: isRefreshing ? 'rotate(0deg)' : `rotate(${Math.min(180, ((pullDistance || 0) / 120) * 180)}deg)`,
                   transition: isPulling || isRefreshing ? 'none' : 'transform 0.2s ease-out',
                 }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582M20 20v-5h-.581M5 19A9 9 0 1119 5" />
               </svg>
-              {pullDistance > 20 && (
-                <span className="text-xs text-blue-500 mt-1" style={{ opacity: pullDistance > 40 ? 1 : pullDistance / 40 }}>
+              {(pullDistance > 15 || isRefreshing) && (
+                <span className="text-xs text-blue-500 mt-1" style={{ opacity: (pullDistance || (isRefreshing ? 60 : 0)) > 30 ? 1 : (pullDistance || 0) / 30 }}>
                   {isRefreshing ? 'Aggiornamento...' : 'Trascina per aggiornare'}
                 </span>
               )}

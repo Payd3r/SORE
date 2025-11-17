@@ -210,6 +210,12 @@ export default function DetailMemoryMobile() {
 
     // Gestione dello swipe per chiudere la pagina o espandere le info
     const handleTouchStart = (e: React.TouchEvent) => {
+        // Se il touch è iniziato su un elemento interattivo (button, link, etc.), non gestirlo
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a, input, select, textarea, [role="button"]')) {
+            return;
+        }
+        
         // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non iniziare lo swipe
         if (activeTab === 'cronologia' && !isAtScrollTop) {
             return;
@@ -441,6 +447,12 @@ export default function DetailMemoryMobile() {
     const carouselSwipeStarted = useRef(false);
 
     const handleCarouselTouchStart = useCallback((e: React.TouchEvent) => {
+        // Se il touch è iniziato su un elemento interattivo (button, link, etc.), non gestirlo
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a, input, select, textarea, [role="button"]')) {
+            return;
+        }
+        
         carouselTouchStartX.current = e.touches[0].clientX;
         carouselTouchStartY.current = e.touches[0].clientY;
         carouselSwipeStarted.current = true;
@@ -458,9 +470,12 @@ export default function DetailMemoryMobile() {
 
         // Determina se lo swipe è principalmente orizzontale o verticale
         // Solo se è chiaramente orizzontale, blocchiamo la propagazione
-        if (deltaX > deltaY && deltaX > 15) {
+        if (deltaX > deltaY && deltaX > 10) {
             isCarouselSwipe.current = true;
-            // Non chiamiamo preventDefault per permettere lo scroll verticale quando necessario
+            // Previene lo scroll verticale solo durante swipe orizzontale chiaro
+            if (deltaX > 20) {
+                e.preventDefault();
+            }
         } else if (deltaY > deltaX && deltaY > 15) {
             isCarouselSwipe.current = false;
             // Se è uno swipe verticale, resettiamo e permettiamo la propagazione
@@ -476,7 +491,8 @@ export default function DetailMemoryMobile() {
         const swipeDistance = Math.abs(swipeDistanceX);
 
         // Solo se lo swipe è principalmente orizzontale e supera la distanza minima
-        if (isCarouselSwipe.current && swipeDistance > minSwipeDistance && swipeDistance > swipeDistanceY) {
+        // Riduciamo la soglia minima per rendere più responsivo
+        if (isCarouselSwipe.current && swipeDistance > 30 && swipeDistance > swipeDistanceY) {
             if (swipeDistanceX > 0) {
                 handlePrevImage();
             } else {
@@ -487,7 +503,7 @@ export default function DetailMemoryMobile() {
         // Reset dei flag
         carouselSwipeStarted.current = false;
         isCarouselSwipe.current = false;
-    }, [handlePrevImage, handleNextImage, minSwipeDistance]);
+    }, [handlePrevImage, handleNextImage]);
     
     // Memoizziamo gli indicatori del carousel per evitare ri-renderizzazioni non necessarie
     const carouselIndicators = useMemo(() => {
@@ -705,9 +721,19 @@ export default function DetailMemoryMobile() {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            e.preventDefault();
                                             handlePrevImage();
                                         }}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all touch-manipulation"
+                                        onTouchStart={(e) => {
+                                            e.stopPropagation();
+                                            // Previene che il carosello catturi il touch
+                                            carouselSwipeStarted.current = false;
+                                        }}
+                                        onTouchEnd={(e) => {
+                                            e.stopPropagation();
+                                        }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-30 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        style={{ touchAction: 'manipulation' }}
                                         aria-label="Immagine precedente"
                                     >
                                         <IoChevronBack className="w-6 h-6" />
@@ -717,9 +743,19 @@ export default function DetailMemoryMobile() {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            e.preventDefault();
                                             handleNextImage();
                                         }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all touch-manipulation"
+                                        onTouchStart={(e) => {
+                                            e.stopPropagation();
+                                            // Previene che il carosello catturi il touch
+                                            carouselSwipeStarted.current = false;
+                                        }}
+                                        onTouchEnd={(e) => {
+                                            e.stopPropagation();
+                                        }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-30 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        style={{ touchAction: 'manipulation' }}
                                         aria-label="Immagine successiva"
                                     >
                                         <IoChevronForward className="w-6 h-6" />
