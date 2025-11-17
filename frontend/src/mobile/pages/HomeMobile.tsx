@@ -59,6 +59,7 @@ const HomeMobile = () => {
   // Stati per pull-to-refresh
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -302,20 +303,25 @@ const HomeMobile = () => {
   // Handler touch per pull-to-refresh
   const handleTouchStart = (e: React.TouchEvent) => {
     if (activeTab !== 'ricordi') return;
-    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop === 0) {
+    // Solo se siamo in cima e non stiamo già facendo pull
+    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop === 0 && !isPulling && !isRefreshing) {
       setTouchStartY(e.touches[0].clientY);
       setTouchStartX(e.touches[0].clientX);
-      setIsPulling(false); // Non attivare subito, aspetta di vedere se è un drag
+      setTouchStartTime(Date.now());
       setPullDistance(0);
       setHasMovedEnough(false);
     }
   };
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY === null || touchStartX === null) return;
-    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop > 0) {
-      // Se l'utente ha scrollato, resetta tutto
+    // Se non abbiamo un punto di partenza, esci immediatamente senza interferire
+    if (touchStartY === null || touchStartX === null || touchStartTime === null) return;
+    
+    // Controlla sempre lo scrollTop - se l'utente ha scrollato, resetta tutto
+    const currentScrollTop = scrollAreaRef.current?.scrollTop ?? 0;
+    if (currentScrollTop > 0) {
       setTouchStartY(null);
       setTouchStartX(null);
+      setTouchStartTime(null);
       setIsPulling(false);
       setPullDistance(0);
       setHasMovedEnough(false);
@@ -324,46 +330,77 @@ const HomeMobile = () => {
 
     const deltaY = e.touches[0].clientY - touchStartY;
     const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+    const elapsedTime = Date.now() - touchStartTime;
+    
+    // Se l'utente scrolla verso il basso (deltaY negativo), permetti scroll normale
+    // Reset immediato senza interferenze
+    if (deltaY < 0) {
+      setTouchStartY(null);
+      setTouchStartX(null);
+      setTouchStartTime(null);
+      setIsPulling(false);
+      setPullDistance(0);
+      setHasMovedEnough(false);
+      return;
+    }
     
     // Se c'è movimento orizzontale significativo, non è un pull-to-refresh
-    if (deltaX > 15) {
+    if (deltaX > 25) {
+      setTouchStartY(null);
+      setTouchStartX(null);
+      setTouchStartTime(null);
       setIsPulling(false);
       setPullDistance(0);
       setHasMovedEnough(false);
       return;
     }
 
-    // Attiva pull-to-refresh solo se il movimento verticale supera la soglia
-    if (deltaY > 15) {
+    // Attiva pull-to-refresh solo se:
+    // 1. Il movimento verticale supera 50px (soglia alta per evitare interferenze)
+    // 2. OPPURE se il movimento è > 30px E il tempo trascorso è > 100ms (per distinguere tap da drag)
+    const isSignificantPull = deltaY > 50 || (deltaY > 30 && elapsedTime > 100);
+    
+    if (isSignificantPull) {
       setIsPulling(true);
       setHasMovedEnough(true);
-      setPullDistance(deltaY > 120 ? 120 : deltaY);
-      e.preventDefault(); // Previeni lo scroll durante il pull
-    } else if (deltaY > 0) {
-      // Movimento minimo, ma non ancora abbastanza per attivare
+      const distance = deltaY > 120 ? 120 : deltaY;
+      setPullDistance(distance);
+      // Previeni lo scroll SOLO quando siamo molto sicuri che è un pull-to-refresh (distance > 60)
+      if (distance > 60) {
+        e.preventDefault();
+      }
+    } else {
+      // Movimento minimo, non ancora abbastanza - permetti scroll normale
+      setIsPulling(false);
       setPullDistance(0);
+      setHasMovedEnough(false);
     }
   };
   const handleTouchEnd = async () => {
-    if (!isPulling || !hasMovedEnough) {
-      // Reset se non era un pull valido
+    // Se non era un pull valido, resetta tutto
+    if (!isPulling || !hasMovedEnough || pullDistance < 50) {
       setIsPulling(false);
       setPullDistance(0);
       setTouchStartY(null);
       setTouchStartX(null);
+      setTouchStartTime(null);
       setHasMovedEnough(false);
       return;
     }
     
+    // Se il pull era abbastanza forte, attiva il refresh
     if (pullDistance > 60) {
       setIsRefreshing(true);
       await handleRefreshRicordi();
       setIsRefreshing(false);
     }
+    
+    // Reset completo
     setIsPulling(false);
     setPullDistance(0);
     setTouchStartY(null);
     setTouchStartX(null);
+    setTouchStartTime(null);
     setHasMovedEnough(false);
   };
 
@@ -802,7 +839,7 @@ const HomeMobile = () => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={activeTab === 'ricordi' && (isPulling || isRefreshing) ? { touchAction: 'none' } : {}}
+        style={activeTab === 'ricordi' && isPulling && pullDistance > 40 ? { touchAction: 'pan-y' } : {}}
       >
         {/* Indicatore di pull-to-refresh - Container fisso con overflow hidden */}
         {activeTab === 'ricordi' && (

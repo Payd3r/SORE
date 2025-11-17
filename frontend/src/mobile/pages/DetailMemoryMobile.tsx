@@ -215,12 +215,6 @@ export default function DetailMemoryMobile() {
             return;
         }
         
-        // Se lo swipe è iniziato sul carosello, ignoralo
-        if (carouselSwipeStarted.current) {
-            isSwipingRef.current = false;
-            return;
-        }
-        
         touchStartY.current = e.touches[0].clientY;
         verticalTouchStartX.current = e.touches[0].clientX;
         touchStartTime.current = Date.now();
@@ -235,8 +229,8 @@ export default function DetailMemoryMobile() {
             return;
         }
 
-        // Se lo swipe del carosello è attivo, ignora questo movimento
-        if (carouselSwipeStarted.current || isCarouselSwipe.current) {
+        // Se lo swipe del carosello è attivo e chiaramente orizzontale, ignora questo movimento
+        if (isCarouselSwipe.current) {
             isSwipingRef.current = false;
             return;
         }
@@ -248,8 +242,8 @@ export default function DetailMemoryMobile() {
         const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
         const deltaYAbs = Math.abs(deltaY);
 
-        // Se il movimento orizzontale è maggiore di quello verticale, ignora (è uno swipe orizzontale)
-        if (deltaX > deltaYAbs && deltaX > 10) {
+        // Se il movimento orizzontale è chiaramente maggiore di quello verticale, ignora (è uno swipe orizzontale)
+        if (deltaX > deltaYAbs && deltaX > 20) {
             isSwipingRef.current = false;
             return;
         }
@@ -287,7 +281,7 @@ export default function DetailMemoryMobile() {
         if (!isSwipingRef.current) return;
         
         // Se lo swipe del carosello è attivo, ignora
-        if (carouselSwipeStarted.current || isCarouselSwipe.current) {
+        if (isCarouselSwipe.current) {
             isSwipingRef.current = false;
             return;
         }
@@ -303,8 +297,8 @@ export default function DetailMemoryMobile() {
         const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
         const deltaYAbs = Math.abs(deltaY);
 
-        // Se il movimento orizzontale è maggiore di quello verticale, ignora
-        if (deltaX > deltaYAbs && deltaX > 10) {
+        // Se il movimento orizzontale è chiaramente maggiore di quello verticale, ignora
+        if (deltaX > deltaYAbs && deltaX > 20) {
             return;
         }
 
@@ -451,7 +445,6 @@ export default function DetailMemoryMobile() {
         carouselTouchStartY.current = e.touches[0].clientY;
         carouselSwipeStarted.current = true;
         isCarouselSwipe.current = false;
-        e.stopPropagation();
     }, []);
 
     const handleCarouselTouchMove = useCallback((e: React.TouchEvent) => {
@@ -464,15 +457,15 @@ export default function DetailMemoryMobile() {
         const deltaY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
 
         // Determina se lo swipe è principalmente orizzontale o verticale
-        // Se il movimento orizzontale è maggiore del verticale, è uno swipe orizzontale
-        if (deltaX > deltaY && deltaX > 10) {
+        // Solo se è chiaramente orizzontale, blocchiamo la propagazione
+        if (deltaX > deltaY && deltaX > 15) {
             isCarouselSwipe.current = true;
-            e.preventDefault(); // Previene lo scroll verticale durante swipe orizzontale
-        } else if (deltaY > deltaX && deltaY > 10) {
+            // Non chiamiamo preventDefault per permettere lo scroll verticale quando necessario
+        } else if (deltaY > deltaX && deltaY > 15) {
             isCarouselSwipe.current = false;
+            // Se è uno swipe verticale, resettiamo e permettiamo la propagazione
+            carouselSwipeStarted.current = false;
         }
-
-        e.stopPropagation();
     }, []);
 
     const handleCarouselTouchEnd = useCallback((e: React.TouchEvent) => {
@@ -494,7 +487,6 @@ export default function DetailMemoryMobile() {
         // Reset dei flag
         carouselSwipeStarted.current = false;
         isCarouselSwipe.current = false;
-        e.stopPropagation();
     }, [handlePrevImage, handleNextImage, minSwipeDistance]);
     
     // Memoizziamo gli indicatori del carousel per evitare ri-renderizzazioni non necessarie
@@ -657,12 +649,6 @@ export default function DetailMemoryMobile() {
                 {/* Carosello di immagini */}
                 <div
                     className="w-full h-full"
-                    style={{
-                        touchAction: 'pan-x',
-                        userSelect: 'none',
-                        WebkitUserSelect: 'none',
-                        WebkitTouchCallout: 'none'
-                    }}
                     onTouchStart={handleCarouselTouchStart}
                     onTouchMove={handleCarouselTouchMove}
                     onTouchEnd={handleCarouselTouchEnd}
@@ -671,22 +657,15 @@ export default function DetailMemoryMobile() {
                         <div 
                             className="w-full h-full relative" 
                             key={`carousel-${forceUpdate}`}
-                            style={{
-                                touchAction: 'pan-x',
-                                userSelect: 'none',
-                                WebkitUserSelect: 'none'
-                            }}
                         >
                             <img
                                 src={carouselImages[currentImageIndex]?.processedUrl}
                                 alt={memory.title}
                                 className="w-full h-full object-cover"
                                 style={{
-                                    touchAction: 'pan-x',
                                     userSelect: 'none',
                                     WebkitUserSelect: 'none',
                                     WebkitTouchCallout: 'none',
-                                    pointerEvents: 'auto',
                                     willChange: 'transform',
                                     backfaceVisibility: 'hidden',
                                     WebkitBackfaceVisibility: 'hidden'
@@ -728,8 +707,7 @@ export default function DetailMemoryMobile() {
                                             e.stopPropagation();
                                             handlePrevImage();
                                         }}
-                                        onTouchStart={(e) => e.stopPropagation()}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all touch-manipulation"
                                         aria-label="Immagine precedente"
                                     >
                                         <IoChevronBack className="w-6 h-6" />
@@ -741,8 +719,7 @@ export default function DetailMemoryMobile() {
                                             e.stopPropagation();
                                             handleNextImage();
                                         }}
-                                        onTouchStart={(e) => e.stopPropagation()}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all touch-manipulation"
                                         aria-label="Immagine successiva"
                                     >
                                         <IoChevronForward className="w-6 h-6" />
