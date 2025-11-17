@@ -164,20 +164,6 @@ export default function DetailMemoryMobile() {
         }
     }, [carouselImages.length, forceUpdate]);
 
-    // Autoplay carosello: cambia immagine ogni 3 secondi
-    useEffect(() => {
-        // Se ci sono meno di 2 immagini, non fare autoplay
-        if (carouselImages.length <= 1) return;
-
-        // Pausa autoplay quando i controlli sono nascosti (utente sta interagendo)
-        if (!showControls) return;
-
-        const interval = setInterval(() => {
-            handleNextImage();
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [carouselImages.length, showControls, handleNextImage]);
 
     // Effetto per nascondere la downbar quando il componente è montato
     useEffect(() => {
@@ -238,89 +224,6 @@ export default function DetailMemoryMobile() {
     // Refs per tracciare la posizione iniziale del touch verticale
     const verticalTouchStartX = useRef(0);
     const verticalTouchEndX = useRef(0);
-
-    // Event capture per bottoni header - intercetta touchstart PRIMA di altri handler
-    useEffect(() => {
-        const buttons = [
-            { ref: backButtonRef, handler: handleClose },
-            { ref: editButtonRef, handler: openEditModal },
-            { ref: deleteButtonRef, handler: openDeleteModal },
-            { ref: shareButtonRef, handler: () => {} } // Share non ha handler ancora
-        ];
-
-        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
-        let rafId: number | null = null;
-
-        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
-        rafId = requestAnimationFrame(() => {
-            buttons.forEach(({ ref, handler }) => {
-                const element = ref.current;
-                if (!element) return;
-
-                const touchHandler = (e: TouchEvent) => {
-                    // Intercetta nella fase di capture PRIMA di altri handler
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    handler();
-                };
-
-                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
-                handlersRef.current.push({ element, handler: touchHandler });
-            });
-        });
-
-        return () => {
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-            }
-            handlersRef.current.forEach(({ element, handler }) => {
-                if (element) {
-                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
-                }
-            });
-        };
-    }, [handleClose, openEditModal, openDeleteModal, showControls]);
-
-    // Event capture per bottoni tabs - intercetta touchstart PRIMA di altri handler
-    useEffect(() => {
-        const tabs = [
-            { ref: infoTabRef, tab: 'info' as TabType },
-            { ref: galleriaTabRef, tab: 'galleria' as TabType },
-            { ref: cronologiaTabRef, tab: 'cronologia' as TabType }
-        ];
-
-        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
-        let rafId: number | null = null;
-
-        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
-        rafId = requestAnimationFrame(() => {
-            tabs.forEach(({ ref, tab }) => {
-                const element = ref.current;
-                if (!element) return;
-
-                const touchHandler = (e: TouchEvent) => {
-                    // Intercetta nella fase di capture PRIMA di altri handler
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    handleTabChange(tab);
-                };
-
-                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
-                handlersRef.current.push({ element, handler: touchHandler });
-            });
-        });
-
-        return () => {
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-            }
-            handlersRef.current.forEach(({ element, handler }) => {
-                if (element) {
-                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
-                }
-            });
-        };
-    }, [handleTabChange, activeTab]);
 
     // Gestione dello swipe per chiudere la pagina o espandere le info
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -537,6 +440,104 @@ export default function DetailMemoryMobile() {
         if (carouselImages.length <= 1) return;
         setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
     }, [carouselImages.length]);
+
+    // Autoplay carosello: cambia immagine ogni 3 secondi
+    useEffect(() => {
+        // Se ci sono meno di 2 immagini, non fare autoplay
+        if (carouselImages.length <= 1) return;
+
+        // Pausa autoplay quando i controlli sono nascosti (utente sta interagendo)
+        if (!showControls) return;
+
+        const interval = setInterval(() => {
+            handleNextImage();
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [carouselImages.length, showControls, handleNextImage]);
+
+    // Event capture per bottoni header - intercetta touchstart PRIMA di altri handler
+    useEffect(() => {
+        const buttons = [
+            { ref: backButtonRef, handler: handleClose },
+            { ref: editButtonRef, handler: openEditModal },
+            { ref: deleteButtonRef, handler: openDeleteModal },
+            { ref: shareButtonRef, handler: () => {} } // Share non ha handler ancora
+        ];
+
+        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
+        let rafId: number | null = null;
+
+        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
+        rafId = requestAnimationFrame(() => {
+            buttons.forEach(({ ref, handler }) => {
+                const element = ref.current;
+                if (!element) return;
+
+                const touchHandler = (e: TouchEvent) => {
+                    // Intercetta nella fase di capture PRIMA di altri handler
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    handler();
+                };
+
+                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
+                handlersRef.current.push({ element, handler: touchHandler });
+            });
+        });
+
+        return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            handlersRef.current.forEach(({ element, handler }) => {
+                if (element) {
+                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
+                }
+            });
+        };
+    }, [handleClose, openEditModal, openDeleteModal, showControls]);
+
+    // Event capture per bottoni tabs - intercetta touchstart PRIMA di altri handler
+    useEffect(() => {
+        const tabs = [
+            { ref: infoTabRef, tab: 'info' as TabType },
+            { ref: galleriaTabRef, tab: 'galleria' as TabType },
+            { ref: cronologiaTabRef, tab: 'cronologia' as TabType }
+        ];
+
+        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
+        let rafId: number | null = null;
+
+        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
+        rafId = requestAnimationFrame(() => {
+            tabs.forEach(({ ref, tab }) => {
+                const element = ref.current;
+                if (!element) return;
+
+                const touchHandler = (e: TouchEvent) => {
+                    // Intercetta nella fase di capture PRIMA di altri handler
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    handleTabChange(tab);
+                };
+
+                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
+                handlersRef.current.push({ element, handler: touchHandler });
+            });
+        });
+
+        return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            handlersRef.current.forEach(({ element, handler }) => {
+                if (element) {
+                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
+                }
+            });
+        };
+    }, [handleTabChange, activeTab]);
     
     // Memoizziamo gli indicatori del carousel per evitare ri-renderizzazioni non necessarie
     const carouselIndicators = useMemo(() => {
