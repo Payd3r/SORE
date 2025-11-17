@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getMemories, Memory, MemoryType } from '../../api/memory';
@@ -65,6 +65,15 @@ const HomeMobile = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasMovedEnough, setHasMovedEnough] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Refs per tracciare se il touch è iniziato su una card
+  const touchStartedOnCardRef = useRef<boolean>(false);
+  
+  // Refs per i bottoni header
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const ricordiTabRef = useRef<HTMLButtonElement>(null);
+  const ideeTabRef = useRef<HTMLButtonElement>(null);
 
   // Filtra i ricordi
   const filteredRicordi = useMemo(() => {
@@ -300,9 +309,87 @@ const HomeMobile = () => {
     return { futureMemories, rows };
   }, [filteredRicordi]);
 
+  // Helper function per identificare elementi interattivi (card, bottoni, link, etc.)
+  const isInteractiveElement = useCallback((target: HTMLElement | null): boolean => {
+    if (!target) return false;
+    // Verifica se è una card o contiene una card
+    const isCard = target.closest('[class*="Card"], [class*="card"], [role="button"]');
+    // Verifica se è un elemento interattivo standard
+    const isStandardInteractive = target.closest('button, a, input, select, textarea, [role="button"], .interactive');
+    return !!(isCard || isStandardInteractive);
+  }, []);
+
+  // Event capture per bottoni header - intercetta touchstart PRIMA di altri handler
+  useEffect(() => {
+    const buttons = [
+      { ref: filterButtonRef, handler: () => {
+        setIsFilterMenuOpen(prev => {
+          const newValue = !prev;
+          if (newValue && isSearchOpen) {
+            setIsSearchOpen(false);
+          }
+          return newValue;
+        });
+      }},
+      { ref: searchButtonRef, handler: () => {
+        setIsSearchOpen(prev => {
+          const newValue = !prev;
+          if (newValue && isFilterMenuOpen) {
+            setIsFilterMenuOpen(false);
+          }
+          return newValue;
+        });
+      }},
+      { ref: ricordiTabRef, handler: () => setActiveTab('ricordi') },
+      { ref: ideeTabRef, handler: () => setActiveTab('idee') }
+    ];
+
+    const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
+    let rafId: number | null = null;
+
+    // Usa requestAnimationFrame per assicurarsi che i refs siano montati
+    rafId = requestAnimationFrame(() => {
+      buttons.forEach(({ ref, handler }) => {
+        const element = ref.current;
+        if (!element) return;
+
+        const touchHandler = (e: TouchEvent) => {
+          // Intercetta nella fase di capture PRIMA di altri handler
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          handler();
+        };
+
+        element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
+        handlersRef.current.push({ element, handler: touchHandler });
+      });
+    });
+
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      handlersRef.current.forEach(({ element, handler }) => {
+        if (element) {
+          element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
+        }
+      });
+    };
+  }, [isFilterMenuOpen, isSearchOpen]);
+
   // Handler touch per pull-to-refresh
   const handleTouchStart = (e: React.TouchEvent) => {
     if (activeTab !== 'ricordi') return;
+    
+    // PRIMA verifica: se target è interattivo (card, bottone, etc.), return early
+    const target = e.target as HTMLElement;
+    if (isInteractiveElement(target)) {
+      touchStartedOnCardRef.current = true;
+      return;
+    }
+    
+    touchStartedOnCardRef.current = false;
+    
     // Solo se siamo in cima e non stiamo già facendo pull
     if (scrollAreaRef.current && scrollAreaRef.current.scrollTop === 0 && !isPulling && !isRefreshing) {
       setTouchStartY(e.touches[0].clientY);
@@ -312,7 +399,13 @@ const HomeMobile = () => {
       setHasMovedEnough(false);
     }
   };
+  
   const handleTouchMove = (e: React.TouchEvent) => {
+    // Se il touch è iniziato su una card, non interferire
+    if (touchStartedOnCardRef.current) {
+      return;
+    }
+    
     // Se non abbiamo un punto di partenza, esci immediatamente senza interferire
     if (touchStartY === null || touchStartX === null || touchStartTime === null) return;
     
@@ -377,6 +470,12 @@ const HomeMobile = () => {
     }
   };
   const handleTouchEnd = async () => {
+    // Se il touch era iniziato su una card, resetta e return early
+    if (touchStartedOnCardRef.current) {
+      touchStartedOnCardRef.current = false;
+      return;
+    }
+    
     // Se non era un pull valido, resetta tutto
     if (!isPulling || !hasMovedEnough || pullDistance < 30) {
       setIsPulling(false);
@@ -430,6 +529,7 @@ const HomeMobile = () => {
         {/* Tab switcher in stile iOS 18 */}
         <div className="flex justify-between items-center">
           <button
+            ref={filterButtonRef}
             onClick={() => {
               setIsFilterMenuOpen(!isFilterMenuOpen);
               if (!isFilterMenuOpen && isSearchOpen) {
@@ -437,6 +537,7 @@ const HomeMobile = () => {
               }
             }}
             className={`p-2 rounded-full ${isFilterMenuOpen ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/20 backdrop-blur-xl' : 'bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-xl'} text-[#007AFF] dark:text-[#0A84FF] relative`}
+            style={{ touchAction: 'manipulation' }}
           >
             <IoFilter className="w-5 h-5" />
             {hasActiveFilters && (
@@ -448,28 +549,33 @@ const HomeMobile = () => {
 
           <div className="inline-flex items-center rounded-full bg-gray-200/70 dark:bg-gray-800/70 p-1.5 backdrop-blur-xl shadow-sm flex-1 mx-5">
             <button
+              ref={ricordiTabRef}
               onClick={() => setActiveTab('ricordi')}
               className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'ricordi'
                 ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                 : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                 }`}
               aria-selected={activeTab === 'ricordi'}
+              style={{ touchAction: 'manipulation' }}
             >
               Ricordi
             </button>
             <button
+              ref={ideeTabRef}
               onClick={() => setActiveTab('idee')}
               className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === 'idee'
                 ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                 : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                 }`}
               aria-selected={activeTab === 'idee'}
+              style={{ touchAction: 'manipulation' }}
             >
               Idee
             </button>
           </div>
 
           <button
+            ref={searchButtonRef}
             onClick={() => {
               setIsSearchOpen(!isSearchOpen);
               if (!isSearchOpen && isFilterMenuOpen) {
@@ -477,6 +583,7 @@ const HomeMobile = () => {
               }
             }}
             className={`p-2 rounded-full ${isSearchOpen ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/20 backdrop-blur-xl' : 'bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-xl'} text-[#007AFF] dark:text-[#0A84FF]`}
+            style={{ touchAction: 'manipulation' }}
           >
             <IoSearch className="w-5 h-5" />
           </button>

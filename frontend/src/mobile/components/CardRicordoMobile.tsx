@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -26,6 +26,10 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showTransformModal, setShowTransformModal] = useState(false);
+  
+  // Refs per gestire touch events
+  const touchStartYRef = useRef<number | null>(null);
+  const touchStartTimeRef = useRef<number | null>(null);
 
   // Carica i dati Spotify solo se presente una canzone e solo per viaggi
   useEffect(() => {
@@ -66,6 +70,41 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
     } else {
       navigate(`/ricordo/${memory?.id}`);
     }
+  };
+
+  // Gestione touch per fermare la propagazione e permettere il click
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Ferma la propagazione per evitare conflitti con pull-to-refresh
+    e.stopPropagation();
+    if (e.touches.length === 1) {
+      touchStartYRef.current = e.touches[0].clientY;
+      touchStartTimeRef.current = Date.now();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Ferma la propagazione
+    e.stopPropagation();
+    
+    // Se c'è stato un movimento minimo, non considerarlo un tap
+    if (touchStartYRef.current !== null && touchStartTimeRef.current !== null) {
+      const deltaY = Math.abs((e.changedTouches[0]?.clientY || 0) - touchStartYRef.current);
+      const elapsedTime = Date.now() - touchStartTimeRef.current;
+      
+      // Se il movimento è minimo (< 10px) e veloce (< 300ms), considera un tap
+      if (deltaY < 10 && elapsedTime < 300) {
+        // Simula un click
+        if (onClick) {
+          onClick(e as any);
+        } else if (memory?.id) {
+          navigate(`/ricordo/${memory.id}`);
+        }
+      }
+    }
+    
+    // Reset
+    touchStartYRef.current = null;
+    touchStartTimeRef.current = null;
   };
 
   const togglePlay = (e: React.MouseEvent) => {
@@ -398,6 +437,8 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
       <div
         className="col-span-1 bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex flex-col min-h-[72px] h-full p-2 gap-1 transition-all duration-200 touch-manipulation active:scale-[0.98]"
         style={{ WebkitTapHighlightColor: 'transparent', willChange: 'transform', contain: 'content' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className="flex items-center gap-2 mb-0.5">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-200 dark:bg-blue-800">
@@ -431,6 +472,8 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
             'col-span-2 bg-gradient-to-br from-blue-100/80 to-blue-300/60 dark:from-blue-900/60 dark:to-blue-800/80 rounded-xl border border-blue-300 dark:border-blue-700 shadow-blue-100 dark:shadow-blue-900/20 overflow-hidden cursor-pointer flex items-center min-h-[110px] h-full p-3 gap-3 transition-all duration-200 touch-manipulation active:scale-[0.98]'
           }
           onClick={() => setShowTransformModal(true)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           style={{ WebkitTapHighlightColor: 'transparent', willChange: 'transform', contain: 'content' }}
         >
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800">
@@ -466,13 +509,18 @@ const CardRicordoMobile = memo(({ memory, futureMemories, onClick, isActive }: M
         border ${typeStyle.cardStyle} overflow-hidden shadow-sm 
         transition-all duration-200 touch-manipulation active:scale-[0.98] ${isActive ? 'scale-95 brightness-105' : ''}`}
       onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       style={{
         // Aggiungi transizione nativa per garantire fluidità
         WebkitTapHighlightColor: 'transparent',
         transform: isActive ? 'scale(0.95)' : 'scale(1)',
         transition: 'transform 0.15s ease, box-shadow 0.15s ease, brightness 0.15s ease',
         willChange: 'transform', // Ottimizzazione per il browser
-        contain: 'content' // Ottimizzazione per il browser
+        contain: 'content', // Ottimizzazione per il browser
+        touchAction: 'manipulation',
+        userSelect: 'none',
+        WebkitUserSelect: 'none'
       }}
     >
       {/* Contenitore principale con sfondo e immagini */}

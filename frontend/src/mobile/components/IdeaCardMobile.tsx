@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Idea } from '../../api/ideas';
 import { checkIdea } from '../../api/ideas';
 
@@ -11,6 +11,10 @@ interface IdeaCardMobileProps {
 export default function IdeaCardMobile({ idea: initialIdea, onCheckChange, onClick }: IdeaCardMobileProps) {
   const [idea, setIdea] = useState(initialIdea);
   const [isChecking, setIsChecking] = useState(false);
+  
+  // Refs per gestire touch events
+  const touchStartYRef = useRef<number | null>(null);
+  const touchStartTimeRef = useRef<number | null>(null);
 
   const handleCheckboxClick = async (e: React.MouseEvent | React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -33,6 +37,36 @@ export default function IdeaCardMobile({ idea: initialIdea, onCheckChange, onCli
     e.preventDefault();
     e.stopPropagation();
     onClick?.();
+  };
+
+  // Gestione touch per fermare la propagazione e permettere il click
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Ferma la propagazione per evitare conflitti con pull-to-refresh
+    e.stopPropagation();
+    if (e.touches.length === 1) {
+      touchStartYRef.current = e.touches[0].clientY;
+      touchStartTimeRef.current = Date.now();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Ferma la propagazione
+    e.stopPropagation();
+    
+    // Se c'è stato un movimento minimo, non considerarlo un tap
+    if (touchStartYRef.current !== null && touchStartTimeRef.current !== null) {
+      const deltaY = Math.abs((e.changedTouches[0]?.clientY || 0) - touchStartYRef.current);
+      const elapsedTime = Date.now() - touchStartTimeRef.current;
+      
+      // Se il movimento è minimo (< 10px) e veloce (< 300ms), considera un tap
+      if (deltaY < 10 && elapsedTime < 300 && onClick) {
+        onClick();
+      }
+    }
+    
+    // Reset
+    touchStartYRef.current = null;
+    touchStartTimeRef.current = null;
   };
 
   const getTypeColor = (type: string | undefined) => {
@@ -76,6 +110,14 @@ export default function IdeaCardMobile({ idea: initialIdea, onCheckChange, onCli
       className={`group relative ${colors.bg} pb-0 rounded-xl backdrop-blur-sm shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden min-h-[50px] h-[50px] flex items-center px-2 pr-1 touch-manipulation active:scale-[0.98] transition-all duration-150`}
       role="button"
       tabIndex={0}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        touchAction: 'manipulation',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
     >
       {/* Checkbox grande a sinistra */}
       <div
