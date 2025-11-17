@@ -41,6 +41,12 @@ interface ExtendedMemory extends Memory {
 // Tipo di tab che può essere selezionato
 type TabType = 'galleria' | 'info' | 'cronologia';
 
+// Helper function per rilevare elementi interattivi
+const isInteractiveElement = (target: HTMLElement | null): boolean => {
+    if (!target) return false;
+    return !!target.closest('button, a, input, select, textarea, [role="button"], .interactive');
+};
+
 export default function DetailMemoryMobile() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -210,9 +216,14 @@ export default function DetailMemoryMobile() {
 
     // Gestione dello swipe per chiudere la pagina o espandere le info
     const handleTouchStart = (e: React.TouchEvent) => {
-        // Se il touch è iniziato su un elemento interattivo (button, link, etc.), non gestirlo
+        // PRIMA verifica: se target è interattivo, return early
         const target = e.target as HTMLElement;
-        if (target.closest('button, a, input, select, textarea, [role="button"]')) {
+        if (isInteractiveElement(target)) {
+            return;
+        }
+        
+        // SECONDA verifica: se carosello sta processando swipe, return early
+        if (carouselSwipeStarted.current) {
             return;
         }
         
@@ -235,7 +246,7 @@ export default function DetailMemoryMobile() {
             return;
         }
 
-        // Se lo swipe del carosello è attivo e chiaramente orizzontale, ignora questo movimento
+        // Se carosello sta processando swipe orizzontale, ignora
         if (isCarouselSwipe.current) {
             isSwipingRef.current = false;
             return;
@@ -248,12 +259,13 @@ export default function DetailMemoryMobile() {
         const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
         const deltaYAbs = Math.abs(deltaY);
 
-        // Se il movimento orizzontale è chiaramente maggiore di quello verticale, ignora (è uno swipe orizzontale)
+        // Se movimento orizzontale > verticale, ignora (è swipe orizzontale)
         if (deltaX > deltaYAbs && deltaX > 20) {
             isSwipingRef.current = false;
             return;
         }
 
+        // Processa swipe verticale
         // Swipe verso il basso: chiude la pagina o contrae le info
         if (deltaY > 0) {
             if (infoExpanded) {
@@ -286,7 +298,7 @@ export default function DetailMemoryMobile() {
     const handleTouchEnd = () => {
         if (!isSwipingRef.current) return;
         
-        // Se lo swipe del carosello è attivo, ignora
+        // Se carosello sta processando swipe orizzontale, ignora
         if (isCarouselSwipe.current) {
             isSwipingRef.current = false;
             return;
@@ -303,11 +315,12 @@ export default function DetailMemoryMobile() {
         const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
         const deltaYAbs = Math.abs(deltaY);
 
-        // Se il movimento orizzontale è chiaramente maggiore di quello verticale, ignora
+        // Se movimento orizzontale > verticale, ignora
         if (deltaX > deltaYAbs && deltaX > 20) {
             return;
         }
 
+        // Processa solo se chiaramente swipe verticale
         // Chiusura pagina (swipe verso il basso quando info non espanse)
         if (deltaY > minSwipeDistance && !infoExpanded) {
             handleClose();
@@ -447,9 +460,9 @@ export default function DetailMemoryMobile() {
     const carouselSwipeStarted = useRef(false);
 
     const handleCarouselTouchStart = useCallback((e: React.TouchEvent) => {
-        // Se il touch è iniziato su un elemento interattivo (button, link, etc.), non gestirlo
+        // Verifica immediata: se target è interattivo, non gestire
         const target = e.target as HTMLElement;
-        if (target.closest('button, a, input, select, textarea, [role="button"]')) {
+        if (isInteractiveElement(target)) {
             return;
         }
         
@@ -457,6 +470,7 @@ export default function DetailMemoryMobile() {
         carouselTouchStartY.current = e.touches[0].clientY;
         carouselSwipeStarted.current = true;
         isCarouselSwipe.current = false;
+        // NON chiamare stopPropagation qui per permettere propagazione normale
     }, []);
 
     const handleCarouselTouchMove = useCallback((e: React.TouchEvent) => {
@@ -468,19 +482,20 @@ export default function DetailMemoryMobile() {
         const deltaX = Math.abs(carouselTouchEndX.current - carouselTouchStartX.current);
         const deltaY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
 
-        // Determina se lo swipe è principalmente orizzontale o verticale
-        // Solo se è chiaramente orizzontale, blocchiamo la propagazione
-        if (deltaX > deltaY && deltaX > 10) {
-            isCarouselSwipe.current = true;
-            // Previene lo scroll verticale solo durante swipe orizzontale chiaro
-            if (deltaX > 20) {
-                e.preventDefault();
-            }
-        } else if (deltaY > deltaX && deltaY > 15) {
+        // Se movimento verticale chiaro, reset immediato
+        if (deltaY > deltaX && deltaY > 15) {
             isCarouselSwipe.current = false;
-            // Se è uno swipe verticale, resettiamo e permettiamo la propagazione
             carouselSwipeStarted.current = false;
+            return;
         }
+
+        // Se movimento orizzontale chiaro (>40px), è swipe orizzontale
+        if (deltaX > deltaY && deltaX > 40) {
+            isCarouselSwipe.current = true;
+            // Previene scroll verticale solo durante swipe orizzontale chiaro
+            e.preventDefault();
+        }
+        // Altrimenti non fare nulla (permettere scroll normale)
     }, []);
 
     const handleCarouselTouchEnd = useCallback(() => {
@@ -490,9 +505,8 @@ export default function DetailMemoryMobile() {
         const swipeDistanceY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
         const swipeDistance = Math.abs(swipeDistanceX);
 
-        // Solo se lo swipe è principalmente orizzontale e supera la distanza minima
-        // Riduciamo la soglia minima per rendere più responsivo
-        if (isCarouselSwipe.current && swipeDistance > 30 && swipeDistance > swipeDistanceY) {
+        // Solo se swipe orizzontale chiaro: deltaX > 50px E deltaX > deltaY * 1.5
+        if (isCarouselSwipe.current && swipeDistance > 50 && swipeDistance > swipeDistanceY * 1.5) {
             if (swipeDistanceX > 0) {
                 handlePrevImage();
             } else {
@@ -634,7 +648,12 @@ export default function DetailMemoryMobile() {
                         >
                             <button
                                 onClick={handleClose}
-                                className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white"
+                                onTouchStart={(e) => {
+                                    e.stopPropagation();
+                                    carouselSwipeStarted.current = false;
+                                }}
+                                className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                style={{ touchAction: 'manipulation' }}
                             >
                                 <IoChevronBack className="w-5 h-5" />
                             </button>
@@ -642,18 +661,33 @@ export default function DetailMemoryMobile() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={openEditModal}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white"
+                                    onTouchStart={(e) => {
+                                        e.stopPropagation();
+                                        carouselSwipeStarted.current = false;
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                    style={{ touchAction: 'manipulation' }}
                                 >
                                     <IoCreateOutline className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={openDeleteModal}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white"
+                                    onTouchStart={(e) => {
+                                        e.stopPropagation();
+                                        carouselSwipeStarted.current = false;
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                    style={{ touchAction: 'manipulation' }}
                                 >
                                     <IoTrashOutline className="w-5 h-5" />
                                 </button>
                                 <button
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white"
+                                    onTouchStart={(e) => {
+                                        e.stopPropagation();
+                                        carouselSwipeStarted.current = false;
+                                    }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                    style={{ touchAction: 'manipulation' }}
                                 >
                                     <IoShareOutline className="w-5 h-5" />
                                 </button>
@@ -728,11 +762,12 @@ export default function DetailMemoryMobile() {
                                             e.stopPropagation();
                                             // Previene che il carosello catturi il touch
                                             carouselSwipeStarted.current = false;
+                                            isCarouselSwipe.current = false;
                                         }}
                                         onTouchEnd={(e) => {
                                             e.stopPropagation();
                                         }}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-30 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-50 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
                                         style={{ touchAction: 'manipulation' }}
                                         aria-label="Immagine precedente"
                                     >
@@ -750,11 +785,12 @@ export default function DetailMemoryMobile() {
                                             e.stopPropagation();
                                             // Previene che il carosello catturi il touch
                                             carouselSwipeStarted.current = false;
+                                            isCarouselSwipe.current = false;
                                         }}
                                         onTouchEnd={(e) => {
                                             e.stopPropagation();
                                         }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-30 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-50 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
                                         style={{ touchAction: 'manipulation' }}
                                         aria-label="Immagine successiva"
                                     >
@@ -861,11 +897,16 @@ export default function DetailMemoryMobile() {
                     <div className="inline-flex items-center rounded-full bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-md p-1 shadow-sm w-full">
                         <button
                             onClick={() => handleTabChange('info')}
+                            onTouchStart={(e) => {
+                                e.stopPropagation();
+                                carouselSwipeStarted.current = false;
+                            }}
                             className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                                 activeTab === 'info'
                                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                             }`}
+                            style={{ touchAction: 'manipulation' }}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -874,11 +915,16 @@ export default function DetailMemoryMobile() {
                         </button>
                         <button
                             onClick={() => handleTabChange('galleria')}
+                            onTouchStart={(e) => {
+                                e.stopPropagation();
+                                carouselSwipeStarted.current = false;
+                            }}
                             className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                                 activeTab === 'galleria'
                                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                             }`}
+                            style={{ touchAction: 'manipulation' }}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -887,11 +933,16 @@ export default function DetailMemoryMobile() {
                         </button>
                         <button
                             onClick={() => handleTabChange('cronologia')}
+                            onTouchStart={(e) => {
+                                e.stopPropagation();
+                                carouselSwipeStarted.current = false;
+                            }}
                             className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                                 activeTab === 'cronologia'
                                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                             }`}
+                            style={{ touchAction: 'manipulation' }}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
