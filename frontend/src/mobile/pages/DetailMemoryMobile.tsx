@@ -8,7 +8,6 @@ import {
     IoLocationOutline,
     IoMusicalNotesOutline,
     IoChevronBack,
-    IoChevronForward,
     IoShareOutline,
     IoTrashOutline,
     IoCreateOutline
@@ -74,6 +73,17 @@ export default function DetailMemoryMobile() {
     const touchStartTime = useRef(0);
     const minSwipeDistance = 60;
     const isSwipingRef = useRef(false);
+
+    // Refs per bottoni header (per event capture)
+    const backButtonRef = useRef<HTMLButtonElement>(null);
+    const editButtonRef = useRef<HTMLButtonElement>(null);
+    const deleteButtonRef = useRef<HTMLButtonElement>(null);
+    const shareButtonRef = useRef<HTMLButtonElement>(null);
+
+    // Refs per bottoni tabs (per event capture)
+    const infoTabRef = useRef<HTMLButtonElement>(null);
+    const galleriaTabRef = useRef<HTMLButtonElement>(null);
+    const cronologiaTabRef = useRef<HTMLButtonElement>(null);
 
     // Per le transizioni fluide
     const infoY = useMotionValue(0);
@@ -154,6 +164,21 @@ export default function DetailMemoryMobile() {
         }
     }, [carouselImages.length, forceUpdate]);
 
+    // Autoplay carosello: cambia immagine ogni 3 secondi
+    useEffect(() => {
+        // Se ci sono meno di 2 immagini, non fare autoplay
+        if (carouselImages.length <= 1) return;
+
+        // Pausa autoplay quando i controlli sono nascosti (utente sta interagendo)
+        if (!showControls) return;
+
+        const interval = setInterval(() => {
+            handleNextImage();
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [carouselImages.length, showControls, handleNextImage]);
+
     // Effetto per nascondere la downbar quando il componente è montato
     useEffect(() => {
         // Controlla se la classe è già presente (potrebbe essere stata aggiunta da HomeMobile)
@@ -214,16 +239,95 @@ export default function DetailMemoryMobile() {
     const verticalTouchStartX = useRef(0);
     const verticalTouchEndX = useRef(0);
 
+    // Event capture per bottoni header - intercetta touchstart PRIMA di altri handler
+    useEffect(() => {
+        const buttons = [
+            { ref: backButtonRef, handler: handleClose },
+            { ref: editButtonRef, handler: openEditModal },
+            { ref: deleteButtonRef, handler: openDeleteModal },
+            { ref: shareButtonRef, handler: () => {} } // Share non ha handler ancora
+        ];
+
+        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
+        let rafId: number | null = null;
+
+        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
+        rafId = requestAnimationFrame(() => {
+            buttons.forEach(({ ref, handler }) => {
+                const element = ref.current;
+                if (!element) return;
+
+                const touchHandler = (e: TouchEvent) => {
+                    // Intercetta nella fase di capture PRIMA di altri handler
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    handler();
+                };
+
+                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
+                handlersRef.current.push({ element, handler: touchHandler });
+            });
+        });
+
+        return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            handlersRef.current.forEach(({ element, handler }) => {
+                if (element) {
+                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
+                }
+            });
+        };
+    }, [handleClose, openEditModal, openDeleteModal, showControls]);
+
+    // Event capture per bottoni tabs - intercetta touchstart PRIMA di altri handler
+    useEffect(() => {
+        const tabs = [
+            { ref: infoTabRef, tab: 'info' as TabType },
+            { ref: galleriaTabRef, tab: 'galleria' as TabType },
+            { ref: cronologiaTabRef, tab: 'cronologia' as TabType }
+        ];
+
+        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
+        let rafId: number | null = null;
+
+        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
+        rafId = requestAnimationFrame(() => {
+            tabs.forEach(({ ref, tab }) => {
+                const element = ref.current;
+                if (!element) return;
+
+                const touchHandler = (e: TouchEvent) => {
+                    // Intercetta nella fase di capture PRIMA di altri handler
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    handleTabChange(tab);
+                };
+
+                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
+                handlersRef.current.push({ element, handler: touchHandler });
+            });
+        });
+
+        return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+            handlersRef.current.forEach(({ element, handler }) => {
+                if (element) {
+                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
+                }
+            });
+        };
+    }, [handleTabChange, activeTab]);
+
     // Gestione dello swipe per chiudere la pagina o espandere le info
     const handleTouchStart = (e: React.TouchEvent) => {
         // PRIMA verifica: se target è interattivo, return early
         const target = e.target as HTMLElement;
         if (isInteractiveElement(target)) {
-            return;
-        }
-        
-        // SECONDA verifica: se carosello sta processando swipe, return early
-        if (carouselSwipeStarted.current) {
+            e.stopPropagation();
             return;
         }
         
@@ -243,12 +347,6 @@ export default function DetailMemoryMobile() {
         
         // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non gestire lo swipe
         if (activeTab === 'cronologia' && !isAtScrollTop) {
-            return;
-        }
-
-        // Se carosello sta processando swipe orizzontale, ignora
-        if (isCarouselSwipe.current) {
-            isSwipingRef.current = false;
             return;
         }
 
@@ -297,12 +395,6 @@ export default function DetailMemoryMobile() {
 
     const handleTouchEnd = () => {
         if (!isSwipingRef.current) return;
-        
-        // Se carosello sta processando swipe orizzontale, ignora
-        if (isCarouselSwipe.current) {
-            isSwipingRef.current = false;
-            return;
-        }
         
         isSwipingRef.current = false;
         
@@ -440,84 +532,11 @@ export default function DetailMemoryMobile() {
         }
     };
 
-    // Naviga tra le immagini del carosello
-    const handlePrevImage = useCallback(() => {
-        if (carouselImages.length <= 1) return;
-        setCurrentImageIndex((prev) => (prev === 0 ? carouselImages.length - 1 : prev - 1));
-    }, [carouselImages.length]);
-
+    // Naviga tra le immagini del carosello (usato per autoplay)
     const handleNextImage = useCallback(() => {
         if (carouselImages.length <= 1) return;
         setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
     }, [carouselImages.length]);
-
-    // Gestione dello swipe per navigare tra le immagini
-    const carouselTouchStartX = useRef(0);
-    const carouselTouchStartY = useRef(0);
-    const carouselTouchEndX = useRef(0);
-    const carouselTouchEndY = useRef(0);
-    const isCarouselSwipe = useRef(false);
-    const carouselSwipeStarted = useRef(false);
-
-    const handleCarouselTouchStart = useCallback((e: React.TouchEvent) => {
-        // Verifica immediata: se target è interattivo, non gestire
-        const target = e.target as HTMLElement;
-        if (isInteractiveElement(target)) {
-            return;
-        }
-        
-        carouselTouchStartX.current = e.touches[0].clientX;
-        carouselTouchStartY.current = e.touches[0].clientY;
-        carouselSwipeStarted.current = true;
-        isCarouselSwipe.current = false;
-        // NON chiamare stopPropagation qui per permettere propagazione normale
-    }, []);
-
-    const handleCarouselTouchMove = useCallback((e: React.TouchEvent) => {
-        if (!carouselSwipeStarted.current) return;
-        
-        carouselTouchEndX.current = e.touches[0].clientX;
-        carouselTouchEndY.current = e.touches[0].clientY;
-
-        const deltaX = Math.abs(carouselTouchEndX.current - carouselTouchStartX.current);
-        const deltaY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
-
-        // Se movimento verticale chiaro, reset immediato
-        if (deltaY > deltaX && deltaY > 15) {
-            isCarouselSwipe.current = false;
-            carouselSwipeStarted.current = false;
-            return;
-        }
-
-        // Se movimento orizzontale chiaro (>40px), è swipe orizzontale
-        if (deltaX > deltaY && deltaX > 40) {
-            isCarouselSwipe.current = true;
-            // Previene scroll verticale solo durante swipe orizzontale chiaro
-            e.preventDefault();
-        }
-        // Altrimenti non fare nulla (permettere scroll normale)
-    }, []);
-
-    const handleCarouselTouchEnd = useCallback(() => {
-        if (!carouselSwipeStarted.current) return;
-
-        const swipeDistanceX = carouselTouchEndX.current - carouselTouchStartX.current;
-        const swipeDistanceY = Math.abs(carouselTouchEndY.current - carouselTouchStartY.current);
-        const swipeDistance = Math.abs(swipeDistanceX);
-
-        // Solo se swipe orizzontale chiaro: deltaX > 50px E deltaX > deltaY * 1.5
-        if (isCarouselSwipe.current && swipeDistance > 50 && swipeDistance > swipeDistanceY * 1.5) {
-            if (swipeDistanceX > 0) {
-                handlePrevImage();
-            } else {
-                handleNextImage();
-            }
-        }
-
-        // Reset dei flag
-        carouselSwipeStarted.current = false;
-        isCarouselSwipe.current = false;
-    }, [handlePrevImage, handleNextImage]);
     
     // Memoizziamo gli indicatori del carousel per evitare ri-renderizzazioni non necessarie
     const carouselIndicators = useMemo(() => {
@@ -647,47 +666,47 @@ export default function DetailMemoryMobile() {
                             exit={{ opacity: 0, y: -20 }}
                         >
                             <button
+                                ref={backButtonRef}
                                 onClick={handleClose}
-                                onTouchStart={(e) => {
-                                    e.stopPropagation();
-                                    carouselSwipeStarted.current = false;
-                                }}
                                 className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
-                                style={{ touchAction: 'manipulation' }}
+                                style={{ 
+                                    touchAction: 'manipulation',
+                                    WebkitTapHighlightColor: 'transparent'
+                                }}
                             >
                                 <IoChevronBack className="w-5 h-5" />
                             </button>
 
                             <div className="flex gap-2">
                                 <button
+                                    ref={editButtonRef}
                                     onClick={openEditModal}
-                                    onTouchStart={(e) => {
-                                        e.stopPropagation();
-                                        carouselSwipeStarted.current = false;
-                                    }}
                                     className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
-                                    style={{ touchAction: 'manipulation' }}
+                                    style={{ 
+                                        touchAction: 'manipulation',
+                                        WebkitTapHighlightColor: 'transparent'
+                                    }}
                                 >
                                     <IoCreateOutline className="w-5 h-5" />
                                 </button>
                                 <button
+                                    ref={deleteButtonRef}
                                     onClick={openDeleteModal}
-                                    onTouchStart={(e) => {
-                                        e.stopPropagation();
-                                        carouselSwipeStarted.current = false;
-                                    }}
                                     className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
-                                    style={{ touchAction: 'manipulation' }}
+                                    style={{ 
+                                        touchAction: 'manipulation',
+                                        WebkitTapHighlightColor: 'transparent'
+                                    }}
                                 >
                                     <IoTrashOutline className="w-5 h-5" />
                                 </button>
                                 <button
-                                    onTouchStart={(e) => {
-                                        e.stopPropagation();
-                                        carouselSwipeStarted.current = false;
-                                    }}
+                                    ref={shareButtonRef}
                                     className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
-                                    style={{ touchAction: 'manipulation' }}
+                                    style={{ 
+                                        touchAction: 'manipulation',
+                                        WebkitTapHighlightColor: 'transparent'
+                                    }}
                                 >
                                     <IoShareOutline className="w-5 h-5" />
                                 </button>
@@ -697,12 +716,7 @@ export default function DetailMemoryMobile() {
                 </AnimatePresence>
 
                 {/* Carosello di immagini */}
-                <div
-                    className="w-full h-full"
-                    onTouchStart={handleCarouselTouchStart}
-                    onTouchMove={handleCarouselTouchMove}
-                    onTouchEnd={handleCarouselTouchEnd}
-                >
+                <div className="w-full h-full">
                     {carouselImages.length > 0 ? (
                         <div 
                             className="w-full h-full relative" 
@@ -747,57 +761,6 @@ export default function DetailMemoryMobile() {
 
                             {/* Indicatori del carosello */}
                             {carouselIndicators}
-
-                            {/* Bottoni di navigazione */}
-                            {carouselImages.length > 1 && (
-                                <>
-                                    {/* Bottone freccia sinistra */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            e.preventDefault();
-                                            handlePrevImage();
-                                        }}
-                                        onTouchStart={(e) => {
-                                            e.stopPropagation();
-                                            // Previene che il carosello catturi il touch
-                                            carouselSwipeStarted.current = false;
-                                            isCarouselSwipe.current = false;
-                                        }}
-                                        onTouchEnd={(e) => {
-                                            e.stopPropagation();
-                                        }}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-50 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
-                                        style={{ touchAction: 'manipulation' }}
-                                        aria-label="Immagine precedente"
-                                    >
-                                        <IoChevronBack className="w-6 h-6" />
-                                    </button>
-
-                                    {/* Bottone freccia destra */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            e.preventDefault();
-                                            handleNextImage();
-                                        }}
-                                        onTouchStart={(e) => {
-                                            e.stopPropagation();
-                                            // Previene che il carosello catturi il touch
-                                            carouselSwipeStarted.current = false;
-                                            isCarouselSwipe.current = false;
-                                        }}
-                                        onTouchEnd={(e) => {
-                                            e.stopPropagation();
-                                        }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-50 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
-                                        style={{ touchAction: 'manipulation' }}
-                                        aria-label="Immagine successiva"
-                                    >
-                                        <IoChevronForward className="w-6 h-6" />
-                                    </button>
-                                </>
-                            )}
                         </div>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -896,17 +859,17 @@ export default function DetailMemoryMobile() {
                 <div className="flex items-center justify-center px-4">
                     <div className="inline-flex items-center rounded-full bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-md p-1 shadow-sm w-full">
                         <button
+                            ref={infoTabRef}
                             onClick={() => handleTabChange('info')}
-                            onTouchStart={(e) => {
-                                e.stopPropagation();
-                                carouselSwipeStarted.current = false;
-                            }}
                             className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                                 activeTab === 'info'
                                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                             }`}
-                            style={{ touchAction: 'manipulation' }}
+                            style={{ 
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent'
+                            }}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -914,17 +877,17 @@ export default function DetailMemoryMobile() {
                             <span>Info</span>
                         </button>
                         <button
+                            ref={galleriaTabRef}
                             onClick={() => handleTabChange('galleria')}
-                            onTouchStart={(e) => {
-                                e.stopPropagation();
-                                carouselSwipeStarted.current = false;
-                            }}
                             className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                                 activeTab === 'galleria'
                                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                             }`}
-                            style={{ touchAction: 'manipulation' }}
+                            style={{ 
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent'
+                            }}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -932,17 +895,17 @@ export default function DetailMemoryMobile() {
                             <span>Galleria</span>
                         </button>
                         <button
+                            ref={cronologiaTabRef}
                             onClick={() => handleTabChange('cronologia')}
-                            onTouchStart={(e) => {
-                                e.stopPropagation();
-                                carouselSwipeStarted.current = false;
-                            }}
                             className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                                 activeTab === 'cronologia'
                                     ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
                                     : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
                             }`}
-                            style={{ touchAction: 'manipulation' }}
+                            style={{ 
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent'
+                            }}
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
