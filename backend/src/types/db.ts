@@ -84,6 +84,8 @@ export interface Image extends DbRow {
   type: ImageType;
   created_by_name?: string;
   memory_title?: string;
+  hash_original?: string | null;
+  hash_webp?: string | null;
 }
 
 export interface Idea extends DbRow {

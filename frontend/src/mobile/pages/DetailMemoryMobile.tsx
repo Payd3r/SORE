@@ -8,6 +8,7 @@ import {
     IoLocationOutline,
     IoMusicalNotesOutline,
     IoChevronBack,
+    IoChevronForward,
     IoShareOutline,
     IoTrashOutline,
     IoCreateOutline
@@ -203,6 +204,10 @@ export default function DetailMemoryMobile() {
     };
 
 
+    // Refs per tracciare la posizione iniziale del touch verticale
+    const verticalTouchStartX = useRef(0);
+    const verticalTouchEndX = useRef(0);
+
     // Gestione dello swipe per chiudere la pagina o espandere le info
     const handleTouchStart = (e: React.TouchEvent) => {
         // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non iniziare lo swipe
@@ -210,7 +215,14 @@ export default function DetailMemoryMobile() {
             return;
         }
         
+        // Se lo swipe è iniziato sul carosello, ignoralo
+        if (carouselSwipeStarted.current) {
+            isSwipingRef.current = false;
+            return;
+        }
+        
         touchStartY.current = e.touches[0].clientY;
+        verticalTouchStartX.current = e.touches[0].clientX;
         touchStartTime.current = Date.now();
         isSwipingRef.current = true;
     };
@@ -223,9 +235,24 @@ export default function DetailMemoryMobile() {
             return;
         }
 
+        // Se lo swipe del carosello è attivo, ignora questo movimento
+        if (carouselSwipeStarted.current || isCarouselSwipe.current) {
+            isSwipingRef.current = false;
+            return;
+        }
+
         touchEndY.current = e.touches[0].clientY;
+        verticalTouchEndX.current = e.touches[0].clientX;
 
         const deltaY = touchEndY.current - touchStartY.current;
+        const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
+        const deltaYAbs = Math.abs(deltaY);
+
+        // Se il movimento orizzontale è maggiore di quello verticale, ignora (è uno swipe orizzontale)
+        if (deltaX > deltaYAbs && deltaX > 10) {
+            isSwipingRef.current = false;
+            return;
+        }
 
         // Swipe verso il basso: chiude la pagina o contrae le info
         if (deltaY > 0) {
@@ -258,6 +285,13 @@ export default function DetailMemoryMobile() {
 
     const handleTouchEnd = () => {
         if (!isSwipingRef.current) return;
+        
+        // Se lo swipe del carosello è attivo, ignora
+        if (carouselSwipeStarted.current || isCarouselSwipe.current) {
+            isSwipingRef.current = false;
+            return;
+        }
+        
         isSwipingRef.current = false;
         
         // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non gestire lo swipe
@@ -266,6 +300,13 @@ export default function DetailMemoryMobile() {
         }
 
         const deltaY = touchEndY.current - touchStartY.current;
+        const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
+        const deltaYAbs = Math.abs(deltaY);
+
+        // Se il movimento orizzontale è maggiore di quello verticale, ignora
+        if (deltaX > deltaYAbs && deltaX > 10) {
+            return;
+        }
 
         // Chiusura pagina (swipe verso il basso quando info non espanse)
         if (deltaY > minSwipeDistance && !infoExpanded) {
@@ -399,29 +440,60 @@ export default function DetailMemoryMobile() {
 
     // Gestione dello swipe per navigare tra le immagini
     const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
     const touchEndX = useRef(0);
+    const touchEndY = useRef(0);
+    const isCarouselSwipe = useRef(false);
+    const carouselSwipeStarted = useRef(false);
 
     const handleCarouselTouchStart = useCallback((e: React.TouchEvent) => {
         touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        carouselSwipeStarted.current = true;
+        isCarouselSwipe.current = false;
         e.stopPropagation();
     }, []);
 
     const handleCarouselTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!carouselSwipeStarted.current) return;
+        
         touchEndX.current = e.touches[0].clientX;
+        touchEndY.current = e.touches[0].clientY;
+
+        const deltaX = Math.abs(touchEndX.current - touchStartX.current);
+        const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+
+        // Determina se lo swipe è principalmente orizzontale o verticale
+        // Se il movimento orizzontale è maggiore del verticale, è uno swipe orizzontale
+        if (deltaX > deltaY && deltaX > 10) {
+            isCarouselSwipe.current = true;
+            e.preventDefault(); // Previene lo scroll verticale durante swipe orizzontale
+        } else if (deltaY > deltaX && deltaY > 10) {
+            isCarouselSwipe.current = false;
+        }
+
         e.stopPropagation();
     }, []);
 
     const handleCarouselTouchEnd = useCallback((e: React.TouchEvent) => {
-        const swipeDistance = touchEndX.current - touchStartX.current;
+        if (!carouselSwipeStarted.current) return;
 
-        if (Math.abs(swipeDistance) > minSwipeDistance) {
-            if (swipeDistance > 0) {
+        const swipeDistanceX = touchEndX.current - touchStartX.current;
+        const swipeDistanceY = Math.abs(touchEndY.current - touchStartY.current);
+        const swipeDistance = Math.abs(swipeDistanceX);
+
+        // Solo se lo swipe è principalmente orizzontale e supera la distanza minima
+        if (isCarouselSwipe.current && swipeDistance > minSwipeDistance && swipeDistance > swipeDistanceY) {
+            if (swipeDistanceX > 0) {
                 handlePrevImage();
             } else {
                 handleNextImage();
             }
         }
 
+        // Reset dei flag
+        carouselSwipeStarted.current = false;
+        isCarouselSwipe.current = false;
         e.stopPropagation();
     }, [handlePrevImage, handleNextImage, minSwipeDistance]);
     
@@ -584,17 +656,42 @@ export default function DetailMemoryMobile() {
 
                 {/* Carosello di immagini */}
                 <div
-                    className="w-full h-full "
+                    className="w-full h-full"
+                    style={{
+                        touchAction: 'pan-x',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none'
+                    }}
                     onTouchStart={handleCarouselTouchStart}
                     onTouchMove={handleCarouselTouchMove}
                     onTouchEnd={handleCarouselTouchEnd}
                 >
                     {carouselImages.length > 0 ? (
-                        <div className="w-full h-full relative" key={`carousel-${forceUpdate}`}>
+                        <div 
+                            className="w-full h-full relative" 
+                            key={`carousel-${forceUpdate}`}
+                            style={{
+                                touchAction: 'pan-x',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none'
+                            }}
+                        >
                             <img
                                 src={carouselImages[currentImageIndex]?.processedUrl}
                                 alt={memory.title}
                                 className="w-full h-full object-cover"
+                                style={{
+                                    touchAction: 'pan-x',
+                                    userSelect: 'none',
+                                    WebkitUserSelect: 'none',
+                                    WebkitTouchCallout: 'none',
+                                    pointerEvents: 'auto',
+                                    willChange: 'transform',
+                                    backfaceVisibility: 'hidden',
+                                    WebkitBackfaceVisibility: 'hidden'
+                                }}
+                                draggable={false}
                                 loading={currentImageIndex === 0 ? "eager" : "lazy"}
                                 fetchPriority={currentImageIndex === 0 ? "high" : "auto"}
                                 decoding={currentImageIndex === 0 ? "sync" : "async"}
@@ -607,11 +704,6 @@ export default function DetailMemoryMobile() {
                                         document.body.offsetHeight;
                                         setForceUpdate(prev => prev + 1);
                                     }
-                                }}
-                                style={{
-                                    willChange: 'transform',
-                                    backfaceVisibility: 'hidden',
-                                    WebkitBackfaceVisibility: 'hidden'
                                 }}
                             />
                             
@@ -626,6 +718,37 @@ export default function DetailMemoryMobile() {
 
                             {/* Indicatori del carosello */}
                             {carouselIndicators}
+
+                            {/* Bottoni di navigazione */}
+                            {carouselImages.length > 1 && (
+                                <>
+                                    {/* Bottone freccia sinistra */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handlePrevImage();
+                                        }}
+                                        onTouchStart={(e) => e.stopPropagation()}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        aria-label="Immagine precedente"
+                                    >
+                                        <IoChevronBack className="w-6 h-6" />
+                                    </button>
+
+                                    {/* Bottone freccia destra */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleNextImage();
+                                        }}
+                                        onTouchStart={(e) => e.stopPropagation()}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center bg-black/40 backdrop-blur-md text-white z-20 pointer-events-auto hover:bg-black/60 active:bg-black/70 transition-all"
+                                        aria-label="Immagine successiva"
+                                    >
+                                        <IoChevronForward className="w-6 h-6" />
+                                    </button>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">

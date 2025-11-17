@@ -40,7 +40,7 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded }: Gall
   const MOVE_THRESHOLD = 10; // pixel
 
   // --- LOGICA PER SEPARARE LE IMMAGINI ---
-  // Unifica tutte le immagini in un'unica galleria, ordinando prima per display_order (ASC, null/undefined in fondo), poi per id DESC
+  // Unifica tutte le immagini in un'unica galleria, ordinando prima per display_order (ASC, null/undefined in fondo), poi per created_at DESC
   let allImages = (memory.images || []).slice();
   allImages.sort((a: any, b: any) => {
     // Prima per display_order (null/undefined in fondo)
@@ -49,8 +49,10 @@ export default function GalleriaRicordoMobile({ memory, onImagesUploaded }: Gall
       if (b.display_order == null) return -1;
       return (a.display_order ?? 0) - (b.display_order ?? 0);
     }
-    // Poi per id DESC (più recenti prima)
-    return (b.id ?? 0) - (a.id ?? 0);
+    // Poi per created_at DESC (più recenti prima)
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return dateB - dateA;
   });
 
   // Applichiamo i filtri SOLO alle immagini senza display_order, ma mostriamo tutte se nessun filtro è attivo

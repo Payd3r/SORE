@@ -80,6 +80,68 @@ export async function processImageJob(job: ImageJob) {
     await updateJobProgress(job.id, 30, 'Estrazione metadati');
     const metadata = processedImage.metadata;
 
+    // Controllo duplicati prima di procedere
+    await updateJobProgress(job.id, 35, 'Controllo duplicati');
+    conn = await getPoolConnection();
+    try {
+      const [existingImages] = await conn.query<Image[]>(
+        `SELECT id, memory_id FROM images 
+         WHERE hash_original = ? AND hash_webp = ? AND couple_id = ? 
+         LIMIT 1`,
+        [processedImage.hash_original, processedImage.hash_webp, job.coupleId]
+      );
+
+      if (existingImages.length > 0) {
+        const existingImage = existingImages[0];
+        console.log('[Worker] Duplicato trovato', { 
+          existingId: existingImage.id, 
+          newHash: processedImage.hash_original.substring(0, 16) + '...' 
+        });
+
+        // Elimina i file appena processati (duplicato)
+        const imageDir = path.dirname(processedImage.original_path);
+        try {
+          if (fs.existsSync(imageDir)) {
+            await fs.promises.rm(imageDir, { recursive: true, force: true });
+            console.log('[Worker] Cartella duplicata eliminata', { path: imageDir });
+          }
+        } catch (deleteError) {
+          console.error('[Worker] Errore eliminazione cartella duplicata:', deleteError);
+        }
+
+        // Se l'upload include memory_id e l'immagine esistente non ha memory_id, aggiorna
+        if (job.memoryId && !existingImage.memory_id) {
+          try {
+            await conn.beginTransaction();
+            await conn.query(
+              'UPDATE images SET memory_id = ? WHERE id = ?',
+              [job.memoryId, existingImage.id]
+            );
+            await updateMemoryDates(job.memoryId, conn);
+            await conn.commit();
+            console.log('[Worker] Memory_id aggiornato per immagine esistente', { 
+              imageId: existingImage.id, 
+              memoryId: job.memoryId 
+            });
+          } catch (updateError) {
+            await conn.rollback();
+            console.error('[Worker] Errore aggiornamento memory_id:', updateError);
+          }
+        }
+
+        // Elimina il file temporaneo
+        if (fs.existsSync(job.filePath)) {
+          fs.unlinkSync(job.filePath);
+        }
+
+        await updateJobProgress(job.id, 100, 'Duplicato rilevato - immagine esistente utilizzata');
+        // La connessione verrà rilasciata nel finally
+        return existingImage.id;
+      }
+    } finally {
+      conn.release();
+    }
+
     // Conversione formato (se necessario)
     if (job.originalName.toLowerCase().endsWith('.heic') || job.originalName.toLowerCase().endsWith('.heif')) {
       await updateJobProgress(job.id, 40, 'Conversione formato HEIC');
@@ -159,8 +221,10 @@ export async function processImageJob(job: ImageJob) {
         created_by_user_id,
         created_at,
         type,
-        country
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, NOW()), ?, ?)`,
+        country,
+        hash_original,
+        hash_webp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, NOW()), ?, ?, ?, ?)`,
       [
         processedImage.original_path,
         processedImage.webp_path,
@@ -173,7 +237,9 @@ export async function processImageJob(job: ImageJob) {
         job.userId,
         metadata.taken_at,
         type || metadata.type || ImageType.LANDSCAPE,
-        metadata.country
+        metadata.country,
+        processedImage.hash_original,
+        processedImage.hash_webp
       ]
     );
     console.log('[Worker] Inserted image', { insertId: (result as any).insertId, type });

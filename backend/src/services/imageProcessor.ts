@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import exifr from 'exifr';
 import { ImageType } from '../types/db';
@@ -29,6 +30,8 @@ interface ProcessedImage {
   thumb_big_path: string;
   thumb_small_path: string;
   metadata: ImageMetadata;
+  hash_original: string;
+  hash_webp: string;
 }
 
 interface ImageFilesToDelete {
@@ -68,6 +71,9 @@ export async function processImage(file: Express.Multer.File): Promise<Processed
       }
     }
 
+    // Calcola hash del buffer originale
+    const hashOriginal = crypto.createHash('sha256').update(buffer).digest('hex');
+
     // Converti in WebP
     const webpBuffer = await sharp(buffer)
       .withMetadata()
@@ -81,6 +87,9 @@ export async function processImage(file: Express.Multer.File): Promise<Processed
     if (!webpBuffer || webpBuffer.length === 0) {
       throw new Error('La conversione ha prodotto file vuoti o non validi');
     }
+
+    // Calcola hash del buffer WebP
+    const hashWebp = crypto.createHash('sha256').update(webpBuffer).digest('hex');
 
     // Classifichiamo l'immagine dopo la conversione con fallback sicuro
     try {
@@ -143,7 +152,9 @@ export async function processImage(file: Express.Multer.File): Promise<Processed
       thumb_small_path: thumbSmallPath,
       metadata: {
         ...metadata,
-      }
+      },
+      hash_original: hashOriginal,
+      hash_webp: hashWebp
     };
   } catch (error) {
     // Pulisci i file temporanei in caso di errore

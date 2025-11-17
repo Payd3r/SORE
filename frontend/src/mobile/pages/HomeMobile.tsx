@@ -58,9 +58,11 @@ const HomeMobile = () => {
 
   // Stati per pull-to-refresh
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasMovedEnough, setHasMovedEnough] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Filtra i ricordi
@@ -302,19 +304,57 @@ const HomeMobile = () => {
     if (activeTab !== 'ricordi') return;
     if (scrollAreaRef.current && scrollAreaRef.current.scrollTop === 0) {
       setTouchStartY(e.touches[0].clientY);
-      setIsPulling(true);
+      setTouchStartX(e.touches[0].clientX);
+      setIsPulling(false); // Non attivare subito, aspetta di vedere se è un drag
       setPullDistance(0);
+      setHasMovedEnough(false);
     }
   };
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isPulling || touchStartY === null) return;
-    const delta = e.touches[0].clientY - touchStartY;
-    if (delta > 0) {
-      setPullDistance(delta > 120 ? 120 : delta);
+    if (touchStartY === null || touchStartX === null) return;
+    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop > 0) {
+      // Se l'utente ha scrollato, resetta tutto
+      setTouchStartY(null);
+      setTouchStartX(null);
+      setIsPulling(false);
+      setPullDistance(0);
+      setHasMovedEnough(false);
+      return;
+    }
+
+    const deltaY = e.touches[0].clientY - touchStartY;
+    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+    
+    // Se c'è movimento orizzontale significativo, non è un pull-to-refresh
+    if (deltaX > 15) {
+      setIsPulling(false);
+      setPullDistance(0);
+      setHasMovedEnough(false);
+      return;
+    }
+
+    // Attiva pull-to-refresh solo se il movimento verticale supera la soglia
+    if (deltaY > 15) {
+      setIsPulling(true);
+      setHasMovedEnough(true);
+      setPullDistance(deltaY > 120 ? 120 : deltaY);
+      e.preventDefault(); // Previeni lo scroll durante il pull
+    } else if (deltaY > 0) {
+      // Movimento minimo, ma non ancora abbastanza per attivare
+      setPullDistance(0);
     }
   };
   const handleTouchEnd = async () => {
-    if (!isPulling) return;
+    if (!isPulling || !hasMovedEnough) {
+      // Reset se non era un pull valido
+      setIsPulling(false);
+      setPullDistance(0);
+      setTouchStartY(null);
+      setTouchStartX(null);
+      setHasMovedEnough(false);
+      return;
+    }
+    
     if (pullDistance > 60) {
       setIsRefreshing(true);
       await handleRefreshRicordi();
@@ -323,6 +363,8 @@ const HomeMobile = () => {
     setIsPulling(false);
     setPullDistance(0);
     setTouchStartY(null);
+    setTouchStartX(null);
+    setHasMovedEnough(false);
   };
 
   if (isLoadingMemories || isLoadingIdeas) {
@@ -755,42 +797,47 @@ const HomeMobile = () => {
 
       {/* Area contenuto principale con scorrimento */}
       <div
-        className="flex-1 overflow-auto pt-[34%] pb-4 px-4"
+        className="flex-1 overflow-auto pt-[34%] pb-4 px-4 relative"
         ref={scrollAreaRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={activeTab === 'ricordi' && (isPulling || isRefreshing) ? { touchAction: 'none' } : {}}
       >
-        {/* Indicatore di pull-to-refresh */}
-        {activeTab === 'ricordi' && (isPulling || isRefreshing) && (
+        {/* Indicatore di pull-to-refresh - Container fisso con overflow hidden */}
+        {activeTab === 'ricordi' && (
           <div
+            className="absolute top-0 left-0 right-0 overflow-hidden pointer-events-none z-10"
             style={{
-              height: pullDistance,
-              transition: isPulling ? 'none' : 'height 0.3s',
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'center',
-              pointerEvents: 'none',
-              marginTop: -24,
+              height: Math.max(pullDistance, 0),
+              transition: isPulling || isRefreshing ? 'none' : 'height 0.3s ease-out',
             }}
           >
             <div
-              className="flex flex-col items-center justify-end w-full"
+              className="flex flex-col items-center justify-end w-full h-full px-4"
               style={{
                 paddingBottom: 8,
-                marginTop: pullDistance > 28 ? pullDistance - 28 : 0,
-                transition: isPulling ? 'none' : 'margin-top 0.3s',
+                transform: `translateY(${Math.max(0, pullDistance - 60)}px)`,
+                transition: isPulling || isRefreshing ? 'none' : 'transform 0.3s ease-out',
+                opacity: pullDistance > 0 ? Math.min(1, pullDistance / 40) : 0,
               }}
             >
-              <svg className={`w-7 h-7 ${isRefreshing ? 'animate-spin' : ''} text-blue-500`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg 
+                className={`w-7 h-7 ${isRefreshing ? 'animate-spin' : ''} text-blue-500`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+                style={{
+                  transform: isRefreshing ? 'rotate(0deg)' : `rotate(${Math.min(180, (pullDistance / 120) * 180)}deg)`,
+                  transition: isPulling || isRefreshing ? 'none' : 'transform 0.2s ease-out',
+                }}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582M20 20v-5h-.581M5 19A9 9 0 1119 5" />
               </svg>
-              {isPulling && !isRefreshing && (
-                <span className="text-xs text-blue-500">Trascina per aggiornare</span>
-              )}
-              {isRefreshing && (
-                <span className="text-xs text-blue-500">Aggiornamento...</span>
+              {pullDistance > 20 && (
+                <span className="text-xs text-blue-500 mt-1" style={{ opacity: pullDistance > 40 ? 1 : pullDistance / 40 }}>
+                  {isRefreshing ? 'Aggiornamento...' : 'Trascina per aggiornare'}
+                </span>
               )}
             </div>
           </div>

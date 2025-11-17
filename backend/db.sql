@@ -75,7 +75,9 @@ CREATE TABLE `images` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `type` enum('paesaggio','singolo','coppia','cibo') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'paesaggio',
-  `display_order` int DEFAULT NULL
+  `display_order` int DEFAULT NULL,
+  `hash_original` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `hash_webp` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -160,7 +162,10 @@ ALTER TABLE `images`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_images_memory_id` (`memory_id`),
   ADD KEY `idx_images_couple_id` (`couple_id`),
-  ADD KEY `idx_images_created_by` (`created_by_user_id`);
+  ADD KEY `idx_images_created_by` (`created_by_user_id`),
+  ADD KEY `idx_hash_original` (`hash_original`),
+  ADD KEY `idx_hash_webp` (`hash_webp`),
+  ADD KEY `idx_hash_composite` (`hash_original`,`hash_webp`,`couple_id`);
 
 --
 -- Indici per le tabelle `memories`
