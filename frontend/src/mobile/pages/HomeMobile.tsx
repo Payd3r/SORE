@@ -7,7 +7,8 @@ import Loader from '../../desktop/components/Layout/Loader';
 import {
   IoFilter,
   IoSearch,
-  IoListOutline
+  IoListOutline,
+  IoRefreshOutline
 } from 'react-icons/io5';
 import IdeaCardMobile from '../components/IdeaCardMobile';
 import CardRicordoMobile from '../components/CardRicordoMobile';
@@ -42,6 +43,9 @@ const HomeMobile = () => {
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [isIdeaModalOpen, setIsIdeaModalOpen] = useState(false);
 
+  // Stato per il refresh dei dati
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+
   // Query per i ricordi
   const { data: memoriesData = [], isLoading: isLoadingMemories, refetch: refetchMemories } = useQuery<Memory[]>({
     queryKey: ['memories'],
@@ -50,7 +54,7 @@ const HomeMobile = () => {
   });
 
   // Query per le idee
-  const { data: ideasData = [], isLoading: isLoadingIdeas } = useQuery<Idea[]>({
+  const { data: ideasData = [], isLoading: isLoadingIdeas, refetch: refetchIdeas } = useQuery<Idea[]>({
     queryKey: ['ideas'],
     queryFn: getIdeas,
     staleTime: 5 * 60 * 1000
@@ -197,6 +201,15 @@ const HomeMobile = () => {
     setSearchQuery('');
     return refetchMemories();
   }, [refetchMemories]);
+
+  // Reimposta i filtri delle idee e ricarica i dati
+  const handleRefreshIdee = useCallback(() => {
+    setIdeeSelectedTypes(new Set());
+    setIdeeSortBy('newest');
+    setIdeeCheckedFilter('ALL');
+    setSearchQuery('');
+    return refetchIdeas();
+  }, [refetchIdeas]);
 
   // Gestione navigazione al ricordo
   const handleRicordoClick = (ricordoId: number) => {
@@ -936,6 +949,37 @@ const HomeMobile = () => {
               </div>
             </div>
           )}
+
+          {/* Separatore */}
+          <div className="mx-4 h-[0.5px] bg-gray-300/50 dark:bg-gray-600/50"></div>
+
+          {/* Bottone refresh */}
+          <div className="pt-3 pb-4 px-4">
+            <button
+              onClick={async () => {
+                setIsRefreshingData(true);
+                setIsFilterMenuOpen(false);
+                try {
+                  if (activeTab === 'ricordi') {
+                    await handleRefreshRicordi();
+                  } else {
+                    await handleRefreshIdee();
+                  }
+                } finally {
+                  setIsRefreshingData(false);
+                }
+              }}
+              disabled={isRefreshingData}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-xs rounded-full transition-all duration-200 ${
+                isRefreshingData
+                  ? 'bg-gray-300/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium shadow-sm hover:bg-[#0051D5] dark:hover:bg-[#0066CC] active:scale-95'
+              }`}
+            >
+              <IoRefreshOutline className={`w-4 h-4 ${isRefreshingData ? 'animate-spin' : ''}`} />
+              <span>{isRefreshingData ? 'Aggiornamento...' : 'Aggiorna dati'}</span>
+            </button>
+          </div>
         </div>
       )}
 
