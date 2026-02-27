@@ -228,7 +228,7 @@ const Profile: React.FC = () => {
                                                                         void enablePush();
                                                                     }
                                                                 }}
-                                                                disabled={pushState.loading || !pushState.supported || pushState.requiresPwaOnIOS}
+                                                                disabled={pushState.loading}
                                                                 className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-indigo-500 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow outline-none focus:outline-none active:outline-none"
                                                             >
                                                                 {pushState.loading

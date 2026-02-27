@@ -254,16 +254,26 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
 // Installazione del Service Worker
 self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(
-    Promise.all([
-      // Cache delle risorse statiche
-      caches.open(CACHE_CONFIG.STATIC.name).then((cache) => {
-        return cache.addAll(CACHE_CONFIG.STATIC.urls);
-      }),
-      // Cache delle risorse dinamiche
-      caches.open(CACHE_CONFIG.DYNAMIC.name),
-      // Cache network-first
-      caches.open(CACHE_CONFIG.NETWORK_FIRST.name)
-    ])
+    (async () => {
+      try {
+        const staticCache = await caches.open(CACHE_CONFIG.STATIC.name);
+
+        for (const url of CACHE_CONFIG.STATIC.urls) {
+          try {
+            await staticCache.add(url);
+          } catch (error) {
+            console.error('[SW] Impossibile mettere in cache', url, error);
+          }
+        }
+
+        await Promise.all([
+          caches.open(CACHE_CONFIG.DYNAMIC.name),
+          caches.open(CACHE_CONFIG.NETWORK_FIRST.name),
+        ]);
+      } catch (error) {
+        console.error('[SW] Errore durante installazione service worker:', error);
+      }
+    })()
   );
 });
 
