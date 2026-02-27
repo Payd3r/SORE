@@ -26,7 +26,7 @@ const Profile: React.FC = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/welcome');
     };
 
     // Funzione per aggiornare i dati dell'utente

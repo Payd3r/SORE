@@ -62,7 +62,7 @@ export default function ProfileMobile() {
 
   const handleLogout = useCallback(() => {
     logout();
-    navigate('/login');
+    navigate('/welcome');
   }, [logout, navigate]);
 
   // Funzione per aggiornare i dati dell'utente
