@@ -26,10 +26,7 @@ const CACHE_CONFIG = {
       '/',
       '/index.html',
       '/manifest.json',
-      '/favicon.ico',
-      '/offline.html',
-      '/icons/icon-152x152.png',
-      '/splash.png'
+      '/offline.html'
     ]
   },
   DYNAMIC: {
