@@ -4,6 +4,7 @@ import DownBar from './DownBar';
 import MobileUploadStatus from '../components/MobileUploadStatus';
 import NotificationsMobile from '../components/NotificationsMobile';
 import { getNotifications } from '../../api/notifications';
+import { useUpload } from '../../contexts/UploadContext';
 
 /**
  * Layout specifico per la modalità PWA
@@ -12,6 +13,7 @@ import { getNotifications } from '../../api/notifications';
 const PwaLayout = () => {
   const location = useLocation();
   const mainRef = useRef<HTMLDivElement>(null);
+  const { bootstrapPendingJobs } = useUpload();
   
   // Stati per gestire le notifiche
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
@@ -26,6 +28,10 @@ const PwaLayout = () => {
     
     return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    void bootstrapPendingJobs();
+  }, [bootstrapPendingJobs]);
   
   // Funzione per recuperare il conteggio delle notifiche non lette
   const fetchNotificationsCount = async () => {

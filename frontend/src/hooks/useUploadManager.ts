@@ -141,7 +141,7 @@ export const useUploadManager = () => {
               return job;
             }
 
-            const updatedFiles = job.files.map((file) => {
+            const updatedFiles: UploadFileItem[] = job.files.map((file) => {
               const apiFile = responseByFileName.get(file.fileName);
               if (!apiFile) {
                 return {
