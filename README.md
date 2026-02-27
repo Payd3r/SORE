@@ -54,7 +54,7 @@ SORE è un'applicazione web moderna che trasforma il modo in cui le coppie gesti
 ### Backend
 - **Node.js** con Express
 - **MySQL** per il database
-- **Google Vision API** per l'AI
+- **Motore di classificazione immagini** per l'AI
 - **Spotify API** per la musica
 
 ### DevOps
@@ -166,11 +166,6 @@ MYSQL_PASSWORD=sore_password
 # JWT
 JWT_SECRET=your_super_secret_key
 
-# Google Vision API (opzionale)
-GOOGLE_CLOUD_PROJECT_ID=your_project_id
-GOOGLE_CLOUD_PRIVATE_KEY=your_private_key
-GOOGLE_CLOUD_CLIENT_EMAIL=your_client_email
-
 # Spotify API (opzionale)
 SPOTIFY_CLIENT_ID=your_client_id
 SPOTIFY_CLIENT_SECRET=your_client_secret
@@ -203,7 +198,7 @@ Questo progetto è sotto licenza MIT. Vedi il file `LICENSE` per i dettagli.
 
 ## 🙏 Ringraziamenti
 
-- **Google Cloud Vision API** per la classificazione delle immagini
+- **Modelli di classificazione delle immagini** per l'analisi delle foto
 - **Spotify API** per l'integrazione musicale
 - **OpenStreetMap** per le mappe
 - **React Community** per gli strumenti di sviluppo
