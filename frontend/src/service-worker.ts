@@ -2,6 +2,14 @@
 
 declare const self: ServiceWorkerGlobalScope;
 
+interface PushNotificationPayload {
+  title?: string;
+  body?: string;
+  url?: string;
+  icon?: string;
+  badge?: string;
+}
+
 // Definizione delle strategie di cache
 const CACHE_STRATEGIES = {
   STATIC: 'static',        // Per risorse statiche (HTML, CSS, JS, immagini)
@@ -331,3 +339,66 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     })()
   );
 }); 
+
+self.addEventListener('push', (event: PushEvent) => {
+  const defaultPayload: Required<Pick<PushNotificationPayload, 'title' | 'body' | 'url' | 'icon' | 'badge'>> = {
+    title: 'SORE',
+    body: 'Hai una nuova notifica.',
+    url: '/profilo',
+    icon: '/icons/icon-152x152.png',
+    badge: '/icons/icon-152x152.png',
+  };
+
+  event.waitUntil(
+    (async () => {
+      let payload: PushNotificationPayload = {};
+
+      if (event.data) {
+        try {
+          payload = event.data.json() as PushNotificationPayload;
+        } catch (_error) {
+          payload = { body: event.data.text() };
+        }
+      }
+
+      await self.registration.showNotification(payload.title || defaultPayload.title, {
+        body: payload.body || defaultPayload.body,
+        icon: payload.icon || defaultPayload.icon,
+        badge: payload.badge || defaultPayload.badge,
+        data: {
+          url: payload.url || defaultPayload.url,
+        },
+      });
+    })()
+  );
+});
+
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close();
+
+  const notificationData = event.notification.data as { url?: string } | undefined;
+  const targetUrl = notificationData?.url || '/profilo';
+
+  event.waitUntil(
+    (async () => {
+      const allClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+
+      for (const client of allClients) {
+        if ('focus' in client) {
+          await client.focus();
+        }
+
+        if ('navigate' in client) {
+          await client.navigate(targetUrl);
+        }
+
+        return;
+      }
+
+      await self.clients.openWindow(targetUrl);
+    })()
+  );
+});

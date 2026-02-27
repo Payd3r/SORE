@@ -10,6 +10,8 @@ import DeleteAccountModal from '../components/Profile/DeleteAccountModal';
 import { ChangePassModal } from '../components/Profile/ChangePassModal';
 import { getImageUrl } from '../../api/images';
 import Loader from '../components/Layout/Loader';
+import { useIsPwa } from '../../utils/isPwa';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 
 const Profile: React.FC = () => {
@@ -18,6 +20,8 @@ const Profile: React.FC = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
+    const isPwaMode = useIsPwa();
+    const { state: pushState, enablePush, disablePush } = usePushNotifications(isPwaMode);
     const queryClient = useQueryClient();
 
     const handleLogout = () => {
@@ -197,6 +201,41 @@ const Profile: React.FC = () => {
                                                                 className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow outline-none focus:outline-none active:outline-none"
                                                             >
                                                                 Cambia
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="group hover:scale-[1.02] transition-all duration-200">
+                                                        <div className="p-4 lg:p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                                                            <h3 className="text-base lg:text-lg text-gray-800 dark:text-white font-medium mb-1.5 lg:mb-2">Notifiche push</h3>
+                                                            <p className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                                                {pushState.supported
+                                                                    ? `Permesso: ${pushState.permission}`
+                                                                    : 'Questo browser non supporta le notifiche push'}
+                                                            </p>
+                                                            {pushState.requiresPwaOnIOS && (
+                                                                <p className="text-xs lg:text-sm text-amber-600 dark:text-amber-400 mb-2">
+                                                                    Installa la PWA da Safari con &quot;Aggiungi a Home&quot; per usare le push su iPhone.
+                                                                </p>
+                                                            )}
+                                                            {pushState.error && (
+                                                                <p className="text-xs lg:text-sm text-red-600 dark:text-red-400 mb-2">{pushState.error}</p>
+                                                            )}
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (pushState.enabled) {
+                                                                        void disablePush();
+                                                                    } else {
+                                                                        void enablePush();
+                                                                    }
+                                                                }}
+                                                                disabled={pushState.loading || !pushState.supported || pushState.requiresPwaOnIOS}
+                                                                className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-indigo-500 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow outline-none focus:outline-none active:outline-none"
+                                                            >
+                                                                {pushState.loading
+                                                                    ? 'Aggiornamento...'
+                                                                    : pushState.enabled
+                                                                        ? 'Disattiva su tutti i dispositivi'
+                                                                        : 'Attiva notifiche push'}
                                                             </button>
                                                         </div>
                                                     </div>

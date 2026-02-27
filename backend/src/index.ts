@@ -15,6 +15,7 @@ import spotifyRoutes from './routes/spotify';
 import recapRoutes from './routes/recap';
 import mapRoutes from './routes/map';
 import notificationRoutes from './routes/notifications';
+import pushRoutes from './routes/push';
 
 // Import servizi
 import { setupNotificationCron } from './cron/notifications';
@@ -112,6 +113,7 @@ app.use('/api/spotify', spotifyRoutes);
 app.use('/api/recap', recapRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/push', pushRoutes);
 
 
 // Inizializza i cron job
@@ -150,5 +152,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('- /api/recap/*');
   console.log('- /api/map/*');
   console.log('- /api/notifications/*');
+  console.log('- /api/push/*');
   console.log('=================================');
 });

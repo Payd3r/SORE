@@ -11,6 +11,8 @@ import { getImageUrl } from '../../api/images';
 import Loader from '../../desktop/components/Layout/Loader';
 import { getRecapData, getRecapConfronto, RecapStats, RecapConfronto } from '../../api/recap';
 import { useEffect, useState, useCallback } from 'react';
+import { useIsPwa } from '../../utils/isPwa';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 export default function ProfileMobile() {
   const { user, logout } = useAuth();
@@ -20,6 +22,8 @@ export default function ProfileMobile() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
+  const isPwaMode = useIsPwa();
+  const { state: pushState, enablePush, disablePush } = usePushNotifications(isPwaMode);
   const queryClient = useQueryClient();
   const [darkMode, setDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('darkMode');
@@ -240,6 +244,41 @@ export default function ProfileMobile() {
                       className="w-full px-3 py-2.5 bg-blue-500/90 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-all duration-200 shadow-sm"
                     >
                       Cambia
+                    </button>
+                  </div>
+                </div>
+                <div className="group hover:scale-[1.02] transition-all duration-200">
+                  <div className="p-4 rounded-xl bg-gray-50/80 dark:bg-gray-700/40 backdrop-blur-sm">
+                    <h3 className="text-base text-gray-800 dark:text-white font-medium mb-2">Notifiche push</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      {pushState.supported
+                        ? `Permesso: ${pushState.permission}`
+                        : 'Questo browser non supporta le notifiche push'}
+                    </p>
+                    {pushState.requiresPwaOnIOS && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                        Installa la PWA da Safari con &quot;Aggiungi a Home&quot; per usare le push su iPhone.
+                      </p>
+                    )}
+                    {pushState.error && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mb-2">{pushState.error}</p>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (pushState.enabled) {
+                          void disablePush();
+                        } else {
+                          void enablePush();
+                        }
+                      }}
+                      disabled={pushState.loading || !pushState.supported || pushState.requiresPwaOnIOS}
+                      className="w-full px-3 py-2.5 bg-indigo-500/90 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+                    >
+                      {pushState.loading
+                        ? 'Aggiornamento...'
+                        : pushState.enabled
+                          ? 'Disattiva su tutti i dispositivi'
+                          : 'Attiva notifiche push'}
                     </button>
                   </div>
                 </div>

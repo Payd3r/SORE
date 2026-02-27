@@ -1,5 +1,6 @@
 import pool from '../config/db';
 import { ResultSetHeader } from 'mysql2';
+import { sendPushToUser } from './pushService';
 
 /**
  * Tipi di notifiche supportate dall'applicazione
@@ -37,7 +38,17 @@ export async function createNotification(data: NotificationData): Promise<number
        VALUES (?, ?, ?, ?, ?, 0, NOW())`,
       [data.user_id, data.title, data.body, data.url || null, data.icon || null]
     );
-    
+
+    // Invia la push in background senza bloccare la creazione notifica su DB.
+    void sendPushToUser(data.user_id, {
+      title: data.title,
+      body: data.body,
+      url: data.url,
+      icon: data.icon || '/icons/icon-152x152.png',
+      notificationId: result.insertId,
+      createdAt: new Date().toISOString(),
+    });
+
     return result.insertId;
   } catch (error) {
     console.error('Error creating notification:', error);

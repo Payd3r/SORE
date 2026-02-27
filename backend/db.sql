@@ -121,6 +121,24 @@ CREATE TABLE `notifications` (
 -- --------------------------------------------------------
 
 --
+-- Struttura della tabella `push_subscriptions`
+--
+
+CREATE TABLE `push_subscriptions` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `endpoint` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `p256dh` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `auth` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expiration_time` bigint DEFAULT NULL,
+  `device_info` json DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Struttura della tabella `users`
 --
 
@@ -183,6 +201,14 @@ ALTER TABLE `notifications`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indici per le tabelle `push_subscriptions`
+--
+ALTER TABLE `push_subscriptions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_push_subscriptions_endpoint` (`endpoint`),
+  ADD KEY `idx_push_subscriptions_user_id` (`user_id`);
+
+--
 -- Indici per le tabelle `users`
 --
 ALTER TABLE `users`
@@ -226,6 +252,12 @@ ALTER TABLE `notifications`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT per la tabella `push_subscriptions`
+--
+ALTER TABLE `push_subscriptions`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT per la tabella `users`
 --
 ALTER TABLE `users`
@@ -262,6 +294,12 @@ ALTER TABLE `memories`
 --
 ALTER TABLE `notifications`
   ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Limiti per la tabella `push_subscriptions`
+--
+ALTER TABLE `push_subscriptions`
+  ADD CONSTRAINT `push_subscriptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Limiti per la tabella `users`
