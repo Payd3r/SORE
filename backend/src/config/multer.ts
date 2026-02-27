@@ -1,32 +1,50 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
+export const IMAGE_UPLOAD_DIR = path.join('media', 'temp');
+export const MAX_UPLOAD_FILES = 300;
+export const MAX_UPLOAD_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif'
+];
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../media/original'));
+  destination: (_req, _file, cb) => {
+    if (!fs.existsSync(IMAGE_UPLOAD_DIR)) {
+      fs.mkdirSync(IMAGE_UPLOAD_DIR, { recursive: true });
+    }
+    cb(null, IMAGE_UPLOAD_DIR);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   }
 });
 
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic'];
-  if (allowedTypes.includes(file.mimetype)) {
+const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype.toLowerCase())) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP and HEIC are allowed.'));
+    cb(new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, HEIC and HEIF are allowed.'));
   }
 };
 
-const upload = multer({
+const uploadImages = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit per file
+    files: MAX_UPLOAD_FILES,
+    fileSize: MAX_UPLOAD_FILE_SIZE_BYTES
   }
 });
 
-export default upload; 
+export const uploadImagesMiddleware = uploadImages.array('images', MAX_UPLOAD_FILES);
+export default uploadImages;

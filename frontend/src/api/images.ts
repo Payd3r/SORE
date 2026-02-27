@@ -23,17 +23,24 @@ export interface ImageResponse {
 
 export interface ImageUploadResponse {
   message: string;
+  summary?: {
+    total: number;
+    queued: number;
+    failed: number;
+  };
   data: Array<{
     success: boolean;
     file: string;
     jobId: string;
     status: string;
+    error?: string;
   }>;
 }
 
 export interface ImageStatusResponse {
   jobId: string;
   state: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
+  errorCode?: string | null;
   data: {
     filePath: string;
     originalName: string;
@@ -126,6 +133,7 @@ export const pollImageStatus = async (
       onUpdate({
         jobId,
         state: 'failed',
+        errorCode: 'STATUS_REQUEST_FAILED',
         data: {
           filePath: '',
           originalName: '',

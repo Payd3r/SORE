@@ -1,57 +1,81 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useUploadManager } from '../hooks/useUploadManager';
+import { UploadFileItem, UploadJob, UploadJobMeta, UploadSummary } from '../types/upload';
 
-interface UploadingFile {
-  fileName: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed' | 'notfound';
-  progress: number;
-  message: string;
-}
+type UploadingFileRecord = Record<string, UploadFileItem>;
 
 interface UploadContextType {
-  uploadingFiles: { [key: string]: UploadingFile };
-  setUploadingFiles: React.Dispatch<React.SetStateAction<{ [key: string]: UploadingFile }>>;
+  uploadingFiles: UploadingFileRecord;
+  setUploadingFiles: React.Dispatch<React.SetStateAction<UploadingFileRecord>>;
   showUploadStatus: boolean;
   setShowUploadStatus: React.Dispatch<React.SetStateAction<boolean>>;
   hasActiveUploads: boolean;
+  jobs: UploadJob[];
+  summary: UploadSummary;
+  enqueueUpload: (files: File[], meta?: UploadJobMeta) => Promise<string>;
+  retryFailedFiles: (jobId: string) => void;
+  cancelJob: (jobId: string) => Promise<void>;
+  clearFinishedJobs: () => Promise<void>;
+  bootstrapPendingJobs: () => Promise<void>;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
 
 export function UploadProvider({ children }: { children: React.ReactNode }) {
-  const [uploadingFiles, setUploadingFiles] = useState<{ [key: string]: UploadingFile }>({});
+  const manager = useUploadManager();
+  const [legacyUploadingFiles, setLegacyUploadingFiles] = useState<UploadingFileRecord>({});
   const [showUploadStatus, setShowUploadStatus] = useState(false);
 
-  // Calcola hasActiveUploads come uno stato derivato
-  const hasActiveUploads = Object.keys(uploadingFiles).length > 0;
-
-  // Carica lo stato iniziale dal localStorage
+  // Compatibilità con i componenti legacy che salvano direttamente lo stato file.
   useEffect(() => {
-    const savedUploadingFiles = localStorage.getItem('uploadingFiles');
-    
+    const savedUploadingFiles = localStorage.getItem('uploadingFiles-legacy');
     if (savedUploadingFiles) {
-      setUploadingFiles(JSON.parse(savedUploadingFiles));
+      try {
+        setLegacyUploadingFiles(JSON.parse(savedUploadingFiles));
+      } catch {
+        localStorage.removeItem('uploadingFiles-legacy');
+      }
     }
   }, []);
 
-  // Salva lo stato nel localStorage quando cambia
   useEffect(() => {
-    if (hasActiveUploads) {
-      localStorage.setItem('uploadingFiles', JSON.stringify(uploadingFiles));
-      localStorage.setItem('isUploading', 'true');
+    if (Object.keys(legacyUploadingFiles).length > 0) {
+      localStorage.setItem('uploadingFiles-legacy', JSON.stringify(legacyUploadingFiles));
     } else {
-      localStorage.removeItem('uploadingFiles');
-      localStorage.removeItem('isUploading');
+      localStorage.removeItem('uploadingFiles-legacy');
     }
-  }, [uploadingFiles, hasActiveUploads]);
+  }, [legacyUploadingFiles]);
+
+  const uploadingFiles = useMemo(
+    () => ({ ...legacyUploadingFiles, ...manager.uploadingFiles }),
+    [legacyUploadingFiles, manager.uploadingFiles]
+  );
+
+  const setUploadingFiles = useCallback<React.Dispatch<React.SetStateAction<UploadingFileRecord>>>((updater) => {
+    setLegacyUploadingFiles((previous) => (typeof updater === 'function' ? updater(previous) : updater));
+  }, []);
+
+  const hasActiveUploads =
+    manager.hasActiveUploads ||
+    Object.values(legacyUploadingFiles).some((file) => file.status === 'queued' || file.status === 'processing');
 
   return (
-    <UploadContext.Provider value={{
-      uploadingFiles,
-      setUploadingFiles,
-      showUploadStatus,
-      setShowUploadStatus,
-      hasActiveUploads
-    }}>
+    <UploadContext.Provider
+      value={{
+        uploadingFiles,
+        setUploadingFiles,
+        showUploadStatus,
+        setShowUploadStatus,
+        hasActiveUploads,
+        jobs: manager.jobs,
+        summary: manager.summary,
+        enqueueUpload: manager.enqueueUpload,
+        retryFailedFiles: manager.retryFailedFiles,
+        cancelJob: manager.cancelJob,
+        clearFinishedJobs: manager.clearFinishedJobs,
+        bootstrapPendingJobs: manager.bootstrapPendingJobs
+      }}
+    >
       {children}
     </UploadContext.Provider>
   );

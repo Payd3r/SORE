@@ -1,41 +1,45 @@
 import express from 'express';
-import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import pool from '../config/db';
 import { auth } from '../middleware/auth';
 import { DbRow, Image, ResultSetHeader, ImageType, Memory } from '../types/db';
 import { processImage, deleteImageFiles } from '../services/imageProcessor';
 import imageQueue from '../config/bull';
+import { MAX_UPLOAD_FILES, MAX_UPLOAD_FILE_SIZE_BYTES, uploadImagesMiddleware } from '../config/multer';
 
 const router = express.Router();
 
 // Definisci il percorso base per le immagini (relativo alla cartella backend)
 const MEDIA_BASE_PATH = 'media';
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(MEDIA_BASE_PATH, 'temp');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = uuidv4();
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    // Accetta qualsiasi tipo di file
-    cb(null, true);
+const normalizeUploadError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return {
+      code: 'UPLOAD_UNKNOWN_ERROR',
+      message: 'Errore sconosciuto durante il caricamento delle immagini'
+    };
   }
-});
+
+  if (error.message.includes('Invalid file type')) {
+    return {
+      code: 'UNSUPPORTED_IMAGE_TYPE',
+      message: 'Formato file non supportato. Usa JPEG, PNG, WebP, GIF, HEIC o HEIF.'
+    };
+  }
+
+  if (error.message.toLowerCase().includes('file too large')) {
+    return {
+      code: 'FILE_TOO_LARGE',
+      message: `Un file supera il limite massimo di ${Math.round(MAX_UPLOAD_FILE_SIZE_BYTES / (1024 * 1024))}MB.`
+    };
+  }
+
+  return {
+    code: 'UPLOAD_VALIDATION_ERROR',
+    message: error.message
+  };
+};
 
 // Get all images for a couple
 router.get('/', auth, async (req: any, res) => {
@@ -107,7 +111,15 @@ router.get('/:imageId', auth, async (req: any, res) => {
 });
 
 // Upload images
-router.post('/upload', auth, upload.array('images', 300), async (req: any, res) => {
+router.post('/upload', auth, (req, res, next) => {
+  uploadImagesMiddleware(req as any, res as any, (error: unknown) => {
+    if (error) {
+      const normalizedError = normalizeUploadError(error);
+      return res.status(400).json(normalizedError);
+    }
+    next();
+  });
+}, async (req: any, res) => {
   // Disabilita timeout per upload lunghi
   req.setTimeout(10 * 60 * 1000);
   res.setTimeout(10 * 60 * 1000);
@@ -122,6 +134,13 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
   } catch {}
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
+  }
+
+  if (req.files.length > MAX_UPLOAD_FILES) {
+    return res.status(400).json({
+      code: 'MAX_FILES_EXCEEDED',
+      message: `Puoi caricare al massimo ${MAX_UPLOAD_FILES} immagini per richiesta.`
+    });
   }
 
   try {
@@ -185,9 +204,15 @@ router.post('/upload', auth, upload.array('images', 300), async (req: any, res) 
     const successCount = results.filter(r => r.success).length;
     //console.log(`[Upload] Queued ${successCount}/${results.length} images for processing`);
 
-    res.status(202).json({ 
+    const failedCount = results.length - successCount;
+    res.status(202).json({
       message: 'Images queued for processing',
-      data: results 
+      summary: {
+        total: results.length,
+        queued: successCount,
+        failed: failedCount
+      },
+      data: results
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -397,9 +422,17 @@ router.get('/status/:jobId', auth, async (req: any, res) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    res.json({ 
+    const state = jobState.state as string;
+    const code = state === 'failed'
+      ? 'JOB_FAILED'
+      : state === 'notfound'
+        ? 'JOB_NOT_FOUND'
+        : null;
+
+    res.json({
       jobId,
       ...jobState,
+      errorCode: code,
       data: job.data
     });
   } catch (error) {
