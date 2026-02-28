@@ -7,7 +7,7 @@ import imageQueue from '../config/bull';
 import sharp from 'sharp';
 import { classifyImage } from './imageClassifier';
 import { updateMemoryDates } from './memoryDateUpdater';
-import { createNewPhotosNotification, createNotification } from './notificationService';
+import { createNewPhotosNotification, createNotification, NotificationType } from './notificationService';
 import { RowDataPacket } from 'mysql2';
 
 interface ProcessedImage {
@@ -276,7 +276,8 @@ export async function processImageJob(job: ImageJob) {
         user_id: job.userId,
         title: 'Upload completato',
         body: 'La tua immagine è stata caricata con successo',
-        url: '/galleria/'
+        url: '/galleria/',
+        type: NotificationType.UPLOAD_COMPLETED
       });
 
       // Notifiche per gli altri utenti nella coppia
@@ -297,7 +298,8 @@ export async function processImageJob(job: ImageJob) {
         await createNewPhotosNotification(
           userResult[0].name,
           1, // Una foto per volta
-          recipientIds
+          recipientIds,
+          job.memoryId ?? undefined
         );
       }
     } catch (notificationError) {

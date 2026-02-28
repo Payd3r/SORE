@@ -10,9 +10,13 @@ export enum NotificationType {
   NEW_IDEA = 'new_idea',
   IDEA_COMPLETED = 'idea_completed',
   NEW_PHOTOS = 'new_photos',
+  UPLOAD_COMPLETED = 'upload_completed',
   MEMORY_ANNIVERSARY = 'memory_anniversary',
-  PERSONAL_ANNIVERSARY = 'personal_anniversary',
+  COUPLE_ANNIVERSARY = 'couple_anniversary',
   BIRTHDAY = 'birthday',
+  FUTURE_MEMORY_7D = 'future_memory_7d',
+  FUTURE_MEMORY_1D = 'future_memory_1d',
+  FUTURE_MEMORY_TODAY = 'future_memory_today',
 }
 
 /**
@@ -24,6 +28,8 @@ export interface NotificationData {
   body: string;
   url?: string;
   icon?: string;
+  /** Tipo per filtraggio e opt-out per tipo in futuro */
+  type?: string;
 }
 
 /**
@@ -33,10 +39,23 @@ export interface NotificationData {
  */
 export async function createNotification(data: NotificationData): Promise<number> {
   try {
+    // Deduplicazione: evita notifiche duplicate per stesso evento (user + url) nello stesso giorno
+    if (data.url) {
+      const [existing] = await pool.promise().query(
+        `SELECT id FROM notifications 
+         WHERE user_id = ? AND url = ? AND DATE(created_at) = CURDATE() 
+         LIMIT 1`,
+        [data.user_id, data.url]
+      );
+      if ((existing as any[]).length > 0) {
+        return 0; // già inviata oggi, non creare duplicate
+      }
+    }
+
     const [result] = await pool.promise().query<ResultSetHeader>(
-      `INSERT INTO notifications (user_id, title, body, url, icon, status, created_at) 
-       VALUES (?, ?, ?, ?, ?, 0, NOW())`,
-      [data.user_id, data.title, data.body, data.url || null, data.icon || null]
+      `INSERT INTO notifications (user_id, title, body, url, icon, status, type, created_at) 
+       VALUES (?, ?, ?, ?, ?, 0, ?, NOW())`,
+      [data.user_id, data.title, data.body, data.url || null, data.icon || null, data.type || null]
     );
 
     // Invia la push in background senza bloccare la creazione notifica su DB.
@@ -69,12 +88,13 @@ export async function createMemoryNotification(
   recipientIds: number[]
 ): Promise<number[]> {
   try {
-    const notificationPromises = recipientIds.map(userId => 
+    const notificationPromises = recipientIds.map(userId =>
       createNotification({
         user_id: userId,
         title: 'Nuovo ricordo',
         body: `${creatorName} ha creato un nuovo ricordo!`,
-        url: `/ricordo/${memoryId}`
+        url: `/ricordo/${memoryId}`,
+        type: NotificationType.NEW_MEMORY
       })
     );
     
@@ -98,12 +118,13 @@ export async function createIdeaNotification(
   recipientIds: number[]
 ): Promise<number[]> {
   try {
-    const notificationPromises = recipientIds.map(userId => 
+    const notificationPromises = recipientIds.map(userId =>
       createNotification({
         user_id: userId,
         title: 'Nuova idea',
         body: `${creatorName} ha creato una nuova idea!`,
-        url: `/idee/${ideaId}`
+        url: `/idee/${ideaId}`,
+        type: NotificationType.NEW_IDEA
       })
     );
     
@@ -127,12 +148,13 @@ export async function createIdeaCompletedNotification(
   recipientIds: number[]
 ): Promise<number[]> {
   try {
-    const notificationPromises = recipientIds.map(userId => 
+    const notificationPromises = recipientIds.map(userId =>
       createNotification({
         user_id: userId,
         title: 'Idea completata',
         body: `Congratulazioni per aver completato l'idea "${ideaTitle}"!`,
-        url: `/idee/${ideaId}`
+        url: `/idee/${ideaId}`,
+        type: NotificationType.IDEA_COMPLETED
       })
     );
     
@@ -148,23 +170,27 @@ export async function createIdeaCompletedNotification(
  * @param uploaderName Nome dell'utente che ha caricato le foto
  * @param count Numero di foto caricate
  * @param recipientIds Array di ID degli utenti destinatari
+ * @param memoryId ID del ricordo (opzionale): se presente, l'URL punta a /ricordo/:id invece di /galleria
  * @returns Array degli ID delle notifiche create
  */
 export async function createNewPhotosNotification(
   uploaderName: string,
   count: number,
-  recipientIds: number[]
+  recipientIds: number[],
+  memoryId?: number
 ): Promise<number[]> {
   try {
-    const notificationPromises = recipientIds.map(userId => 
+    const url = memoryId ? `/ricordo/${memoryId}` : '/galleria';
+    const notificationPromises = recipientIds.map(userId =>
       createNotification({
         user_id: userId,
         title: 'Nuove foto',
         body: `${uploaderName} ha aggiunto ${count} ${count === 1 ? 'nuova foto' : 'nuove foto'}!`,
-        url: `/galleria`
+        url,
+        type: NotificationType.NEW_PHOTOS
       })
     );
-    
+
     return Promise.all(notificationPromises);
   } catch (error) {
     console.error('Error creating new photos notifications:', error);
@@ -173,29 +199,66 @@ export async function createNewPhotosNotification(
 }
 
 /**
- * Crea notifiche per ricordi futuri in scadenza tra una settimana
+ * Crea notifiche per ricordi futuri in scadenza
  * @param memoryTitle Titolo del ricordo
  * @param memoryId ID del ricordo
  * @param recipientIds Array di ID degli utenti destinatari
+ * @param daysAhead 7 = tra 7 giorni, 1 = domani, 0 = oggi
  * @returns Array degli ID delle notifiche create
  */
 export async function createFutureMemoryReminderNotification(
   memoryTitle: string,
   memoryId: number,
+  recipientIds: number[],
+  daysAhead: 7 | 1 | 0 = 7
+): Promise<number[]> {
+  try {
+    const { title, body, type } =
+      daysAhead === 7
+        ? { title: 'Manca una settimana!', body: `Manca una settimana a "${memoryTitle}"!`, type: NotificationType.FUTURE_MEMORY_7D }
+        : daysAhead === 1
+          ? { title: 'Domani!', body: `Domani: ${memoryTitle}!`, type: NotificationType.FUTURE_MEMORY_1D }
+          : { title: 'Oggi!', body: `Oggi è il giorno di "${memoryTitle}"!`, type: NotificationType.FUTURE_MEMORY_TODAY };
+
+    const notificationPromises = recipientIds.map(userId =>
+      createNotification({
+        user_id: userId,
+        title,
+        body,
+        url: `/ricordo/${memoryId}`,
+        type
+      })
+    );
+    return Promise.all(notificationPromises);
+  } catch (error) {
+    console.error('Error creating future memory reminder notifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Crea notifiche per anniversario di coppia
+ * @param coupleName Nome della coppia
+ * @param recipientIds Array di ID degli utenti della coppia
+ * @returns Array degli ID delle notifiche create
+ */
+export async function createCoupleAnniversaryNotification(
+  coupleName: string,
   recipientIds: number[]
 ): Promise<number[]> {
   try {
     const notificationPromises = recipientIds.map(userId =>
       createNotification({
         user_id: userId,
-        title: 'Manca una settimana!',
-        body: `Manca una settimana a "${memoryTitle}"!`,
-        url: `/ricordo/${memoryId}`
+        title: 'Buon anniversario!',
+        body: `Oggi è un giorno speciale per ${coupleName}. Auguri!`,
+        url: `/profilo`,
+        type: NotificationType.COUPLE_ANNIVERSARY
       })
     );
     return Promise.all(notificationPromises);
   } catch (error) {
-    console.error('Error creating future memory reminder notifications:', error);
+    console.error('Error creating couple anniversary notifications:', error);
     throw error;
   }
 }
@@ -233,7 +296,8 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
           user_id: userId,
           title: '1 anno fa oggi...',
           body: `Ricordi "${memory.title}" di un anno fa?`,
-          url: `/ricordo/${memory.id}`
+          url: `/ricordo/${memory.id}`,
+          type: NotificationType.MEMORY_ANNIVERSARY
         });
       }
     }
@@ -259,7 +323,8 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
             user_id: user.id,
             title: 'Buon compleanno!',
             body: `Tanti auguri ${user.name}! Speriamo che tu abbia un meraviglioso compleanno.`,
-            url: `/profilo`
+            url: `/profilo`,
+            type: NotificationType.BIRTHDAY
           });
         }
       }
@@ -267,29 +332,87 @@ export async function generateTimeBasedNotifications(): Promise<boolean> {
       // Se qualcosa va storto (es. colonna mancante), salta silenziosamente i compleanni
     }
     
-    // 3. Ricordi futuri che scadono tra 7 giorni
+    // 3. Anniversario coppia (oggi = MONTH+DAY di couples.anniversary_date)
+    const [couplesToday] = await pool.promise().query(
+      `SELECT c.id, c.name
+         FROM couples c
+        WHERE MONTH(c.anniversary_date) = MONTH(CURDATE())
+          AND DAY(c.anniversary_date) = DAY(CURDATE())`
+    );
+
+    for (const couple of couplesToday as any[]) {
+      const [users] = await pool.promise().query(
+        'SELECT id FROM users WHERE couple_id = ?',
+        [couple.id]
+      );
+      const userIds = (users as any[]).map((u: any) => u.id);
+      if (userIds.length > 0) {
+        await createCoupleAnniversaryNotification(couple.name, userIds);
+      }
+    }
+
+    // 4. Ricordi futuri che scadono tra 7 giorni
     const todayObj = new Date();
     const weekAhead = new Date(todayObj);
     weekAhead.setDate(todayObj.getDate() + 7);
     const weekAheadStr = weekAhead.toISOString().split('T')[0];
 
-    const [futureMemories] = await pool.promise().query(
+    const [futureMemories7d] = await pool.promise().query(
       `SELECT m.id, m.title, m.start_date, m.couple_id
          FROM memories m
         WHERE m.type = 'futuro' AND DATE(m.start_date) = ?`,
       [weekAheadStr]
     );
 
-    for (const memory of (futureMemories as any[])) {
-      // Prendi tutti gli utenti della coppia
+    for (const memory of (futureMemories7d as any[])) {
       const [users] = await pool.promise().query(
         'SELECT id FROM users WHERE couple_id = ?',
         [memory.couple_id]
       );
       const userIds = (users as any[]).map((u: any) => u.id);
-      await createFutureMemoryReminderNotification(memory.title, memory.id, userIds);
+      await createFutureMemoryReminderNotification(memory.title, memory.id, userIds, 7);
     }
-    
+
+    // 5. Ricordi futuri domani
+    const tomorrow = new Date(todayObj);
+    tomorrow.setDate(todayObj.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const [futureMemories1d] = await pool.promise().query(
+      `SELECT m.id, m.title, m.start_date, m.couple_id
+         FROM memories m
+        WHERE m.type = 'futuro' AND DATE(m.start_date) = ?`,
+      [tomorrowStr]
+    );
+
+    for (const memory of (futureMemories1d as any[])) {
+      const [users] = await pool.promise().query(
+        'SELECT id FROM users WHERE couple_id = ?',
+        [memory.couple_id]
+      );
+      const userIds = (users as any[]).map((u: any) => u.id);
+      await createFutureMemoryReminderNotification(memory.title, memory.id, userIds, 1);
+    }
+
+    // 6. Ricordi futuri oggi
+    const todayStr = todayObj.toISOString().split('T')[0];
+
+    const [futureMemories0d] = await pool.promise().query(
+      `SELECT m.id, m.title, m.start_date, m.couple_id
+         FROM memories m
+        WHERE m.type = 'futuro' AND DATE(m.start_date) = ?`,
+      [todayStr]
+    );
+
+    for (const memory of (futureMemories0d as any[])) {
+      const [users] = await pool.promise().query(
+        'SELECT id FROM users WHERE couple_id = ?',
+        [memory.couple_id]
+      );
+      const userIds = (users as any[]).map((u: any) => u.id);
+      await createFutureMemoryReminderNotification(memory.title, memory.id, userIds, 0);
+    }
+
     return true;
   } catch (error) {
     console.error('Error generating time-based notifications:', error);

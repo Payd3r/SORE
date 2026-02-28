@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
+import { IoCloudUploadOutline, IoCloseOutline, IoTrashOutline } from 'react-icons/io5';
 import { createMemory, MemoryType } from '../../api/memory';
 import { createIdea, IdeaType } from '../../api/ideas';
 import { useUpload } from '../../contexts/UploadContext';
-import { Button, Card as UiCard, SegmentedControl } from '../../components/ui';
-import Skeleton from '../../components/ui/Skeleton';
+import { Button, Card, SegmentedControl } from '../components/ui';
+import { MobileHeader, MobilePageWrapper } from '../components/layout';
 
 type UploadTab = 'MEMORY' | 'IMAGE' | 'IDEA';
 
 const MAX_IMAGES = 300;
 
-const tabOptions: Array<{ id: UploadTab; label: string }> = [
-  { id: 'MEMORY', label: 'Ricordo' },
-  { id: 'IMAGE', label: 'Immagini' },
-  { id: 'IDEA', label: 'Idea' }
+const tabOptions: Array<{ key: UploadTab; label: string }> = [
+  { key: 'MEMORY', label: 'Ricordo' },
+  { key: 'IMAGE', label: 'Immagini' },
+  { key: 'IDEA', label: 'Idea' }
 ];
 
 const memoryTypeOptions: MemoryType[] = ['SEMPLICE', 'EVENTO', 'VIAGGIO', 'FUTURO'];
@@ -47,19 +46,21 @@ export default function UploadMobile() {
 
   const previews = useMemo(
     () =>
-      selectedFiles.slice(0, 6).map((file) => ({
+      selectedFiles.slice(0, 12).map((file, index) => ({
+        index,
         file,
         url: URL.createObjectURL(file)
       })),
     [selectedFiles]
   );
 
-  useEffect(
-    () => () => {
+  const hiddenCount = selectedFiles.length - previews.length;
+
+  useEffect(() => {
+    return () => {
       previews.forEach((preview) => URL.revokeObjectURL(preview.url));
-    },
-    [previews]
-  );
+    };
+  }, [previews]);
 
   const clearAll = () => {
     setTitle('');
@@ -89,9 +90,13 @@ export default function UploadMobile() {
     setSelectedFiles((prev) => [...prev, ...incoming]);
   };
 
+  const removeFileAtIndex = (indexToRemove: number) => {
+    setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   const submitMemory = async () => {
     if (!title.trim()) {
-      setError('Il titolo del ricordo è obbligatorio.');
+      setError('Il titolo del ricordo e obbligatorio.');
       return;
     }
     if (memoryType !== 'FUTURO' && selectedFiles.length === 0) {
@@ -99,7 +104,13 @@ export default function UploadMobile() {
       return;
     }
 
-    const payload: any = {
+    const payload: {
+      title: string;
+      type: MemoryType;
+      location?: string;
+      song?: string;
+      date?: string;
+    } = {
       title: title.trim(),
       type: memoryType,
       location: location.trim() || undefined,
@@ -131,7 +142,7 @@ export default function UploadMobile() {
 
   const submitIdea = async () => {
     if (!ideaTitle.trim()) {
-      setError('Il titolo dell’idea è obbligatorio.');
+      setError('Il titolo dell\'idea e obbligatorio.');
       return;
     }
 
@@ -165,162 +176,130 @@ export default function UploadMobile() {
     }
   };
 
-  return (
-    <div className="h-full overflow-auto bg-[#f2f2f7] pb-28 dark:bg-black">
-      <div className="sticky top-0 z-20 border-b border-white/60 bg-[#f2f2f7]/80 px-4 pb-4 pt-12 backdrop-blur-xl dark:border-gray-800 dark:bg-black/70">
-        <h1 className="mb-4 text-center text-xl font-semibold tracking-tight text-[#111827] dark:text-white">
-          Nuovo Upload
-        </h1>
-        <SegmentedControl
-          value={tab}
-          options={tabOptions.map((option) => ({ value: option.id, label: option.label }))}
-          onChange={setTab}
-          className="bg-white/80 dark:bg-gray-900/80"
-        />
-      </div>
+  const ctaLabel = isSaving ? 'Elaborazione in corso...' : tab === 'IDEA' ? 'Salva idea' : 'Carica foto';
 
-      <div className="space-y-4 px-4 pt-4">
-        {isSaving && (
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/20">
-            <p className="text-xs font-medium text-blue-600 dark:text-blue-300">Pipeline upload in esecuzione</p>
-            <div className="mt-3 space-y-2" aria-hidden="true">
-              <Skeleton className="h-3 w-3/4 bg-blue-100 dark:bg-blue-900/60" />
-              <Skeleton className="h-3 w-2/3 bg-blue-100 dark:bg-blue-900/60" />
-              <Skeleton className="h-3 w-1/2 bg-blue-100 dark:bg-blue-900/60" />
-            </div>
+  return (
+    <MobilePageWrapper accentBg className="h-full overflow-auto pb-28">
+      <MobileHeader
+        title="Carica foto"
+        onBack={() => navigate(-1)}
+        rightActions={
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="rounded-full px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-input)]"
+          >
+            Annulla
+          </button>
+        }
+      />
+
+      <section className="space-y-4 pt-4">
+        <SegmentedControl value={tab} options={tabOptions} onChange={setTab} />
+
+        {error && (
+          <div className="rounded-card border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+            {error}
           </div>
         )}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
-          >
-            {error}
-          </motion.div>
+
+        {isSaving && (
+          <Card className="p-4">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Pipeline upload in esecuzione</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">Caricamento e indicizzazione in background...</p>
+          </Card>
         )}
 
-        <AnimatePresence mode="wait">
-          {tab === 'MEMORY' && (
-            <motion.section
-              key="memory"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              className="space-y-4"
-            >
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Titolo ricordo</h2>
-                <Input value={title} onChange={setTitle} placeholder="Es. Weekend al mare" />
-              </UiCard>
+        {(tab === 'MEMORY' || tab === 'IMAGE') && (
+          <>
+            <UploadDropZone onSelectFiles={onSelectFiles} selectedCount={selectedFiles.length} />
 
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Tipo ricordo</h2>
-                <div className="grid grid-cols-2 gap-2">
-                  {memoryTypeOptions.map((type) => (
-                    <Pill
-                      key={type}
-                      active={memoryType === type}
-                      label={prettyType(type)}
-                      onClick={() => setMemoryType(type)}
-                    />
-                  ))}
+            {selectedFiles.length > 0 && (
+              <Card className="p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{selectedFiles.length} foto selezionate</p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFiles([])}
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-input)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                  >
+                    <IoTrashOutline className="h-3.5 w-3.5" />
+                    Svuota
+                  </button>
                 </div>
-              </UiCard>
 
-              {memoryType === 'FUTURO' && (
-                <UiCard>
-                  <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Data futura (opzionale)</h2>
-                  <input
-                    type="date"
-                    value={futureDate}
-                    onChange={(e) => setFutureDate(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#0a84ff] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                  />
-                </UiCard>
-              )}
-
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Posizione (opzionale)</h2>
-                <Input value={location} onChange={setLocation} placeholder="Es. Firenze" />
-              </UiCard>
-
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Canzone (opzionale)</h2>
-                <Input value={song} onChange={setSong} placeholder="Titolo - artista" />
-              </UiCard>
-
-              <PhotoPicker selectedFiles={selectedFiles} onSelectFiles={onSelectFiles} setSelectedFiles={setSelectedFiles} previews={previews} />
-            </motion.section>
-          )}
-
-          {tab === 'IMAGE' && (
-            <motion.section
-              key="image"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              className="space-y-4"
-            >
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Carica in galleria</h2>
-                <p className="mb-3 text-sm text-gray-500 dark:text-gray-300">
-                  Carica foto in background. Puoi chiudere questa schermata e continuare a usare la PWA.
-                </p>
-                <PhotoPicker selectedFiles={selectedFiles} onSelectFiles={onSelectFiles} setSelectedFiles={setSelectedFiles} previews={previews} />
-              </UiCard>
-            </motion.section>
-          )}
-
-          {tab === 'IDEA' && (
-            <motion.section
-              key="idea"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              className="space-y-4"
-            >
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Titolo idea</h2>
-                <Input value={ideaTitle} onChange={setIdeaTitle} placeholder="Es. Cena in terrazza" />
-              </UiCard>
-
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Descrizione</h2>
-                <textarea
-                  value={ideaDescription}
-                  onChange={(e) => setIdeaDescription(e.target.value)}
-                  placeholder="Aggiungi dettagli..."
-                  className="h-28 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#0a84ff] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                />
-              </UiCard>
-
-              <UiCard>
-                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Categoria</h2>
-                <div className="grid grid-cols-2 gap-2">
-                  {ideaTypeOptions.map((type) => (
-                    <Pill
-                      key={type}
-                      active={ideaType === type}
-                      label={prettyType(type)}
-                      onClick={() => setIdeaType(type)}
-                    />
+                <div className="grid grid-cols-3 gap-2">
+                  {previews.map((preview) => (
+                    <div key={`${preview.file.name}-${preview.file.lastModified}-${preview.index}`} className="relative">
+                      <img src={preview.url} alt={preview.file.name} className="h-24 w-full rounded-xl object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeFileAtIndex(preview.index)}
+                        className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                        aria-label="Rimuovi immagine"
+                      >
+                        <IoCloseOutline className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   ))}
+                  {hiddenCount > 0 && (
+                    <div className="flex h-24 items-center justify-center rounded-xl bg-[var(--bg-input)] text-xs font-semibold text-[var(--text-secondary)]">
+                      +{hiddenCount}
+                    </div>
+                  )}
                 </div>
-              </UiCard>
-            </motion.section>
-          )}
-        </AnimatePresence>
-      </div>
+              </Card>
+            )}
+          </>
+        )}
+
+        {tab === 'MEMORY' && (
+          <Card className="space-y-3 p-4">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Dettagli ricordo</h2>
+            <Input value={title} onChange={setTitle} placeholder="Titolo ricordo *" />
+            <div className="grid grid-cols-2 gap-2">
+              {memoryTypeOptions.map((type) => (
+                <Pill key={type} active={memoryType === type} label={prettyType(type)} onClick={() => setMemoryType(type)} />
+              ))}
+            </div>
+            {memoryType === 'FUTURO' && (
+              <input
+                type="date"
+                value={futureDate}
+                onChange={(e) => setFutureDate(e.target.value)}
+                className="w-full rounded-input border border-[var(--border-default)] bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]"
+              />
+            )}
+            <Input value={location} onChange={setLocation} placeholder="Posizione (opzionale)" />
+            <Input value={song} onChange={setSong} placeholder="Canzone (opzionale)" />
+          </Card>
+        )}
+
+        {tab === 'IDEA' && (
+          <Card className="space-y-3 p-4">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Nuova idea</h2>
+            <Input value={ideaTitle} onChange={setIdeaTitle} placeholder="Titolo idea *" />
+            <textarea
+              value={ideaDescription}
+              onChange={(e) => setIdeaDescription(e.target.value)}
+              placeholder="Descrizione"
+              className="h-28 w-full resize-none rounded-input border border-[var(--border-default)] bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              {ideaTypeOptions.map((type) => (
+                <Pill key={type} active={ideaType === type} label={prettyType(type)} onClick={() => setIdeaType(type)} />
+              ))}
+            </div>
+          </Card>
+        )}
+      </section>
 
       <div className="fixed bottom-16 left-0 right-0 z-20 px-4 pb-3">
-        <motion.div whileTap={{ scale: 0.98 }}>
-          <Button type="button" onClick={handleSubmit} disabled={isSaving} className="w-full rounded-2xl bg-gradient-to-r from-[#0a84ff] to-[#5ac8fa] shadow-lg">
-          {isSaving ? 'Elaborazione in corso...' : tab === 'IDEA' ? 'Salva Idea' : 'Avvia Upload'}
-          </Button>
-        </motion.div>
+        <Button type="button" onClick={handleSubmit} disabled={isSaving} fullWidth className="rounded-[14px] shadow-[var(--shadow-md)]">
+          {ctaLabel}
+        </Button>
       </div>
-    </div>
+    </MobilePageWrapper>
   );
 }
 
@@ -338,7 +317,7 @@ function Input({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#0a84ff] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      className="w-full rounded-input border border-[var(--border-default)] bg-[var(--bg-card)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]"
     />
   );
 }
@@ -348,66 +327,36 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl px-3 py-2 text-sm transition ${
+      className={
         active
-          ? 'bg-[#0a84ff] text-white'
-          : 'bg-[#f4f4f5] text-gray-600 hover:bg-[#e6e6eb] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-      }`}
+          ? 'rounded-input bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--text-inverse)]'
+          : 'rounded-input bg-[var(--bg-input)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+      }
     >
       {label}
     </button>
   );
 }
 
-function PhotoPicker({
-  selectedFiles,
+function UploadDropZone({
   onSelectFiles,
-  setSelectedFiles,
-  previews
+  selectedCount
 }: {
-  selectedFiles: File[];
   onSelectFiles: (files: FileList | null) => void;
-  setSelectedFiles: Dispatch<SetStateAction<File[]>>;
-  previews: Array<{ file: File; url: string }>;
+  selectedCount: number;
 }) {
   return (
-    <div className="space-y-3">
-      <label className="block rounded-2xl border border-dashed border-[#b9dbff] bg-[#f0f7ff] p-4 text-center dark:border-blue-900/50 dark:bg-blue-950/20">
-        <input type="file" className="hidden" multiple accept="image/*" onChange={(e) => onSelectFiles(e.target.files)} />
-        <div className="mx-auto mb-2 h-9 w-9 rounded-full bg-white/80 p-2 text-[#0a84ff] dark:bg-blue-900/60">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V8m0 0l-3 3m3-3l3 3M4 16.5A3.5 3.5 0 017.5 13h9a3.5 3.5 0 010 7h-9A3.5 3.5 0 014 16.5z" />
-          </svg>
-        </div>
-        <p className="text-sm font-medium text-[#0a3b75] dark:text-blue-200">Tocca per selezionare foto</p>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">JPEG, PNG, WEBP, HEIC - max 50MB per file</p>
-      </label>
-
-      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
-        <span>{selectedFiles.length} / {MAX_IMAGES} selezionate</span>
-        {selectedFiles.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setSelectedFiles([])}
-            className="rounded-full bg-red-50 px-3 py-1 font-medium text-red-500 dark:bg-red-900/30"
-          >
-            Svuota
-          </button>
-        )}
+    <label className="block cursor-pointer rounded-card border-2 border-dashed border-[var(--border-default)] bg-[var(--bg-input)] px-6 py-10 text-center">
+      <input type="file" className="hidden" multiple accept="image/*" onChange={(e) => onSelectFiles(e.target.files)} />
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-card)] text-[var(--color-primary)]">
+        <IoCloudUploadOutline className="h-6 w-6" />
       </div>
-
-      {selectedFiles.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          {previews.map((preview) => (
-            <img key={`${preview.file.name}-${preview.file.lastModified}`} src={preview.url} alt={preview.file.name} className="h-20 w-full rounded-xl object-cover" />
-          ))}
-          {selectedFiles.length > previews.length && (
-            <div className="flex h-20 items-center justify-center rounded-xl bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-300">
-              +{selectedFiles.length - previews.length}
-            </div>
-          )}
-        </div>
+      <p className="text-sm font-semibold text-[var(--text-primary)]">Trascina le foto qui</p>
+      <p className="mt-1 text-sm text-[var(--text-secondary)]">oppure tocca per selezionare</p>
+      <p className="mt-3 text-xs text-[var(--text-tertiary)]">JPEG, PNG, WEBP, HEIC - max 50MB per file</p>
+      {selectedCount > 0 && (
+        <p className="mt-2 text-xs font-medium text-[var(--color-primary)]">{selectedCount} foto pronte per l'upload</p>
       )}
-    </div>
+    </label>
   );
 }

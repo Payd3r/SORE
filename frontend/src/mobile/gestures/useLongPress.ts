@@ -31,11 +31,24 @@ export function useLongPress<T>({
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (!startPosRef.current) return;
+    if (!startPosRef.current || e.touches.length === 0) return;
     const dx = Math.abs(e.touches[0].clientX - startPosRef.current.x);
     const dy = Math.abs(e.touches[0].clientY - startPosRef.current.y);
     if (dx > moveThreshold || dy > moveThreshold) clear();
   };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+    timeoutRef.current = window.setTimeout(() => onLongPress(item, e), delay);
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!startPosRef.current) return;
+    const dx = Math.abs(e.clientX - startPosRef.current.x);
+    const dy = Math.abs(e.clientY - startPosRef.current.y);
+    if (dx > moveThreshold || dy > moveThreshold) clear();
+  };
+  const onMouseUp = () => clear();
+  const onMouseLeave = () => clear();
 
   const onTouchEnd = () => clear();
   const onTouchCancel = () => clear();
@@ -44,5 +57,16 @@ export function useLongPress<T>({
     onLongPress(item, e);
   };
 
-  return { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel, onContextMenu, clear };
+  return {
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    onTouchCancel,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onMouseLeave,
+    onContextMenu,
+    clear,
+  };
 }

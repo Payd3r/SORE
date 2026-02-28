@@ -454,6 +454,89 @@
   --ios-safe-right: env(safe-area-inset-right, 0px);
   --ios-safe-bottom: env(safe-area-inset-bottom, 0px);
   --ios-safe-left: env(safe-area-inset-left, 0px);
+
+  /* SORE Mobile Design System — Tema Chiaro */
+  --bg-page: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-input: #F5F5F5;
+  --bg-secondary: #EEEEEE;
+  --bg-page-accent: #E0F2F7;
+
+  --text-primary: #000000;
+  --text-secondary: #424242;
+  --text-tertiary: #9E9E9E;
+  --text-inverse: #FFFFFF;
+
+  --border-default: #EEEEEE;
+  --border-focus: #FF6B35;
+
+  --color-primary: #FF6B35;
+  --color-primary-hover: #E85A2A;
+  --color-primary-active: #D94E1F;
+  --color-accent-pink: #E91E63;
+  --color-accent-blue: #0A84FF;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+
+  --glass-overlay: rgba(0,0,0,0.4);
+  --glass-border: rgba(255,255,255,0.2);
+
+  /* Animazioni e transizioni */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 400ms;
+
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* SORE Mobile Design System — Tema Scuro */
+.dark {
+  --bg-page: #0D1117;
+  --bg-card: #161B22;
+  --bg-elevated: #21262D;
+  --bg-input: #21262D;
+  --bg-secondary: #30363D;
+  --bg-page-accent: #0D2D3A;
+
+  --text-primary: #F0F6FC;
+  --text-secondary: #B1BAC4;
+  --text-tertiary: #8B949E;
+  --text-inverse: #0D1117;
+
+  --border-default: #30363D;
+  --border-focus: #FF8A65;
+
+  --color-primary: #FF8A65;
+  --color-primary-hover: #FFAB91;
+  --color-primary-active: #FFCCBC;
+  --color-accent-pink: #F48FB1;
+  --color-accent-blue: #82B1FF;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+
+  --glass-overlay: rgba(0,0,0,0.6);
+  --glass-border: rgba(255,255,255,0.08);
+}
+
+/* Riduzione movimento per accessibilità */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 a {

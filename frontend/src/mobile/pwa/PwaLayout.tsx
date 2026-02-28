@@ -27,6 +27,12 @@ const PwaLayout = () => {
     void bootstrapPendingJobs();
   }, [bootstrapPendingJobs]);
 
+  useEffect(() => {
+    const handleOpenNotifications = () => setIsNotificationsModalOpen(true);
+    window.addEventListener('sore:open-notifications', handleOpenNotifications);
+    return () => window.removeEventListener('sore:open-notifications', handleOpenNotifications);
+  }, []);
+
   // Disattiva tutte le gesture di swipe per la sidebar
   useEffect(() => {
     // Rimuovi la sidebar dal DOM (se presente)
@@ -39,7 +45,7 @@ const PwaLayout = () => {
     document.body.classList.add('pwa-layout');
     document.documentElement.classList.add('pwa-layout');
 
-    // Aggiungi stili per i gradienti di sfondo
+    // Stili sfondo PWA con design system (usa variabili CSS)
     const style = document.createElement('style');
     style.innerHTML = `
       .pwa-layout .pwa-gradient-bg {
@@ -51,16 +57,8 @@ const PwaLayout = () => {
         z-index: -1;
         pointer-events: none;
       }
-      
-      /* Gradiente chiaro - fucsia e azzurro */
-      .pwa-layout:not(.dark) .pwa-gradient-bg {
-        background: linear-gradient(135deg, rgba(219, 39, 119, 0.1) 0%, rgba(147, 197, 253, 0.1) 50%, rgba(37, 99, 235, 0.1) 100%);
-      }
-      
-      /* Gradiente scuro - sfumature di blu */
-      .dark.pwa-layout .pwa-gradient-bg {
-        background: linear-gradient(135deg, rgba(11, 68, 99, 0.1) 0%, rgba(0, 45, 70, 0.1) 50%, rgba(6, 28, 41, 0.1) 100%);
-      }
+      .pwa-layout:not(.dark) .pwa-gradient-bg { background: var(--bg-page); }
+      .dark.pwa-layout .pwa-gradient-bg { background: var(--bg-page); }
     `;
     document.head.appendChild(style);
     
@@ -118,11 +116,11 @@ const PwaLayout = () => {
       {unreadNotificationsCount > 0 && !location.pathname.startsWith('/upload') && (
         <button 
           onClick={() => setIsNotificationsModalOpen(true)}
-          className="fixed bottom-20 right-4 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-blue-500 text-white"
+          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg bg-[var(--color-primary)] text-white transition-all hover:bg-[var(--color-primary-hover)] active:scale-95"
           aria-label="Notifiche"
         >
           <svg 
-            className="w-5 h-5"
+            className="h-5 w-5"
             fill="none" 
             viewBox="0 0 24 24" 
             stroke="currentColor"
@@ -134,11 +132,9 @@ const PwaLayout = () => {
               d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" 
             />
           </svg>
-          {unreadNotificationsCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-            </span>
-          )}
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent-pink)] text-xs font-bold text-white">
+            {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+          </span>
         </button>
       )}
       

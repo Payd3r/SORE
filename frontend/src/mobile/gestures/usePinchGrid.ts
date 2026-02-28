@@ -36,6 +36,9 @@ export function usePinchGrid({
       onCompactChange(false);
       lockRef.current = now;
     }
+    if (Math.abs(ratio - 1) > 0.05) {
+      e.preventDefault();
+    }
   };
 
   const onTouchEnd = () => {

@@ -11,7 +11,7 @@ import {
   IoAddCircleOutline,
   IoAddCircle
 } from 'react-icons/io5';
-import TabBar, { TabBarItemData } from '../../components/ui/TabBar';
+import { FixedBottomBar, type FixedBottomBarItemData } from '../components/layout';
 import { getMemories } from '../../api/memory';
 import { getIdeas } from '../../api/ideas';
 import { getGalleryImages } from '../../api/images';
@@ -90,7 +90,7 @@ const DownBar = ({ unreadCount = 0, unreadCountLoading = false }: DownBarProps) 
     }
   };
 
-  const items: TabBarItemData[] = useMemo(
+  const items: FixedBottomBarItemData[] = useMemo(
     () => [
       {
         key: '/',
@@ -119,8 +119,8 @@ const DownBar = ({ unreadCount = 0, unreadCountLoading = false }: DownBarProps) 
       {
         key: '/profilo',
         label: 'Profilo',
-        icon: <span className="h-2.5 w-2.5 rounded-full bg-[#8E8E93]" />,
-        activeIcon: <span className="h-2.5 w-2.5 rounded-full bg-[#0A84FF]" />,
+        icon: <span className="h-2.5 w-2.5 rounded-full bg-[var(--text-tertiary)]" />,
+        activeIcon: <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />,
         badge: unreadCountLoading ? 0 : unreadCount,
       },
     ],
@@ -133,7 +133,7 @@ const DownBar = ({ unreadCount = 0, unreadCountLoading = false }: DownBarProps) 
   }, [currentPath, items]);
 
   return (
-    <TabBar
+    <FixedBottomBar
       items={items}
       activeKey={activeKey}
       onPrefetch={prefetchRouteData}

@@ -22,12 +22,13 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
   const [currentImage, setCurrentImage] = useState<ImageType | null>(null);
   const [galleryImages, setGalleryImages] = useState<ImageType[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [_loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
-  const [_isLoadingWebp, setIsLoadingWebp] = useState(true);
+  const [, setLoadedImages] = useState<Record<string, boolean>>({});
+  const [, setIsLoadingWebp] = useState(true);
   const [webpLoaded, setWebpLoaded] = useState(false);
   
   // Stati per le azioni e UI
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showChrome, setShowChrome] = useState(true);
   
   // Stati per gestire lo zoom e swipe
   const [scale, setScale] = useState(1);
@@ -106,6 +107,7 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
       setSwipeDistance(0);
       setIsClosing(false);
       setWebpLoaded(false);
+      setShowChrome(true);
       
       // Carica immediatamente l'immagine webp
       preloadWebpImage(image.id);
@@ -534,6 +536,28 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
       setLastTap(0);
     }
   };
+
+  const handleShare = async (url: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Immagine',
+          text: 'Guarda questa foto su SORE',
+          url
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Errore durante la condivisione:', error);
+    }
+  };
+
+  const handleDownload = (url: string, imageId: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `immagine-${imageId}.webp`;
+    link.click();
+  };
   
   // Funzioni per le azioni sull'immagine
   const handleDelete = async () => {
@@ -628,8 +652,8 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
   const imageDate = format(new Date(displayImage.created_at), 'EEEE d MMMM yyyy', { locale: it });
 
   return createPortal(
-    <div 
-      className="fixed inset-0 z-[60] bg-black touch-none flex flex-col pt-12 overflow-hidden"
+    <div
+      className="fixed inset-0 z-[60] flex touch-none flex-col overflow-hidden bg-black"
       style={{
         opacity: isClosing ? 0.5 : 1,
         transform: `translateY(${swipeDistance}px)`,
@@ -643,31 +667,56 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
       }}
       onTouchEnd={(e) => e.stopPropagation()}
     >
-      {/* Header con data */}
-      <div className="relative py-4 flex items-center justify-center">
-        {/* Pulsante chiudi in alto a sinistra */}
-        <button
-          onClick={onClose}
-          className="absolute left-2 p-2 rounded-full bg-black/50 text-white"
-          aria-label="Chiudi"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        
-        {/* Data centrata */}
-        <h2 className="text-white/90 font-medium capitalize text-center">
-          {imageDate}
-        </h2>
-        
-        
-      </div>
+      {showChrome && (
+        <div className="relative z-20 flex items-center justify-between px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <button
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white"
+            aria-label="Chiudi"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <h2 className="max-w-[55%] truncate text-center text-sm font-medium capitalize text-white/90">
+            {imageDate}
+          </h2>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleShare(webpUrl || thumbnailUrl)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white"
+              aria-label="Condividi"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C9.886 14.011 11.278 14.4 12.75 14.4c1.472 0 2.864-.389 4.066-1.058M12 3v8.4m0 0l3-3m-3 3l-3-3M4 19.8h16" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Vuoi scaricare questa immagine?')) {
+                  handleDownload(webpUrl || thumbnailUrl, currentImage.id);
+                }
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white"
+              aria-label="Altre azioni"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12h.01M12 12h.01M18 12h.01" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Contenitore principale per l'immagine */}
       <div 
         ref={containerRef}
-        className="flex-1 relative flex items-center justify-center overflow-hidden"
+        className="relative flex flex-1 items-center justify-center overflow-hidden"
+        onClick={() => setShowChrome((prev) => !prev)}
         onTouchStart={(e) => {
           e.stopPropagation();
           handleTouchStart(e);
@@ -729,74 +778,80 @@ export default function ImageDetailMobile({ isOpen, onClose, image, onImageDelet
         </div>
       </div>
       
-      {/* Carosello di miniature in basso */}
-      <div className="bg-black/70 px-2 py-3 overflow-hidden">
-        <div 
-          ref={carouselRef}
-          className="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar"
-          style={{
-            scrollBehavior: 'smooth',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
-          }}
-        >
-          {galleryImages.map((img, index) => (
-            <div 
-              key={img.id}
-              className={`flex-shrink-0 w-[40px] h-[60px] rounded-md overflow-hidden transition-all duration-200 ${
-                index === currentIndex 
-                  ? 'border-2 border-white shadow-lg scale-110 z-10 brightness-125 snap-center' 
-                  : 'border border-white/30 opacity-70 hover:opacity-100'
-              }`}
-              onClick={() => handleThumbnailClick(img, index)}
-            >
-              <img 
-                src={getImageUrl(img.thumb_big_path)} 
-                alt={`Miniatura ${index + 1}`}
-                className="w-full h-full object-cover"
-                loading={Math.abs(index - currentIndex) <= 2 ? "eager" : "lazy"}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Barra degli strumenti in fondo */}
-      <div className="bg-black/80 py-5 pb-10">
-        <div className="flex justify-center">
-          {/* Toggle centrale in stile iOS con i tre pulsanti */}
-          <div className="inline-flex items-center rounded-full bg-white/10 p-1 shadow-inner">
-            {/* Pulsante Elimina */}
+      {showChrome && (
+        <>
+          <div className="absolute left-0 right-0 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between px-2">
             <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-white hover:bg-white/20 active:bg-white/30 transition-colors text-sm font-medium ${isDeleting ? 'opacity-50' : ''}`}
+              type="button"
+              onClick={() => navigateToImage('prev')}
+              className="rounded-full bg-black/45 p-2 text-white"
+              aria-label="Immagine precedente"
             >
-              <svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="text-white">{isDeleting ? 'Eliminando...' : 'Elimina'}</span>
             </button>
-            
-            {/* Pulsante Scarica */}
             <button
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = webpUrl || thumbnailUrl;
-                link.download = `immagine-${currentImage.id}.webp`;
-                link.click();
-              }}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-white hover:bg-white/20 active:bg-white/30 transition-colors text-sm font-medium"
+              type="button"
+              onClick={() => navigateToImage('next')}
+              className="rounded-full bg-black/45 p-2 text-white"
+              aria-label="Immagine successiva"
             >
-              <svg className="w-4.5 h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              <span className="text-white">Scarica</span>
             </button>
           </div>
-        </div>
-      </div>     
+
+          <div className="bg-black/70 px-2 py-2 text-center text-xs text-white/80">
+            {galleryImages.length > 0 ? `${currentIndex + 1}/${galleryImages.length}` : '1/1'}
+          </div>
+
+          <div className="bg-black/80 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/90 capitalize">{imageDate}</p>
+                <p className="text-xs text-white/65">Immagine associata alla tua galleria</p>
+              </div>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="rounded-full bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20"
+              >
+                {isDeleting ? 'Eliminazione...' : 'Elimina'}
+              </button>
+            </div>
+
+            <div
+              ref={carouselRef}
+              className="mt-3 flex items-center gap-1 overflow-x-auto py-1 no-scrollbar"
+              style={{
+                scrollBehavior: 'smooth',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {galleryImages.map((img, index) => (
+                <div
+                  key={img.id}
+                  className={`h-[52px] w-[40px] flex-shrink-0 overflow-hidden rounded-md transition-all duration-200 ${
+                    index === currentIndex ? 'z-10 scale-110 border-2 border-[var(--color-primary)] snap-center' : 'border border-white/25 opacity-80'
+                  }`}
+                  onClick={() => handleThumbnailClick(img, index)}
+                >
+                  <img
+                    src={getImageUrl(img.thumb_big_path)}
+                    alt={`Miniatura ${index + 1}`}
+                    className="h-full w-full object-cover"
+                    loading={Math.abs(index - currentIndex) <= 2 ? 'eager' : 'lazy'}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>,
     document.body
   );

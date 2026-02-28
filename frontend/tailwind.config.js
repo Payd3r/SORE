@@ -31,6 +31,13 @@ export default {
           card: '#FFFFFF',
           darkBg: '#000000',
           darkCard: '#1C1C1E',
+        },
+        sore: {
+          primary: '#FF6B35',
+          'primary-hover': '#E85A2A',
+          'primary-active': '#D94E1F',
+          accent: '#E91E63',
+          'accent-blue': '#0A84FF',
         }
       },
       fontFamily: {
@@ -41,6 +48,10 @@ export default {
         'ios-md': '16px',
         'ios-lg': '20px',
         'ios-xl': '24px',
+        card: '16px',
+        'card-lg': '20px',
+        input: '12px',
+        'input-lg': '16px',
       },
       boxShadow: {
         'ios-card': '0 10px 30px -20px rgba(15, 23, 42, 0.45)',

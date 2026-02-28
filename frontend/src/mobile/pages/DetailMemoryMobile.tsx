@@ -1,947 +1,358 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
-    IoCalendarOutline,
-    IoLocationOutline,
-    IoMusicalNotesOutline,
-    IoChevronBack,
-    IoShareOutline,
-    IoTrashOutline,
-    IoCreateOutline
+  IoCalendarOutline,
+  IoHeartOutline,
+  IoLocationOutline,
+  IoShareSocialOutline,
 } from 'react-icons/io5';
-import { FaSpotify } from 'react-icons/fa';
-import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-motion';
 import { getMemory, getMemoryCarousel, updateMemory, deleteMemory, type Memory } from '../../api/memory';
 import { getImageUrl } from '../../api/images';
-import { getTrackDetails, SpotifyTrack } from '../../api/spotify';
-import InfoRicordoMobile from '../components/InfoRicordoMobile';
-import GalleriaRicordoMobile from '../components/GalleriaRicordoMobile';
-import CronologiaRicordoMobile from '../components/CronologiaRicordoMobile';
+import { getTrackDetails, type SpotifyTrack } from '../../api/spotify';
 import MemoryEditModal from '../../desktop/components/Memory/MemoryEditModal';
 import DeleteModal from '../../desktop/components/Memory/DeleteModal';
-import { Button } from '../../components/ui';
-import Skeleton from '../../components/ui/Skeleton';
-import { SkeletonMemoryDetailMobile } from '../components/skeletons';
+import { MobileHeader } from '../components/layout';
+import { SegmentedControl, Button } from '../components/ui';
 
-// Interfacce
-interface CarouselImage {
-    image: string;
-    created_at: string;
-    processedUrl: string;
-}
-
-// Extended Memory con informazioni aggiuntive restituite dall'API
 interface ExtendedMemory extends Memory {
-    created_by_name: string;
-    created_by_user_id: number;
+  description?: string | null;
+  created_by_name: string;
+  created_by_user_id: number;
 }
 
-// Tipo di tab che può essere selezionato
-type TabType = 'galleria' | 'info' | 'cronologia';
+interface CarouselImage {
+  image: string;
+  processedUrl: string;
+}
 
-// Helper function per rilevare elementi interattivi
-const isInteractiveElement = (target: HTMLElement | null): boolean => {
-    if (!target) return false;
-    return !!target.closest('button, a, input, select, textarea, [role="button"], .interactive');
-};
+type DetailTab = 'overview' | 'galleria' | 'info';
 
 export default function DetailMemoryMobile() {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
-    const queryClient = useQueryClient();
-
-    // Stati per i dati del ricordo e carosello
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [activeTab, setActiveTab] = useState<TabType>('info');
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [spotifyData, setSpotifyData] = useState<SpotifyTrack | null>(null);
-    const [isLoadingTrack, setIsLoadingTrack] = useState(false);
-
-    // Stati per la UI e animazioni
-    const [infoExpanded, setInfoExpanded] = useState(false);
-    const [showControls, setShowControls] = useState(true);
-    const [isAtScrollTop, setIsAtScrollTop] = useState(true);
-    const contentScrollRef = useRef<HTMLDivElement>(null);
-
-    // Refs per la gestione dei gesti touch
-    const infoRef = useRef<HTMLDivElement>(null);
-    const touchStartY = useRef(0);
-    const touchEndY = useRef(0);
-    const touchStartTime = useRef(0);
-    const minSwipeDistance = 60;
-    const isSwipingRef = useRef(false);
-
-    // Refs per bottoni header (per event capture)
-    const backButtonRef = useRef<HTMLButtonElement>(null);
-    const editButtonRef = useRef<HTMLButtonElement>(null);
-    const deleteButtonRef = useRef<HTMLButtonElement>(null);
-    const shareButtonRef = useRef<HTMLButtonElement>(null);
-
-    // Refs per bottoni tabs (per event capture)
-    const infoTabRef = useRef<HTMLButtonElement>(null);
-    const galleriaTabRef = useRef<HTMLButtonElement>(null);
-    const cronologiaTabRef = useRef<HTMLButtonElement>(null);
-
-    // Per le transizioni fluide
-    const infoY = useMotionValue(0);
-    const infoControls = useAnimation();
-
-    // React Query per il fetching del ricordo
-    const { data: memory, isLoading } = useQuery<ExtendedMemory>({
-        queryKey: ['memory', id],
-        queryFn: async () => {
-            const response = await getMemory(id!);
-            return response.data as ExtendedMemory;
-        },
-        enabled: !!id,
-        staleTime: 5 * 60 * 1000, // 5 minuti
-    });
-
-    // React Query per il fetching delle immagini del carousel
-    const { data: carouselImages = [] } = useQuery<CarouselImage[]>({
-        queryKey: ['memoryCarousel', id],
-        queryFn: async () => {
-            const response = await getMemoryCarousel(id!);
-            return response.data.map((img: any) => ({
-                ...img,
-                processedUrl: getImageUrl(img.image)
-            }));
-        },
-        enabled: !!id,
-        staleTime: 5 * 60 * 1000, // 5 minuti
-        gcTime: 10 * 60 * 1000, // 10 minuti
-        refetchOnWindowFocus: false, // Evita ricaricamenti non necessari
-    });
-
-    // Effetto per monitorare la posizione dello scroll
-    useEffect(() => {
-        const scrollContainer = contentScrollRef.current;
-        if (!scrollContainer) return;
-
-        const handleScroll = () => {
-            setIsAtScrollTop(scrollContainer.scrollTop < 10);
-        };
-
-        scrollContainer.addEventListener('scroll', handleScroll);
-        return () => {
-            scrollContainer.removeEventListener('scroll', handleScroll);
-        };
-    }, [activeTab]);
-
-    // Effetto per caricare i dati Spotify se il ricordo ha una canzone
-    useEffect(() => {
-        if (memory?.song) {
-            setIsLoadingTrack(true);
-            getTrackDetails(memory.song.split(' - ')[0]) // Prendi solo il titolo prima del trattino
-                .then(data => {
-                    setSpotifyData(data);
-                })
-                .catch(error => {
-                    console.error('Errore nel caricamento dei dati Spotify:', error);
-                })
-                .finally(() => {
-                    setIsLoadingTrack(false);
-                });
-        }
-    }, [memory?.song]);
-
-    // Forza un re-render quando le immagini del carosello sono caricate
-    const [forceUpdate, setForceUpdate] = useState(0);
-    useEffect(() => {
-        if (carouselImages.length > 0) {
-            // Forza un re-render dopo un breve ritardo per garantire che il blur funzioni correttamente
-            // ma solo una volta e solo se necessario
-            const timer = setTimeout(() => {
-                // Limitiamo il numero di aggiornamenti per evitare loop
-                if (forceUpdate < 2) {
-                    setForceUpdate(prev => prev + 1);
-                }
-            }, 50);
-            return () => clearTimeout(timer);
-        }
-    }, [carouselImages.length, forceUpdate]);
-
-
-    // Effetto per nascondere la downbar quando il componente è montato
-    useEffect(() => {
-        // Controlla se la classe è già presente (potrebbe essere stata aggiunta da HomeMobile)
-        if (!document.body.classList.contains('detail-memory-active')) {
-            // Aggiungi una classe CSS temporanea per nascondere la downbar
-            document.body.classList.add('detail-memory-active');
-
-            // Aggiungi stile inline per nascondere la downbar e blocccare lo scrolling
-            const styleElement = document.createElement('style');
-            styleElement.innerHTML = `
-          /* Nasconde la barra di navigazione inferiore */
-          body.detail-memory-active .fixed.bottom-0.left-0.right-0.z-50.backdrop-blur-xl {
-            display: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-          }
-          body.detail-memory-active {
-            overflow: hidden !important;
-          }
-        `;
-            document.head.appendChild(styleElement);
-
-            // Mantieni riferimento allo styleElement per rimuoverlo al dismount
-            return () => {
-                document.body.classList.remove('detail-memory-active');
-                if (styleElement.parentNode) {
-                    document.head.removeChild(styleElement);
-                }
-            };
-        }
-        
-        // Se la classe era già presente, rimuoviamola solo al dismount
-        return () => {
-            document.body.classList.remove('detail-memory-active');
-            // Non rimuoviamo lo stile perché potrebbe essere stato aggiunto da un'altra istanza
-        };
-    }, []);
-
-    // Chiudi il modale e torna alla home
-    const handleClose = () => {
-        navigate(-1);
-    };
-
-    // Gestisce il tap sulla tab
-    const handleTabChange = (tab: TabType) => {
-        setActiveTab(tab);
-        setIsAtScrollTop(true); // Reset dello stato all'inizio della visualizzazione
-        
-        // Assicuriamo che lo scroll torni in cima quando cambiamo tab
-        if (contentScrollRef.current) {
-            contentScrollRef.current.scrollTop = 0;
-        }
-    };
-
-
-    // Refs per tracciare la posizione iniziale del touch verticale
-    const verticalTouchStartX = useRef(0);
-    const verticalTouchEndX = useRef(0);
-
-    // Gestione dello swipe per chiudere la pagina o espandere le info
-    const handleTouchStart = (e: React.TouchEvent) => {
-        // PRIMA verifica: se target è interattivo, return early
-        const target = e.target as HTMLElement;
-        if (isInteractiveElement(target)) {
-            e.stopPropagation();
-            return;
-        }
-        
-        // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non iniziare lo swipe
-        if (activeTab === 'cronologia' && !isAtScrollTop) {
-            return;
-        }
-        
-        touchStartY.current = e.touches[0].clientY;
-        verticalTouchStartX.current = e.touches[0].clientX;
-        touchStartTime.current = Date.now();
-        isSwipingRef.current = true;
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isSwipingRef.current) return;
-        
-        // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non gestire lo swipe
-        if (activeTab === 'cronologia' && !isAtScrollTop) {
-            return;
-        }
-
-        touchEndY.current = e.touches[0].clientY;
-        verticalTouchEndX.current = e.touches[0].clientX;
-
-        const deltaY = touchEndY.current - touchStartY.current;
-        const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
-        const deltaYAbs = Math.abs(deltaY);
-
-        // Se movimento orizzontale > verticale, ignora (è swipe orizzontale)
-        if (deltaX > deltaYAbs && deltaX > 20) {
-            isSwipingRef.current = false;
-            return;
-        }
-
-        // Processa swipe verticale
-        // Swipe verso il basso: chiude la pagina o contrae le info
-        if (deltaY > 0) {
-            if (infoExpanded) {
-                // Se le info sono espanse, riduciamo l'espansione
-                const moveY = deltaY * 0.5; // Resistance per rendere il movimento più naturale
-                infoY.set(Math.min(moveY - 200, 0)); // -200 perché partiamo da -200 in posizione espansa
-            } else {
-                // Altrimenti, prepariamoci a chiudere la pagina
-                const resistance = 0.4;
-                const moveY = deltaY * resistance;
-
-                if (moveY > 50) {
-                    setShowControls(false);
-                }
-
-                infoY.set(moveY);
-            }
-        }
-
-        // Swipe verso l'alto: espande le informazioni
-        if (deltaY < 0) {
-            if (!infoExpanded) {
-                // Se le info non sono ancora espanse, espandiamole
-                const moveY = Math.max(deltaY, -220); // Limit the upward movement
-                infoY.set(moveY);
-            }
-        }
-    };
-
-    const handleTouchEnd = () => {
-        if (!isSwipingRef.current) return;
-        
-        isSwipingRef.current = false;
-        
-        // Se siamo nella tab cronologia e non siamo all'inizio dello scroll, non gestire lo swipe
-        if (activeTab === 'cronologia' && !isAtScrollTop) {
-            return;
-        }
-
-        const deltaY = touchEndY.current - touchStartY.current;
-        const deltaX = Math.abs(verticalTouchEndX.current - verticalTouchStartX.current);
-        const deltaYAbs = Math.abs(deltaY);
-
-        // Se movimento orizzontale > verticale, ignora
-        if (deltaX > deltaYAbs && deltaX > 20) {
-            return;
-        }
-
-        // Processa solo se chiaramente swipe verticale
-        // Chiusura pagina (swipe verso il basso quando info non espanse)
-        if (deltaY > minSwipeDistance && !infoExpanded) {
-            handleClose();
-        }
-        // Contrazione delle info (swipe verso il basso quando info espanse)
-        else if (deltaY > minSwipeDistance && infoExpanded) {
-            setInfoExpanded(false);
-            infoControls.start({
-                y: 0,
-                transition: {
-                    type: 'spring',
-                    damping: 20,
-                    stiffness: 300,
-                    velocity: 0.5
-                }
-            });
-        }
-        // Espansione info (swipe verso l'alto quando info non espanse)
-        else if (deltaY < -minSwipeDistance && !infoExpanded) {
-            setInfoExpanded(true);
-            infoControls.start({
-                y: -200,
-                transition: {
-                    type: 'spring',
-                    damping: 20,
-                    stiffness: 300,
-                    velocity: 0.5
-                }
-            });
-        }
-        // Piccoli movimenti: ritorno alla posizione iniziale
-        else {
-            infoControls.start({
-                y: infoExpanded ? -200 : 0,
-                transition: {
-                    type: 'spring',
-                    damping: 25,
-                    stiffness: 400,
-                    velocity: 0.5
-                }
-            });
-            setShowControls(true);
-            infoY.set(infoExpanded ? -200 : 0);
-        }
-    };
-
-    // Gestisce l'edit del ricordo
-    const openEditModal = () => {
-        setIsEditModalOpen(true);
-    };
-
-    const closeEditModal = () => {
-        setIsEditModalOpen(false);
-    };
-
-    const handleUpdateMemory = async (updatedData: Partial<Memory>) => {
-        if (!id) return;
-
-        try {
-            await updateMemory(id, updatedData);
-            // Invalida la query per ricaricare i dati aggiornati
-            queryClient.invalidateQueries({ queryKey: ['memory', id] });
-            closeEditModal();
-        } catch (error) {
-            console.error('Errore durante l\'aggiornamento del ricordo:', error);
-        }
-    };
-
-    // Gestisce l'eliminazione del ricordo
-    const openDeleteModal = () => {
-        setIsDeleteModalOpen(true);
-    };
-
-    const closeDeleteModal = () => {
-        setIsDeleteModalOpen(false);
-    };
-
-    const handleDelete = async () => {
-        if (!id) return;
-
-        setIsDeleting(true);
-        try {
-            await deleteMemory(id);
-            queryClient.invalidateQueries({ queryKey: ['memories'] });
-            navigate('/');
-        } catch (error) {
-            console.error('Errore durante l\'eliminazione:', error);
-        } finally {
-            setIsDeleting(false);
-            closeDeleteModal();
-        }
-    };
-
-    // Formatta l'intervallo di date
-    const formatDateRange = (startDate: string | null, endDate: string | null) => {
-        if (!startDate) return '';
-
-        try {
-            const start = format(parseISO(startDate), 'd MMM', { locale: it });
-
-            if (!endDate) return start;
-
-            // Se le date sono uguali, mostra solo una data
-            if (format(parseISO(startDate), 'yyyy-MM-dd') === format(parseISO(endDate), 'yyyy-MM-dd')) {
-                return start;
-            }
-
-            // Se il mese è lo stesso, mostra solo il giorno per la prima data
-            if (format(parseISO(startDate), 'MM-yyyy') === format(parseISO(endDate), 'MM-yyyy')) {
-                return `${format(parseISO(startDate), 'd')} - ${format(parseISO(endDate), 'd MMM', { locale: it })}`;
-            }
-
-            // Se i mesi sono diversi, mostra il mese per entrambe le date
-            return `${start} - ${format(parseISO(endDate), 'd MMM', { locale: it })}`;
-        } catch (error) {
-            return '';
-        }
-    };
-
-    // Naviga tra le immagini del carosello (usato per autoplay)
-    const handleNextImage = useCallback(() => {
-        if (carouselImages.length <= 1) return;
-        setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
-    }, [carouselImages.length]);
-
-    // Autoplay carosello: cambia immagine ogni 3 secondi
-    useEffect(() => {
-        // Se ci sono meno di 2 immagini, non fare autoplay
-        if (carouselImages.length <= 1) return;
-
-        // Pausa autoplay quando i controlli sono nascosti (utente sta interagendo)
-        if (!showControls) return;
-
-        const interval = setInterval(() => {
-            handleNextImage();
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [carouselImages.length, showControls, handleNextImage]);
-
-    // Event capture per bottoni header - intercetta touchstart PRIMA di altri handler
-    useEffect(() => {
-        const buttons = [
-            { ref: backButtonRef, handler: handleClose },
-            { ref: editButtonRef, handler: openEditModal },
-            { ref: deleteButtonRef, handler: openDeleteModal },
-            { ref: shareButtonRef, handler: () => {} } // Share non ha handler ancora
-        ];
-
-        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
-        let rafId: number | null = null;
-
-        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
-        rafId = requestAnimationFrame(() => {
-            buttons.forEach(({ ref, handler }) => {
-                const element = ref.current;
-                if (!element) return;
-
-                const touchHandler = (e: TouchEvent) => {
-                    // Intercetta nella fase di capture PRIMA di altri handler
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    handler();
-                };
-
-                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
-                handlersRef.current.push({ element, handler: touchHandler });
-            });
-        });
-
-        return () => {
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-            }
-            handlersRef.current.forEach(({ element, handler }) => {
-                if (element) {
-                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
-                }
-            });
-        };
-    }, [handleClose, openEditModal, openDeleteModal, showControls]);
-
-    // Event capture per bottoni tabs - intercetta touchstart PRIMA di altri handler
-    useEffect(() => {
-        const tabs = [
-            { ref: infoTabRef, tab: 'info' as TabType },
-            { ref: galleriaTabRef, tab: 'galleria' as TabType },
-            { ref: cronologiaTabRef, tab: 'cronologia' as TabType }
-        ];
-
-        const handlersRef = { current: [] as Array<{ element: HTMLElement; handler: (e: TouchEvent) => void }> };
-        let rafId: number | null = null;
-
-        // Usa requestAnimationFrame per assicurarsi che i refs siano montati
-        rafId = requestAnimationFrame(() => {
-            tabs.forEach(({ ref, tab }) => {
-                const element = ref.current;
-                if (!element) return;
-
-                const touchHandler = (e: TouchEvent) => {
-                    // Intercetta nella fase di capture PRIMA di altri handler
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    handleTabChange(tab);
-                };
-
-                element.addEventListener('touchstart', touchHandler, { capture: true, passive: false });
-                handlersRef.current.push({ element, handler: touchHandler });
-            });
-        });
-
-        return () => {
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-            }
-            handlersRef.current.forEach(({ element, handler }) => {
-                if (element) {
-                    element.removeEventListener('touchstart', handler, { capture: true } as EventListenerOptions);
-                }
-            });
-        };
-    }, [handleTabChange, activeTab]);
-    
-    // Memoizziamo gli indicatori del carousel per evitare ri-renderizzazioni non necessarie
-    const carouselIndicators = useMemo(() => {
-        if (carouselImages.length <= 1) return null;
-        
-        return (
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
-                {carouselImages.map((_, index) => (
-                    <div
-                        key={index}
-                        className={`h-1.5 rounded-full transition-all ${index === currentImageIndex
-                            ? 'w-6 bg-white'
-                            : 'w-1.5 bg-white/40'
-                            }`}
-                    />
-                ))}
-            </div>
-        );
-    }, [carouselImages.length, currentImageIndex]);
-
-    // Memoizziamo il player Spotify per evitare ri-renderizzazioni non necessarie
-    const spotifyPlayer = useMemo(() => {
-        if (!memory?.song) return null;
-        
-        return (
-            <div className="absolute left-4 right-4 bottom-4 bg-black/40 backdrop-blur-md rounded-xl overflow-hidden shadow-lg z-10">
-                {isLoadingTrack ? (
-                    <div className="h-16 bg-gray-700/40 p-3">
-                        <Skeleton className="h-full w-full rounded-lg bg-gray-600/60" />
-                    </div>
-                ) : spotifyData ? (
-                    <div className="flex items-center gap-3 py-2 px-3">
-                        {spotifyData.album?.images?.[0]?.url && (
-                            <img
-                                src={spotifyData.album.images[0].url}
-                                alt={`${spotifyData.name} album cover`}
-                                className="w-12 h-12 rounded-md shadow-sm"
-                                loading="lazy"
-                            />
-                        )}
-                        <div className="flex-grow min-w-0">
-                            <p className="text-sm text-white font-medium truncate">{spotifyData.name}</p>
-                            <p className="text-xs text-white/70 truncate">
-                                {spotifyData.artists.map(artist => artist.name).join(', ')}
-                            </p>
-                        </div>
-                        {spotifyData.external_urls?.spotify && (
-                            <a
-                                href={spotifyData.external_urls.spotify}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center w-10 h-10 rounded-full bg-[#1DB954] text-white"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <FaSpotify className="w-5 h-5" />
-                            </a>
-                        )}
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-3 py-3 px-4">
-                        <IoMusicalNotesOutline className="w-5 h-5 text-white/80" />
-                        <p className="text-sm text-white truncate">{memory.song}</p>
-                    </div>
-                )}
-            </div>
-        );
-    }, [memory?.song, isLoadingTrack, spotifyData]);
-
-    // Main UI render
-    if (isLoading) {
-        return <SkeletonMemoryDetailMobile />;
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [expandedDescription, setExpandedDescription] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(0);
+
+  const { data: memory, isLoading } = useQuery<ExtendedMemory>({
+    queryKey: ['memory', id],
+    queryFn: async () => {
+      const response = await getMemory(id!);
+      return response.data as ExtendedMemory;
+    },
+    enabled: Boolean(id),
+  });
+
+  const { data: carouselImages = [] } = useQuery<CarouselImage[]>({
+    queryKey: ['memoryCarousel', id],
+    queryFn: async () => {
+      const response = await getMemoryCarousel(id!);
+      return response.data.map((image: { image: string }) => ({
+        image: image.image,
+        processedUrl: getImageUrl(image.image),
+      }));
+    },
+    enabled: Boolean(id),
+  });
+
+  const { data: spotifyTrack } = useQuery<SpotifyTrack | null>({
+    queryKey: ['memoryTrack', memory?.id, memory?.song],
+    queryFn: async () => {
+      if (!memory?.song) return null;
+      const trackName = memory.song.split(' - ')[0];
+      return getTrackDetails(trackName);
+    },
+    enabled: Boolean(memory?.song),
+  });
+
+  useEffect(() => {
+    document.body.classList.add('detail-memory-active');
+    return () => document.body.classList.remove('detail-memory-active');
+  }, []);
+
+  const imageToShow = useMemo(() => {
+    if (carouselImages.length > 0) return carouselImages[currentImageIndex]?.processedUrl;
+    const fallback = memory?.images?.[0]?.thumb_big_path;
+    return fallback ? getImageUrl(fallback) : '';
+  }, [carouselImages, currentImageIndex, memory?.images]);
+
+  const locationAndDate = useMemo(() => {
+    if (!memory) return '';
+    const startDate = memory.start_date ? format(parseISO(memory.start_date), 'd MMM yyyy', { locale: it }) : '';
+    const endDate = memory.end_date ? format(parseISO(memory.end_date), 'd MMM yyyy', { locale: it }) : '';
+    const dateLabel = endDate && endDate !== startDate ? `${startDate} - ${endDate}` : startDate;
+    if (memory.location && dateLabel) return `${memory.location} • ${dateLabel}`;
+    return memory.location || dateLabel;
+  }, [memory]);
+
+  const handlePrevImage = () => {
+    if (carouselImages.length <= 1) return;
+    setCurrentImageIndex((prev) => (prev === 0 ? carouselImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    if (carouselImages.length <= 1) return;
+    setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
+  };
+
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => setTouchStartX(e.touches[0].clientX);
+
+  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    const distance = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(distance) < 40) return;
+    if (distance > 0) handlePrevImage();
+    else handleNextImage();
+  };
+
+  const handleSaveMemory = async (updatedData: Partial<Memory>) => {
+    if (!id) return;
+    await updateMemory(id, updatedData);
+    await queryClient.invalidateQueries({ queryKey: ['memory', id] });
+    setIsEditOpen(false);
+  };
+
+  const handleDeleteMemory = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      await deleteMemory(id);
+      await queryClient.invalidateQueries({ queryKey: ['memories'] });
+      navigate('/');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteOpen(false);
     }
+  };
 
-    if (!memory) {
-        return (
-            <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-[100000]">
-                <p className="text-center text-gray-600 dark:text-gray-400">
-                    Ricordo non trovato o errore di caricamento.
-                </p>
-            </div>
-        );
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = memory?.title || 'Ricordo';
+    if (navigator.share) {
+      await navigator.share({ title, url });
+      return;
     }
+    await navigator.clipboard.writeText(url);
+  };
 
+  if (isLoading || !memory) {
     return (
-        <div
-            className="fixed inset-0 flex flex-col overflow-hidden bg-white dark:bg-gray-900"
-            style={{
-                position: 'fixed',
-                zIndex: 100000,
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0
-            }}
-        >
-            <div
-                className="absolute top-0 left-0 right-0 z-10 pointer-events-none h-[120px]"
-                style={{
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    maskImage: 'linear-gradient(to bottom, black 30%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)'
-                }}
-            ></div>
-            {/* Carosello in alto con mappa/immagini */}
-            <motion.div
-                className="relative w-full shrink-0"
-                style={{
-                    height: infoExpanded ? '35%' : '70%',
-                }}
-                animate={infoControls}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            >
-                {/* Safe area per la notch */}
-                <div className="absolute inset-x-0 top-0 h-[env(safe-area-inset-top)] bg-transparent"></div>
-
-                {/* Controlli e bottoni */}
-                <AnimatePresence>
-                    {showControls && (
-                        <motion.div
-                            className="absolute top-0 left-0 right-0 z-10 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-4 flex justify-between items-center z-1000"
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                        >
-                            <Button
-                                ref={backButtonRef}
-                                onClick={handleClose}
-                                variant="ghost"
-                                size="icon"
-                                className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
-                                style={{ 
-                                    touchAction: 'manipulation',
-                                    WebkitTapHighlightColor: 'transparent'
-                                }}
-                            >
-                                <IoChevronBack className="w-5 h-5" />
-                            </Button>
-
-                            <div className="flex gap-2">
-                                <Button
-                                    ref={editButtonRef}
-                                    onClick={openEditModal}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
-                                    style={{ 
-                                        touchAction: 'manipulation',
-                                        WebkitTapHighlightColor: 'transparent'
-                                    }}
-                                >
-                                    <IoCreateOutline className="w-5 h-5" />
-                                </Button>
-                                <Button
-                                    ref={deleteButtonRef}
-                                    onClick={openDeleteModal}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
-                                    style={{ 
-                                        touchAction: 'manipulation',
-                                        WebkitTapHighlightColor: 'transparent'
-                                    }}
-                                >
-                                    <IoTrashOutline className="w-5 h-5" />
-                                </Button>
-                                <Button
-                                    ref={shareButtonRef}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
-                                    style={{ 
-                                        touchAction: 'manipulation',
-                                        WebkitTapHighlightColor: 'transparent'
-                                    }}
-                                >
-                                    <IoShareOutline className="w-5 h-5" />
-                                </Button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Carosello di immagini */}
-                <div className="w-full h-full">
-                    {carouselImages.length > 0 ? (
-                        <div 
-                            className="w-full h-full relative" 
-                            key={`carousel-${forceUpdate}`}
-                        >
-                            <img
-                                src={carouselImages[currentImageIndex]?.processedUrl}
-                                alt={memory.title}
-                                className="w-full h-full object-cover"
-                                style={{
-                                    userSelect: 'none',
-                                    WebkitUserSelect: 'none',
-                                    WebkitTouchCallout: 'none',
-                                    willChange: 'transform',
-                                    backfaceVisibility: 'hidden',
-                                    WebkitBackfaceVisibility: 'hidden'
-                                }}
-                                draggable={false}
-                                loading={currentImageIndex === 0 ? "eager" : "lazy"}
-                                fetchPriority={currentImageIndex === 0 ? "high" : "auto"}
-                                decoding={currentImageIndex === 0 ? "sync" : "async"}
-                                onLoad={(e) => {
-                                    // Impostare l'elemento immagine come prioritario nel DOM
-                                    if (currentImageIndex === 0) {
-                                        const img = e.target as HTMLImageElement;
-                                        img.style.display = 'block';
-                                        // Forziamo un reflow per assicurare che il blur funzioni correttamente
-                                        document.body.offsetHeight;
-                                        setForceUpdate(prev => prev + 1);
-                                    }
-                                }}
-                            />
-                            
-                            {/* Precarica le immagini successive per rendere più fluido lo swipe */}
-                            {carouselImages.length > 1 && currentImageIndex < carouselImages.length - 1 && (
-                                <link 
-                                    rel="prefetch" 
-                                    href={carouselImages[currentImageIndex + 1]?.processedUrl} 
-                                    as="image" 
-                                />
-                            )}
-
-                            {/* Indicatori del carosello */}
-                            {carouselIndicators}
-                        </div>
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <p className="text-white/70">Nessuna immagine disponibile</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Player Spotify (solo se presente una canzone) */}
-                {spotifyPlayer}
-            </motion.div>
-
-            {/* Sezione info (che può espandersi) */}
-            <motion.div
-                ref={infoRef}
-                className="relative w-full bg-white dark:bg-gray-900 flex flex-col flex-grow overflow-hidden z-20"
-                style={{
-                    y: infoY,
-                    height: infoExpanded ? '90%' : '90%',
-                    minHeight: '90%'
-                }}
-                animate={infoControls}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                {/* Pill di drag */}
-                <div className="w-full h-8 flex items-center justify-center mt-2">
-                    <div className="w-20 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
-                </div>
-
-                {/* Header con titolo e controllo espansione */}
-                <div className="px-5 pb-2 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                            {memory.title}
-                        </h1>
-
-                        {/* Info base con data e località */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                            {memory.start_date && (
-                                <div className="flex items-center gap-1.5">
-                                    <IoCalendarOutline className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        {formatDateRange(memory.start_date, memory.end_date || null)}
-                                    </span>
-                                </div>
-                            )}
-
-                            {memory.location && (
-                                <div className="flex items-center gap-1.5">
-                                    <IoLocationOutline className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[200px]">
-                                        {memory.location}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* Contenuto scrollabile con padding per evitare che finisca sotto i tabs */}
-                <div 
-                    ref={contentScrollRef}
-                    className="flex-grow overflow-auto px-5 pb-0"
-                >
-                    {activeTab === 'info' && (
-                        <InfoRicordoMobile memory={memory} onVisitGallery={() => handleTabChange('galleria')} />
-                    )}
-
-                    {activeTab === 'galleria' && (
-                        <GalleriaRicordoMobile 
-                            memory={memory} 
-                            onImagesUploaded={() => {
-                                queryClient.invalidateQueries({ queryKey: ['memory', id] });
-                                queryClient.invalidateQueries({ queryKey: ['memoryCarousel', id] });
-                            }}
-                        />
-                    )}
-
-                    {activeTab === 'cronologia' && (
-                        <CronologiaRicordoMobile memory={memory} />
-                    )}
-                </div>
-            </motion.div>
-
-            {/* Tabs in fondo (fissati) - spostati fuori dal contenitore di info */}
-            <div
-                className="fixed bottom-0 left-0 right-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 z-[100020]"
-                style={{
-                    background: 'transparent'
-                }}
-            >
-                <div className="flex items-center justify-center px-4">
-                    <div className="inline-flex items-center rounded-full bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-md p-1 shadow-sm w-full">
-                        <button
-                            ref={infoTabRef}
-                            onClick={() => handleTabChange('info')}
-                            className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                                activeTab === 'info'
-                                    ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
-                                    : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
-                            }`}
-                            style={{ 
-                                touchAction: 'manipulation',
-                                WebkitTapHighlightColor: 'transparent'
-                            }}
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Info</span>
-                        </button>
-                        <button
-                            ref={galleriaTabRef}
-                            onClick={() => handleTabChange('galleria')}
-                            className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                                activeTab === 'galleria'
-                                    ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
-                                    : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
-                            }`}
-                            style={{ 
-                                touchAction: 'manipulation',
-                                WebkitTapHighlightColor: 'transparent'
-                            }}
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span>Galleria</span>
-                        </button>
-                        <button
-                            ref={cronologiaTabRef}
-                            onClick={() => handleTabChange('cronologia')}
-                            className={`flex-1 py-2 px-4 rounded-full text-xs font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                                activeTab === 'cronologia'
-                                    ? 'bg-white dark:bg-gray-700 text-black dark:text-white shadow-sm font-semibold'
-                                    : 'text-gray-600 dark:text-gray-400 bg-transparent hover:bg-white/10 dark:hover:bg-gray-700/20'
-                            }`}
-                            style={{ 
-                                touchAction: 'manipulation',
-                                WebkitTapHighlightColor: 'transparent'
-                            }}
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Cronologia</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {/* Modali */}
-            {isEditModalOpen && (
-                <MemoryEditModal
-                    isOpen={isEditModalOpen}
-                    onClose={closeEditModal}
-                    memory={memory}
-                    onSave={handleUpdateMemory}
-                />
-            )}
-
-            {isDeleteModalOpen && (
-                <DeleteModal
-                    isOpen={isDeleteModalOpen}
-                    onClose={closeDeleteModal}
-                    onDelete={handleDelete}
-                    isDeleting={isDeleting}
-                />
-            )}
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-page)] text-[var(--text-secondary)]">
+        Caricamento ricordo...
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen bg-[var(--bg-page)]">
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 z-20">
+          <MobileHeader
+            variant="overlay"
+            title={memory.title}
+            onBack={() => navigate(-1)}
+            rightActions={
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
+                  aria-label="Condividi"
+                >
+                  <IoShareSocialOutline className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFavorite((prev) => !prev)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
+                  aria-label="Preferiti"
+                >
+                  <IoHeartOutline className={`h-5 w-5 ${isFavorite ? 'text-[var(--color-accent-pink)]' : ''}`} />
+                </button>
+              </div>
+            }
+          />
+        </div>
+
+        <div className="relative h-[44vh] w-full overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          {imageToShow ? (
+            <img src={imageToShow} alt={memory.title} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
+              Nessuna immagine disponibile
+            </div>
+          )}
+
+          <span className="absolute left-4 top-20 rounded-full border border-white/30 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md">
+            {memory.type}
+          </span>
+
+          {carouselImages.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1">
+              {carouselImages.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1.5 rounded-full ${idx === currentImageIndex ? 'w-6 bg-white' : 'w-2 bg-white/60'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <section className="-mt-5 rounded-t-[20px] bg-[var(--bg-card)] px-4 pb-28 pt-5 shadow-[var(--shadow-md)]">
+        <h1 className="text-xl font-bold text-[var(--text-primary)]">{memory.title}</h1>
+        {locationAndDate && (
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">{locationAndDate}</p>
+        )}
+
+        <div className="mt-4">
+          <SegmentedControl<DetailTab>
+            options={[
+              { key: 'overview', label: 'Overview' },
+              { key: 'galleria', label: 'Galleria' },
+              { key: 'info', label: 'Info' },
+            ]}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
+        </div>
+
+        {activeTab === 'overview' && (
+          <div className="mt-4 space-y-4">
+            {memory.description && (
+              <div>
+                <h3 className="mb-1 text-sm font-semibold text-[var(--text-primary)]">Descrizione</h3>
+                <p className={`text-sm text-[var(--text-secondary)] ${expandedDescription ? '' : 'line-clamp-4'}`}>
+                  {memory.description}
+                </p>
+                {memory.description.length > 180 && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDescription((prev) => !prev)}
+                    className="mt-1 text-sm font-medium text-[var(--color-primary)]"
+                  >
+                    {expandedDescription ? 'Mostra meno' : 'Leggi tutto'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {(memory.start_date || memory.location) && (
+              <div className="grid gap-2 text-sm text-[var(--text-secondary)]">
+                {memory.start_date && (
+                  <div className="flex items-center gap-2">
+                    <IoCalendarOutline className="h-4 w-4" />
+                    <span>{locationAndDate.split('•').pop()?.trim() || locationAndDate}</span>
+                  </div>
+                )}
+                {memory.location && (
+                  <div className="flex items-center gap-2">
+                    <IoLocationOutline className="h-4 w-4" />
+                    <span>{memory.location}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {spotifyTrack && (
+              <div className="rounded-card border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3">
+                <p className="text-xs uppercase text-[var(--text-tertiary)]">Brano associato</p>
+                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">{spotifyTrack.name}</p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {spotifyTrack.artists.map((artist) => artist.name).join(', ')}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'galleria' && (
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {(memory.images || []).map((image, index) => (
+              <button
+                key={image.id}
+                type="button"
+                onClick={() => {
+                  const selected = carouselImages.findIndex((carousel) => carousel.image === image.webp_path || carousel.image === image.thumb_big_path);
+                  setCurrentImageIndex(selected >= 0 ? selected : index % Math.max(carouselImages.length, 1));
+                }}
+                className="aspect-square overflow-hidden rounded-lg bg-[var(--bg-secondary)]"
+              >
+                <img
+                  src={image.thumb_big_path ? getImageUrl(image.thumb_big_path) : ''}
+                  alt={`Immagine ${index + 1}`}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'info' && (
+          <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
+            <p>
+              <span className="font-medium text-[var(--text-primary)]">Tipo:</span> {memory.type}
+            </p>
+            <p>
+              <span className="font-medium text-[var(--text-primary)]">Creato il:</span>{' '}
+              {format(parseISO(memory.created_at), 'd MMMM yyyy', { locale: it })}
+            </p>
+            <p>
+              <span className="font-medium text-[var(--text-primary)]">Ultimo aggiornamento:</span>{' '}
+              {format(parseISO(memory.updated_at), 'd MMMM yyyy', { locale: it })}
+            </p>
+            {memory.created_by_name && (
+              <p>
+                <span className="font-medium text-[var(--text-primary)]">Creato da:</span> {memory.created_by_name}
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border-default)] bg-[var(--bg-card)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="grid grid-cols-3 gap-2">
+          <Button variant="secondary" onClick={() => setIsEditOpen(true)}>
+            Modifica
+          </Button>
+          <Button variant="secondary" onClick={() => setIsDeleteOpen(true)}>
+            Elimina
+          </Button>
+          <Button onClick={handleShare}>Condividi</Button>
+        </div>
+      </div>
+
+      {isEditOpen && (
+        <MemoryEditModal
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          memory={{
+            ...memory,
+            created_by_name: memory.created_by_name ?? '',
+            created_by_user_id: memory.created_by_user_id ?? 0,
+          }}
+          onSave={handleSaveMemory}
+        />
+      )}
+
+      {isDeleteOpen && (
+        <DeleteModal
+          isOpen={isDeleteOpen}
+          onClose={() => setIsDeleteOpen(false)}
+          onDelete={handleDeleteMemory}
+          isDeleting={isDeleting}
+        />
+      )}
+    </div>
+  );
 }
