@@ -44,19 +44,19 @@ const CACHE_CONFIG = {
 // Funzione per determinare la strategia di cache per una richiesta
 const getCacheStrategy = (request: Request): string => {
   const url = new URL(request.url);
-  
+
   // Risorse statiche
-  if (url.pathname.endsWith('.html') || 
-      url.pathname.endsWith('.css') || 
-      url.pathname.endsWith('.js') || 
-      url.pathname.endsWith('.png') || 
-      url.pathname.endsWith('.webp') || 
-      url.pathname.endsWith('.svg') ||
-      url.pathname.endsWith('.jpg') ||
-      url.pathname.endsWith('.ico')) {
+  if (url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.webp') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.ico')) {
     return CACHE_STRATEGIES.STATIC;
   }
-  
+
   // API calls
   if (url.pathname.startsWith('/api/')) {
     // Per le API di lettura, usa stale-while-revalidate
@@ -66,7 +66,7 @@ const getCacheStrategy = (request: Request): string => {
     // Per le API di scrittura, usa network-first
     return CACHE_STRATEGIES.NETWORK_FIRST;
   }
-  
+
   // Default per altre risorse
   return CACHE_STRATEGIES.DYNAMIC;
 };
@@ -75,11 +75,11 @@ const getCacheStrategy = (request: Request): string => {
 const handleStaticCache = async (request: Request): Promise<Response> => {
   const cache = await caches.open(CACHE_CONFIG.STATIC.name);
   const cachedResponse = await cache.match(request);
-  
+
   if (cachedResponse) {
     return cachedResponse;
   }
-  
+
   const networkResponse = await fetch(request);
   cache.put(request, networkResponse.clone());
   return networkResponse;
@@ -89,24 +89,24 @@ const handleStaticCache = async (request: Request): Promise<Response> => {
 const handleDynamicCache = async (request: Request): Promise<Response> => {
   const cache = await caches.open(CACHE_CONFIG.DYNAMIC.name);
   const cachedResponse = await cache.match(request);
-  
+
   if (cachedResponse) {
     const cachedData = await cachedResponse.json();
     const cacheAge = Date.now() - new Date(cachedData.timestamp).getTime();
-    
+
     if (cacheAge < CACHE_CONFIG.DYNAMIC.maxAge) {
       return cachedResponse;
     }
   }
-  
+
   const networkResponse = await fetch(request);
   const responseData = await networkResponse.clone().json();
   responseData.timestamp = new Date().toISOString();
-  
+
   const cacheResponse = new Response(JSON.stringify(responseData), {
     headers: { 'Content-Type': 'application/json' }
   });
-  
+
   cache.put(request, cacheResponse.clone());
   return networkResponse;
 };
@@ -114,22 +114,22 @@ const handleDynamicCache = async (request: Request): Promise<Response> => {
 // Funzione per gestire la strategia network-first
 const handleNetworkFirst = async (request: Request): Promise<Response> => {
   const cache = await caches.open(CACHE_CONFIG.NETWORK_FIRST.name);
-  
+
   try {
     // Impostiamo un timeout per le richieste di rete
     const controller = new AbortController();
     const signal = controller.signal;
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondi di timeout
-    
+
     try {
       const networkResponse = await fetch(request, { signal });
       clearTimeout(timeoutId);
-      
+
       // Se la risposta non è OK (es. 404, 500), lanciamo un errore
       if (!networkResponse.ok) {
         throw new Error(`HTTP error! status: ${networkResponse.status}`);
       }
-      
+
       // Salva nella cache e restituisci la risposta
       cache.put(request, networkResponse.clone());
       return networkResponse;
@@ -139,16 +139,16 @@ const handleNetworkFirst = async (request: Request): Promise<Response> => {
     }
   } catch (error) {
     //console.log(`[SW] Errore di rete per ${request.url}. Cerco nella cache...`);
-    
+
     const cachedResponse = await cache.match(request);
     if (cachedResponse) {
       //console.log(`[SW] Risposta trovata nella cache per ${request.url}`);
       return cachedResponse;
     }
-    
+
     // Se non c'è risposta nella cache, restituisci una risposta generica di errore
     //console.log(`[SW] Nessuna risposta nella cache per ${request.url}`);
-    
+
     // Se la richiesta è per un'API, restituisci un JSON di errore
     if (request.url.includes('/api/')) {
       return new Response(JSON.stringify({
@@ -157,22 +157,22 @@ const handleNetworkFirst = async (request: Request): Promise<Response> => {
         message: 'Verifica la tua connessione di rete'
       }), {
         status: 503,
-        headers: {'Content-Type': 'application/json'}
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    // Per richieste di navigazione, mantieni il comportamento originale
+
+    // Fallback alla pagina offline per le richieste di navigazione
     if (request.mode === 'navigate') {
-      const offlineResponse = await caches.match('/offline.html');
+      const offlineResponse = await caches.match(new Request('/offline.html'));
       if (offlineResponse) {
         return offlineResponse;
       }
     }
-    
+
     // Per altre richieste (es. immagini, CSS, JS), ritorna una risposta vuota
-    return new Response('', { 
-      status: 408, 
-      statusText: 'Richiesta scaduta, connessione non disponibile' 
+    return new Response('', {
+      status: 408,
+      statusText: 'Request Timeout'
     });
   }
 };
@@ -181,7 +181,7 @@ const handleNetworkFirst = async (request: Request): Promise<Response> => {
 const handleStaleWhileRevalidate = async (request: Request): Promise<Response> => {
   const cache = await caches.open(CACHE_CONFIG.DYNAMIC.name);
   const cachedResponse = await cache.match(request);
-  
+
   // Ritorna immediatamente la risposta dalla cache se disponibile
   if (cachedResponse) {
     // Aggiorna la cache in background
@@ -190,14 +190,14 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
         if (!networkResponse.ok) {
           throw new Error(`HTTP error! status: ${networkResponse.status}`);
         }
-        
+
         const responseData = await networkResponse.clone().json();
         responseData.timestamp = new Date().toISOString();
-        
+
         const newResponse = new Response(JSON.stringify(responseData), {
           headers: { 'Content-Type': 'application/json' }
         });
-        
+
         cache.put(request, newResponse);
       } catch (error) {
         console.error(`[SW] Errore nell'aggiornamento della cache:`, error);
@@ -207,30 +207,30 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
       console.error(`[SW] Errore nel fetch di rete:`, error);
       // Non facciamo nulla, perché abbiamo già restituito la risposta dalla cache
     });
-    
+
     return cachedResponse;
   }
-  
+
   // Se non c'è cache, fai la richiesta di rete
   try {
     const networkResponse = await fetch(request);
-    
+
     if (!networkResponse.ok) {
       throw new Error(`HTTP error! status: ${networkResponse.status}`);
     }
-    
+
     const responseData = await networkResponse.clone().json();
     responseData.timestamp = new Date().toISOString();
-    
+
     const newResponse = new Response(JSON.stringify(responseData), {
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
     cache.put(request, newResponse.clone());
     return newResponse;
   } catch (error) {
     console.error(`[SW] Errore nella richiesta di rete:`, error);
-    
+
     // Per richieste di API, ritorna un JSON di errore
     if (request.url.includes('/api/')) {
       return new Response(JSON.stringify({
@@ -239,14 +239,14 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
         message: 'Verifica la tua connessione di rete'
       }), {
         status: 503,
-        headers: {'Content-Type': 'application/json'}
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Per altre richieste, ritorna una risposta vuota
-    return new Response('', { 
-      status: 408, 
-      statusText: 'Richiesta scaduta, connessione non disponibile' 
+    return new Response('', {
+      status: 408,
+      statusText: 'Request Timeout'
     });
   }
 };
@@ -292,13 +292,13 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
 
 // Intercettazione delle richieste
 self.addEventListener('fetch', (event: FetchEvent) => {
-  // Ignora le richieste non GET
-  if (event.request.method !== 'GET') {
+  // Ignora le richieste non GET e non HTTP/HTTPS
+  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
     return;
   }
 
   const strategy = getCacheStrategy(event.request);
-  
+
   event.respondWith(
     (async () => {
       try {
@@ -316,15 +316,15 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         }
       } catch (error) {
         console.error(`[SW] Errore non gestito nell'intercettazione della richiesta:`, error);
-        
+
         // Fallback alla pagina offline per le richieste di navigazione
         if (event.request.mode === 'navigate') {
-          const offlineResponse = await caches.match('/offline.html');
+          const offlineResponse = await caches.match(new Request('/offline.html'));
           if (offlineResponse) {
             return offlineResponse;
           }
         }
-        
+
         // Per richieste API, ritorna un JSON di errore
         if (event.request.url.includes('/api/')) {
           return new Response(JSON.stringify({
@@ -333,19 +333,19 @@ self.addEventListener('fetch', (event: FetchEvent) => {
             message: 'Si è verificato un errore imprevisto'
           }), {
             status: 500,
-            headers: {'Content-Type': 'application/json'}
+            headers: { 'Content-Type': 'application/json' }
           });
         }
-        
+
         // Per altre richieste, ritorna una risposta vuota
-        return new Response('', { 
-          status: 500, 
-          statusText: 'Errore interno del service worker' 
+        return new Response('', {
+          status: 500,
+          statusText: 'Internal Server Error'
         });
       }
     })()
   );
-}); 
+});
 
 self.addEventListener('push', (event: PushEvent) => {
   const defaultPayload: Required<Pick<PushNotificationPayload, 'title' | 'body' | 'url' | 'icon' | 'badge'>> = {
