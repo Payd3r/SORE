@@ -46,7 +46,9 @@ const getCacheStrategy = (request: Request): string => {
   const url = new URL(request.url);
 
   // Risorse statiche
-  if (url.pathname.endsWith('.html') ||
+  if (request.mode === 'navigate' ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('.html') ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.png') ||
@@ -67,7 +69,7 @@ const getCacheStrategy = (request: Request): string => {
     return CACHE_STRATEGIES.NETWORK_FIRST;
   }
 
-  // Default per altre risorse
+  // Default per altre risorse se necessario
   return CACHE_STRATEGIES.DYNAMIC;
 };
 
@@ -91,23 +93,41 @@ const handleDynamicCache = async (request: Request): Promise<Response> => {
   const cachedResponse = await cache.match(request);
 
   if (cachedResponse) {
-    const cachedData = await cachedResponse.json();
-    const cacheAge = Date.now() - new Date(cachedData.timestamp).getTime();
-
-    if (cacheAge < CACHE_CONFIG.DYNAMIC.maxAge) {
-      return cachedResponse;
+    try {
+      const cachedData = await cachedResponse.clone().json();
+      if (cachedData && cachedData.timestamp) {
+        const cacheAge = Date.now() - new Date(cachedData.timestamp).getTime();
+        if (cacheAge < CACHE_CONFIG.DYNAMIC.maxAge) {
+          return cachedResponse;
+        }
+      }
+    } catch (e) {
+      // Se non è JSON o non ha timestamp, logica fallita, facciamo cmq fallback a network
     }
   }
 
   const networkResponse = await fetch(request);
-  const responseData = await networkResponse.clone().json();
-  responseData.timestamp = new Date().toISOString();
+  const responseToCache = networkResponse.clone();
 
-  const cacheResponse = new Response(JSON.stringify(responseData), {
-    headers: { 'Content-Type': 'application/json' }
-  });
+  try {
+    const contentType = responseToCache.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const responseData = await responseToCache.json();
+      responseData.timestamp = new Date().toISOString();
 
-  cache.put(request, cacheResponse.clone());
+      const cacheResponse = new Response(JSON.stringify(responseData), {
+        headers: networkResponse.headers,
+        status: networkResponse.status,
+        statusText: networkResponse.statusText
+      });
+      cache.put(request, cacheResponse);
+    } else {
+      cache.put(request, networkResponse.clone());
+    }
+  } catch (error) {
+    cache.put(request, networkResponse.clone());
+  }
+
   return networkResponse;
 };
 
@@ -163,7 +183,8 @@ const handleNetworkFirst = async (request: Request): Promise<Response> => {
 
     // Fallback alla pagina offline per le richieste di navigazione
     if (request.mode === 'navigate') {
-      const offlineResponse = await caches.match(new Request('/offline.html'));
+      const offlineUrl = new URL('/offline.html', self.location.origin).href;
+      const offlineResponse = await caches.match(offlineUrl);
       if (offlineResponse) {
         return offlineResponse;
       }
@@ -191,14 +212,22 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
           throw new Error(`HTTP error! status: ${networkResponse.status}`);
         }
 
-        const responseData = await networkResponse.clone().json();
-        responseData.timestamp = new Date().toISOString();
+        const responseToCache = networkResponse.clone();
+        const contentType = responseToCache.headers.get('content-type');
 
-        const newResponse = new Response(JSON.stringify(responseData), {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        if (contentType && contentType.includes('application/json')) {
+          const responseData = await responseToCache.json();
+          responseData.timestamp = new Date().toISOString();
 
-        cache.put(request, newResponse);
+          const newResponse = new Response(JSON.stringify(responseData), {
+            headers: networkResponse.headers,
+            status: networkResponse.status,
+            statusText: networkResponse.statusText
+          });
+          cache.put(request, newResponse);
+        } else {
+          cache.put(request, networkResponse.clone());
+        }
       } catch (error) {
         console.error(`[SW] Errore nell'aggiornamento della cache:`, error);
         // Non lanciamo l'errore, perché l'operazione è in background
@@ -219,15 +248,24 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
       throw new Error(`HTTP error! status: ${networkResponse.status}`);
     }
 
-    const responseData = await networkResponse.clone().json();
-    responseData.timestamp = new Date().toISOString();
+    const responseToCache = networkResponse.clone();
+    const contentType = responseToCache.headers.get('content-type');
 
-    const newResponse = new Response(JSON.stringify(responseData), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    if (contentType && contentType.includes('application/json')) {
+      const responseData = await responseToCache.json();
+      responseData.timestamp = new Date().toISOString();
 
-    cache.put(request, newResponse.clone());
-    return newResponse;
+      const newResponse = new Response(JSON.stringify(responseData), {
+        headers: networkResponse.headers,
+        status: networkResponse.status,
+        statusText: networkResponse.statusText
+      });
+      cache.put(request, newResponse.clone());
+      return newResponse;
+    } else {
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
   } catch (error) {
     console.error(`[SW] Errore nella richiesta di rete:`, error);
 
@@ -319,7 +357,8 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 
         // Fallback alla pagina offline per le richieste di navigazione
         if (event.request.mode === 'navigate') {
-          const offlineResponse = await caches.match(new Request('/offline.html'));
+          const offlineUrl = new URL('/offline.html', self.location.origin).href;
+          const offlineResponse = await caches.match(offlineUrl);
           if (offlineResponse) {
             return offlineResponse;
           }
