@@ -8,11 +8,11 @@ import EditProfileModal from '../../desktop/components/Profile/EditProfileModal'
 import DeleteAccountModal from '../../desktop/components/Profile/DeleteAccountModal';
 import { ChangePassModal } from '../../desktop/components/Profile/ChangePassModal';
 import { getImageUrl } from '../../api/images';
-import Loader from '../../desktop/components/Layout/Loader';
 import { getRecapData, getRecapConfronto, RecapStats, RecapConfronto } from '../../api/recap';
 import { useEffect, useState, useCallback } from 'react';
 import { useIsPwa } from '../../utils/isPwa';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { SkeletonProfileHeaderMobile, SkeletonStatsMobile } from '../components/skeletons';
 
 export default function ProfileMobile() {
   const { user, logout } = useAuth();
@@ -107,7 +107,7 @@ export default function ProfileMobile() {
   });
 
   // React Query per il fetching dei dati del recap
-  const { data: recapData, isLoading: isLoadingRecap } = useQuery<RecapStats>({
+  const { data: recapData, isLoading: isLoadingRecap, isFetching: isFetchingRecap } = useQuery<RecapStats>({
     queryKey: ['recap-data'],
     queryFn: getRecapData,
     staleTime: 5 * 60 * 1000, // 5 minuti
@@ -115,14 +115,19 @@ export default function ProfileMobile() {
   });
 
   // React Query per il fetching dei dati del confronto
-  const { data: confrontoData, isLoading: isLoadingConfronto } = useQuery<RecapConfronto>({
+  const {
+    data: confrontoData,
+    isLoading: isLoadingConfronto,
+    isFetching: isFetchingConfronto,
+  } = useQuery<RecapConfronto>({
     queryKey: ['recap-confronto'],
     queryFn: getRecapConfronto,
     staleTime: 5 * 60 * 1000, // 5 minuti
     enabled: activeTab === 'stats',
   });
 
-  const isLoading = isLoadingUser || isLoadingCouple || isLoadingRecap || isLoadingConfronto;
+  const isInitialLoading = isLoadingUser || isLoadingCouple;
+  const isFetchingStats = isFetchingRecap || isFetchingConfronto;
   const error = !user?.id ? 'Utente non autenticato' :
     !userInfoData?.couple_id ? 'Nessuna coppia associata all\'utente' : null;
 
@@ -134,10 +139,13 @@ export default function ProfileMobile() {
 
   const partner = getPartner();
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-[100000]">
-        <Loader fullScreen text="Caricamento in corso..." subText="Stiamo preparando l'app per te" />
+      <div className="fixed inset-0 overflow-auto bg-[#F2F2F7] px-4 pb-20 pt-24 dark:bg-black z-[100000]">
+        <div className="space-y-4">
+          <SkeletonProfileHeaderMobile />
+          <SkeletonStatsMobile />
+        </div>
       </div>
     );
   }
@@ -355,10 +363,15 @@ export default function ProfileMobile() {
           </div>
         ) : (
           <div className="space-y-6">
-            {(isLoadingRecap || isLoadingConfronto) ? (
-              <div className="flex justify-center items-center py-10">
-                <Loader type="spinner" size="md" />
+            {isFetchingStats && recapData && confrontoData && (
+              <div className="flex justify-center">
+                <span className="rounded-full bg-white/70 px-3 py-1 text-xs text-blue-500 dark:bg-gray-800/70">
+                  Aggiornamento statistiche...
+                </span>
               </div>
+            )}
+            {(isLoadingRecap || isLoadingConfronto) ? (
+              <SkeletonStatsMobile />
             ) : (
               <>
                 {/* Sezione Panoramica */}

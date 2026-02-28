@@ -17,12 +17,14 @@ import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-mo
 import { getMemory, getMemoryCarousel, updateMemory, deleteMemory, type Memory } from '../../api/memory';
 import { getImageUrl } from '../../api/images';
 import { getTrackDetails, SpotifyTrack } from '../../api/spotify';
-import Loader from '../../desktop/components/Layout/Loader';
 import InfoRicordoMobile from '../components/InfoRicordoMobile';
 import GalleriaRicordoMobile from '../components/GalleriaRicordoMobile';
 import CronologiaRicordoMobile from '../components/CronologiaRicordoMobile';
 import MemoryEditModal from '../../desktop/components/Memory/MemoryEditModal';
 import DeleteModal from '../../desktop/components/Memory/DeleteModal';
+import { Button } from '../../components/ui';
+import Skeleton from '../../components/ui/Skeleton';
+import { SkeletonMemoryDetailMobile } from '../components/skeletons';
 
 // Interfacce
 interface CarouselImage {
@@ -565,7 +567,9 @@ export default function DetailMemoryMobile() {
         return (
             <div className="absolute left-4 right-4 bottom-4 bg-black/40 backdrop-blur-md rounded-xl overflow-hidden shadow-lg z-10">
                 {isLoadingTrack ? (
-                    <div className="animate-pulse h-16 bg-gray-700/50"></div>
+                    <div className="h-16 bg-gray-700/40 p-3">
+                        <Skeleton className="h-full w-full rounded-lg bg-gray-600/60" />
+                    </div>
                 ) : spotifyData ? (
                     <div className="flex items-center gap-3 py-2 px-3">
                         {spotifyData.album?.images?.[0]?.url && (
@@ -606,11 +610,7 @@ export default function DetailMemoryMobile() {
 
     // Main UI render
     if (isLoading) {
-        return (
-            <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-[100000]">
-                <Loader />
-            </div>
-        );
+        return <SkeletonMemoryDetailMobile />;
     }
 
     if (!memory) {
@@ -666,51 +666,59 @@ export default function DetailMemoryMobile() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                         >
-                            <button
+                            <Button
                                 ref={backButtonRef}
                                 onClick={handleClose}
-                                className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                variant="ghost"
+                                size="icon"
+                                className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
                                 style={{ 
                                     touchAction: 'manipulation',
                                     WebkitTapHighlightColor: 'transparent'
                                 }}
                             >
                                 <IoChevronBack className="w-5 h-5" />
-                            </button>
+                            </Button>
 
                             <div className="flex gap-2">
-                                <button
+                                <Button
                                     ref={editButtonRef}
                                     onClick={openEditModal}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
                                     style={{ 
                                         touchAction: 'manipulation',
                                         WebkitTapHighlightColor: 'transparent'
                                     }}
                                 >
                                     <IoCreateOutline className="w-5 h-5" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     ref={deleteButtonRef}
                                     onClick={openDeleteModal}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
                                     style={{ 
                                         touchAction: 'manipulation',
                                         WebkitTapHighlightColor: 'transparent'
                                     }}
                                 >
                                     <IoTrashOutline className="w-5 h-5" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     ref={shareButtonRef}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-lg text-white z-40"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="z-40 bg-black/30 text-white backdrop-blur-lg hover:bg-black/40"
                                     style={{ 
                                         touchAction: 'manipulation',
                                         WebkitTapHighlightColor: 'transparent'
                                     }}
                                 >
                                     <IoShareOutline className="w-5 h-5" />
-                                </button>
+                                </Button>
                             </div>
                         </motion.div>
                     )}

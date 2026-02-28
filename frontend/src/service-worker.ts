@@ -100,15 +100,15 @@ const handleDynamicCache = async (request: Request): Promise<Response> => {
   }
   
   const networkResponse = await fetch(request);
-  const responseData = await networkResponse.json();
+  const responseData = await networkResponse.clone().json();
   responseData.timestamp = new Date().toISOString();
   
-  const newResponse = new Response(JSON.stringify(responseData), {
-    headers: networkResponse.headers
+  const cacheResponse = new Response(JSON.stringify(responseData), {
+    headers: { 'Content-Type': 'application/json' }
   });
   
-  cache.put(request, newResponse.clone());
-  return newResponse;
+  cache.put(request, cacheResponse.clone());
+  return networkResponse;
 };
 
 // Funzione per gestire la strategia network-first
@@ -195,7 +195,7 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
         responseData.timestamp = new Date().toISOString();
         
         const newResponse = new Response(JSON.stringify(responseData), {
-          headers: networkResponse.headers
+          headers: { 'Content-Type': 'application/json' }
         });
         
         cache.put(request, newResponse);
@@ -223,7 +223,7 @@ const handleStaleWhileRevalidate = async (request: Request): Promise<Response> =
     responseData.timestamp = new Date().toISOString();
     
     const newResponse = new Response(JSON.stringify(responseData), {
-      headers: networkResponse.headers
+      headers: { 'Content-Type': 'application/json' }
     });
     
     cache.put(request, newResponse.clone());

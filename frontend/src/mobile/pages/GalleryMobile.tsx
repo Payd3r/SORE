@@ -4,8 +4,10 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import ImageDetailMobile from './ImageDetailMobile';
 import LazyImage from '../../desktop/components/Images/LazyImage';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import Loader from '../../desktop/components/Layout/Loader';
 import { useQueryClient } from '@tanstack/react-query';
+import { usePinchGrid } from '../gestures';
+import { SkeletonGalleryGridMobile } from '../components/skeletons';
+import { useMobileLoadingState } from '../hooks/useMobileLoadingState';
 
 type SortOption = 'newest' | 'oldest' | 'random';
 type ImageTypeFilter = 'all' | 'COPPIA' | 'SINGOLO' | 'PAESAGGIO' | 'CIBO';
@@ -25,10 +27,7 @@ export default function GalleryMobile() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [initialTouchDistance, setInitialTouchDistance] = useState<number | null>(null);
-  const [_pinchScale, setPinchScale] = useState<number>(1);
   const [isPinching, setIsPinching] = useState(false);
-  const lastPinchTimeRef = useRef<number>(0);
   const [showFilters, setShowFilters] = useState(false);
 
   // Riferimento per tenere traccia del mese visibile al centro dello schermo
@@ -45,6 +44,7 @@ export default function GalleryMobile() {
   const {
     data,
     isLoading: loading,
+    isFetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -69,6 +69,7 @@ export default function GalleryMobile() {
     staleTime: 5 * 60 * 1000, // 5 minuti
     retry: 2,
     refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
   // Combina tutte le immagini dalle pagine caricate
@@ -120,6 +121,12 @@ export default function GalleryMobile() {
   const filteredImages = useMemo(() => {
     return sortImages(filterImages(allImages));
   }, [allImages, sortImages, filterImages]);
+
+  const galleryLoadingState = useMobileLoadingState({
+    isLoading: loading,
+    isFetching,
+    data: filteredImages,
+  });
 
   // Gestione dello scroll infinito
   useEffect(() => {
@@ -243,56 +250,23 @@ export default function GalleryMobile() {
     }
   }, [selectedImages, refetch]);
 
-  // Gestione delle gesture di pinch per lo zoom in/out
+  const pinch = usePinchGrid({
+    compact: isCompactGrid,
+    onCompactChange: setIsCompactGrid,
+  });
+
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (e.touches.length !== 2) return;
-
-    // Calcola la distanza iniziale tra le dita
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
-    const distance = Math.hypot(
-      touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
-    );
-
-    setInitialTouchDistance(distance);
-    setIsPinching(true);
-    setPinchScale(1); // Reset dello scale al valore iniziale
-  }, []);
+    if (e.touches.length === 2) setIsPinching(true);
+    pinch.onTouchStart(e as React.TouchEvent);
+  }, [pinch]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (e.touches.length !== 2 || initialTouchDistance === null) return;
-
-    // Calcola la distanza attuale tra le dita
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
-    const currentDistance = Math.hypot(
-      touch2.clientX - touch1.clientX,
-      touch2.clientY - touch1.clientY
-    );
-
-    // Calcola il fattore di scala tra la distanza iniziale e quella attuale
-    const newScale = currentDistance / initialTouchDistance;
-    setPinchScale(newScale);
-
-    // Throttle il cambio di modalità per evitare cambi troppo rapidi
-    const now = Date.now();
-    if (now - lastPinchTimeRef.current > 300) { // Controllo ogni 300ms
-      // Determina se è pinch in o pinch out
-      if (newScale < 0.8 && isCompactGrid === false) {
-        setIsCompactGrid(true);
-        lastPinchTimeRef.current = now;
-      } else if (newScale > 1.2 && isCompactGrid === true) {
-        setIsCompactGrid(false);
-        lastPinchTimeRef.current = now;
-      }
-    }
-  }, [initialTouchDistance, isCompactGrid]);
+    pinch.onTouchMove(e as React.TouchEvent);
+  }, [pinch]);
 
   const handleTouchEnd = () => {
     setIsPinching(false);
-    setInitialTouchDistance(null);
-    lastPinchTimeRef.current = 0;
+    pinch.onTouchEnd();
   };
 
   // Ricalcola il layout quando lo schermo cambia dimensione
@@ -549,9 +523,16 @@ export default function GalleryMobile() {
       {/* Contenuto principale - scrolling */}
       <div className="flex-1 overflow-auto" ref={scrollContainerRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         <div className="min-h-full">
-          {loading && filteredImages.length === 0 ? (
-            <div className="w-full flex items-center justify-center py-20">
-              <Loader type="spinner" size="md" />
+          {galleryLoadingState.showSoftRefreshing && (
+            <div className="flex justify-center pt-24">
+              <span className="rounded-full bg-white/70 px-3 py-1 text-xs text-blue-500 dark:bg-gray-800/70">
+                Aggiornamento galleria...
+              </span>
+            </div>
+          )}
+          {galleryLoadingState.showSkeleton ? (
+            <div className="w-full pt-32">
+              <SkeletonGalleryGridMobile compact={isCompactGrid} count={35} />
             </div>
           ) : filteredImages.length === 0 ? (
             <div className="w-full flex items-center justify-center py-20">
@@ -628,8 +609,8 @@ export default function GalleryMobile() {
 
                     {/* Indicatore di caricamento per infinite scroll */}
                     {isFetchingNextPage && (
-                      <div className="py-6 flex justify-center">
-                        <Loader type="spinner" size="sm" />
+                      <div className="py-4">
+                        <SkeletonGalleryGridMobile compact={isCompactGrid} count={isCompactGrid ? 10 : 6} />
                       </div>
                     )}
                   </div>
@@ -764,8 +745,8 @@ export default function GalleryMobile() {
                       ))}
                     {/* Indicatore di caricamento per infinite scroll */}
                     {isFetchingNextPage && (
-                      <div className="py-6 flex justify-center">
-                        <Loader type="spinner" size="sm" />
+                      <div className="py-4">
+                        <SkeletonGalleryGridMobile compact={isCompactGrid} count={isCompactGrid ? 10 : 6} />
                       </div>
                     )}
                   </div>

@@ -20,9 +20,36 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
         },
+        ios: {
+          blue: '#0A84FF',
+          green: '#30D158',
+          red: '#FF453A',
+          orange: '#FF9F0A',
+          yellow: '#FFD60A',
+          gray: '#8E8E93',
+          bg: '#F2F2F7',
+          card: '#FFFFFF',
+          darkBg: '#000000',
+          darkCard: '#1C1C1E',
+        }
       },
       fontFamily: {
-        sans: ['Inter var', 'sans-serif'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', 'Inter var', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        'ios-sm': '12px',
+        'ios-md': '16px',
+        'ios-lg': '20px',
+        'ios-xl': '24px',
+      },
+      boxShadow: {
+        'ios-card': '0 10px 30px -20px rgba(15, 23, 42, 0.45)',
+        'ios-float': '0 16px 40px -24px rgba(2, 8, 23, 0.6)',
+      },
+      spacing: {
+        'ios-edge': '16px',
+        'ios-gap': '12px',
+        'ios-touch': '44px',
       },
       animation: {
         'fadeIn': 'fadeIn 0.5s ease-in',

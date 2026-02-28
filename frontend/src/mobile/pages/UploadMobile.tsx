@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { createMemory, MemoryType } from '../../api/memory';
 import { createIdea, IdeaType } from '../../api/ideas';
 import { useUpload } from '../../contexts/UploadContext';
+import { Button, Card as UiCard, SegmentedControl } from '../../components/ui';
+import Skeleton from '../../components/ui/Skeleton';
 
 type UploadTab = 'MEMORY' | 'IMAGE' | 'IDEA';
 
@@ -169,27 +171,25 @@ export default function UploadMobile() {
         <h1 className="mb-4 text-center text-xl font-semibold tracking-tight text-[#111827] dark:text-white">
           Nuovo Upload
         </h1>
-        <div className="rounded-2xl bg-white/80 p-1 shadow-sm dark:bg-gray-900/80">
-          <div className="grid grid-cols-3 gap-1">
-            {tabOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => setTab(option.id)}
-                className={`rounded-xl px-3 py-2 text-xs font-medium transition ${
-                  tab === option.id
-                    ? 'bg-[#0a84ff] text-white shadow'
-                    : 'text-gray-500 dark:text-gray-300'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SegmentedControl
+          value={tab}
+          options={tabOptions.map((option) => ({ value: option.id, label: option.label }))}
+          onChange={setTab}
+          className="bg-white/80 dark:bg-gray-900/80"
+        />
       </div>
 
       <div className="space-y-4 px-4 pt-4">
+        {isSaving && (
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-900/20">
+            <p className="text-xs font-medium text-blue-600 dark:text-blue-300">Pipeline upload in esecuzione</p>
+            <div className="mt-3 space-y-2" aria-hidden="true">
+              <Skeleton className="h-3 w-3/4 bg-blue-100 dark:bg-blue-900/60" />
+              <Skeleton className="h-3 w-2/3 bg-blue-100 dark:bg-blue-900/60" />
+              <Skeleton className="h-3 w-1/2 bg-blue-100 dark:bg-blue-900/60" />
+            </div>
+          </div>
+        )}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -209,11 +209,13 @@ export default function UploadMobile() {
               exit={{ opacity: 0, y: -12 }}
               className="space-y-4"
             >
-              <Card title="Titolo ricordo">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Titolo ricordo</h2>
                 <Input value={title} onChange={setTitle} placeholder="Es. Weekend al mare" />
-              </Card>
+              </UiCard>
 
-              <Card title="Tipo ricordo">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Tipo ricordo</h2>
                 <div className="grid grid-cols-2 gap-2">
                   {memoryTypeOptions.map((type) => (
                     <Pill
@@ -224,26 +226,29 @@ export default function UploadMobile() {
                     />
                   ))}
                 </div>
-              </Card>
+              </UiCard>
 
               {memoryType === 'FUTURO' && (
-                <Card title="Data futura (opzionale)">
+                <UiCard>
+                  <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Data futura (opzionale)</h2>
                   <input
                     type="date"
                     value={futureDate}
                     onChange={(e) => setFutureDate(e.target.value)}
                     className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#0a84ff] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   />
-                </Card>
+                </UiCard>
               )}
 
-              <Card title="Posizione (opzionale)">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Posizione (opzionale)</h2>
                 <Input value={location} onChange={setLocation} placeholder="Es. Firenze" />
-              </Card>
+              </UiCard>
 
-              <Card title="Canzone (opzionale)">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Canzone (opzionale)</h2>
                 <Input value={song} onChange={setSong} placeholder="Titolo - artista" />
-              </Card>
+              </UiCard>
 
               <PhotoPicker selectedFiles={selectedFiles} onSelectFiles={onSelectFiles} setSelectedFiles={setSelectedFiles} previews={previews} />
             </motion.section>
@@ -257,12 +262,13 @@ export default function UploadMobile() {
               exit={{ opacity: 0, y: -12 }}
               className="space-y-4"
             >
-              <Card title="Carica in galleria">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Carica in galleria</h2>
                 <p className="mb-3 text-sm text-gray-500 dark:text-gray-300">
                   Carica foto in background. Puoi chiudere questa schermata e continuare a usare la PWA.
                 </p>
                 <PhotoPicker selectedFiles={selectedFiles} onSelectFiles={onSelectFiles} setSelectedFiles={setSelectedFiles} previews={previews} />
-              </Card>
+              </UiCard>
             </motion.section>
           )}
 
@@ -274,20 +280,23 @@ export default function UploadMobile() {
               exit={{ opacity: 0, y: -12 }}
               className="space-y-4"
             >
-              <Card title="Titolo idea">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Titolo idea</h2>
                 <Input value={ideaTitle} onChange={setIdeaTitle} placeholder="Es. Cena in terrazza" />
-              </Card>
+              </UiCard>
 
-              <Card title="Descrizione">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Descrizione</h2>
                 <textarea
                   value={ideaDescription}
                   onChange={(e) => setIdeaDescription(e.target.value)}
                   placeholder="Aggiungi dettagli..."
                   className="h-28 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700 outline-none focus:border-[#0a84ff] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                 />
-              </Card>
+              </UiCard>
 
-              <Card title="Categoria">
+              <UiCard>
+                <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">Categoria</h2>
                 <div className="grid grid-cols-2 gap-2">
                   {ideaTypeOptions.map((type) => (
                     <Pill
@@ -298,32 +307,19 @@ export default function UploadMobile() {
                     />
                   ))}
                 </div>
-              </Card>
+              </UiCard>
             </motion.section>
           )}
         </AnimatePresence>
       </div>
 
       <div className="fixed bottom-16 left-0 right-0 z-20 px-4 pb-3">
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSaving}
-          className="w-full rounded-2xl bg-gradient-to-r from-[#0a84ff] to-[#5ac8fa] px-4 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
-        >
+        <motion.div whileTap={{ scale: 0.98 }}>
+          <Button type="button" onClick={handleSubmit} disabled={isSaving} className="w-full rounded-2xl bg-gradient-to-r from-[#0a84ff] to-[#5ac8fa] shadow-lg">
           {isSaving ? 'Elaborazione in corso...' : tab === 'IDEA' ? 'Salva Idea' : 'Avvia Upload'}
-        </motion.button>
+          </Button>
+        </motion.div>
       </div>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="rounded-3xl bg-white/85 p-4 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.7)] backdrop-blur-xl dark:bg-gray-900/80">
-      <h2 className="mb-3 text-sm font-semibold text-gray-800 dark:text-white">{title}</h2>
-      {children}
     </div>
   );
 }

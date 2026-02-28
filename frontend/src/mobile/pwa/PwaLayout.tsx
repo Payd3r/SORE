@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import DownBar from './DownBar';
 import MobileUploadStatus from '../components/MobileUploadStatus';
 import NotificationsMobile from '../components/NotificationsMobile';
-import { getNotifications } from '../../api/notifications';
 import { useUpload } from '../../contexts/UploadContext';
+import { useNotificationsSummaryQuery } from '../hooks/useNotificationsQuery';
+import { useReducedMotionSafe } from '../hooks/useReducedMotionSafe';
 
 /**
  * Layout specifico per la modalità PWA
@@ -14,34 +16,16 @@ const PwaLayout = () => {
   const location = useLocation();
   const mainRef = useRef<HTMLDivElement>(null);
   const { bootstrapPendingJobs } = useUpload();
+  const reduceMotion = useReducedMotionSafe();
   
   // Stati per gestire le notifiche
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  const { data: notificationsSummary, isLoading: notificationsSummaryLoading, refetch: refetchNotificationsSummary } = useNotificationsSummaryQuery(true);
+  const unreadNotificationsCount = notificationsSummary?.unread ?? 0;
   
-  // Carica le notifiche all'apertura della PWA
-  useEffect(() => {
-    fetchNotificationsCount();
-    
-    // Imposta un intervallo per controllare periodicamente le nuove notifiche
-    const intervalId = setInterval(fetchNotificationsCount, 60000); // ogni minuto
-    
-    return () => clearInterval(intervalId);
-  }, []);
-
   useEffect(() => {
     void bootstrapPendingJobs();
   }, [bootstrapPendingJobs]);
-  
-  // Funzione per recuperare il conteggio delle notifiche non lette
-  const fetchNotificationsCount = async () => {
-    try {
-      const response = await getNotifications(1, 0); // Richiedi solo 1 notifica, ci interessa solo il conteggio
-      setUnreadNotificationsCount(response.unread);
-    } catch (error) {
-      console.error('Errore nel recupero delle notifiche:', error);
-    }
-  };
 
   // Disattiva tutte le gesture di swipe per la sidebar
   useEffect(() => {
@@ -93,44 +77,39 @@ const PwaLayout = () => {
     };
   }, []);
 
-  // Blocca le gesture di swipe di default del browser (indietro/avanti)
-  useEffect(() => {
-    const preventSwipeNavigation = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      const touch = e.touches[0];
-      // Blocca swipe da bordo sinistro o destro (tipico per back/forward)
-      if (touch.clientX < 30 || touch.clientX > window.innerWidth - 30) {
-        e.preventDefault();
-      }
-    };
-    document.addEventListener('touchstart', preventSwipeNavigation, { passive: false });
-    return () => {
-      document.removeEventListener('touchstart', preventSwipeNavigation);
-    };
-  }, []);
-
   // Quando si chiude il modale delle notifiche, aggiorna il conteggio
   const handleCloseNotificationsModal = () => {
     setIsNotificationsModalOpen(false);
-    fetchNotificationsCount(); // Aggiorna il conteggio delle notifiche non lette
+    void refetchNotificationsSummary();
   };
 
   return (
     <div 
-      className="flex flex-col w-full h-[100dvh] relative overflow-hidden" 
+      className="relative flex h-[100dvh] w-full flex-col overflow-hidden" 
     >
       {/* Sfondo gradiente */}
       <div className="pwa-gradient-bg" />
 
       <main 
         ref={mainRef}
-        className="flex-1 overflow-auto overscroll-none relative touch-pan-y"
+        className="relative flex-1 overflow-auto overscroll-y-contain touch-pan-y pt-[max(env(safe-area-inset-top),0px)]"
       >
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' }}
+            className="h-full"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
       
       {/* Barra di navigazione inferiore fissa */}
-      <DownBar />
+      <DownBar unreadCount={unreadNotificationsCount} unreadCountLoading={notificationsSummaryLoading} />
       
       {/* Componente per visualizzare lo stato di caricamento */}
       <MobileUploadStatus />

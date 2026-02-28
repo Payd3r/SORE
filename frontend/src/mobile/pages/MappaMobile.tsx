@@ -2,9 +2,11 @@ import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Map from '../../desktop/components/Maps/Map';
 import { getMapImages } from '../../api/map';
-import Loader from '../../desktop/components/Layout/Loader';
 import { useRef, useState } from 'react';
 import { PhotoIcon, GlobeAltIcon, CalendarIcon, ChartBarIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { SkeletonMapMobile, SkeletonStatsMobile } from '../components/skeletons';
+import { useMobileLoadingState } from '../hooks/useMobileLoadingState';
 
 type StatsType = {
   countries: { name: string; count: number }[];
@@ -30,6 +32,10 @@ export default function MappaMobile() {
     queryKey: ['mapImages'],
     queryFn: getMapImages,
     staleTime: 5 * 60 * 1000, // 5 minuti
+  });
+  const mapLoadingState = useMobileLoadingState({
+    isLoading,
+    data: images,
   });
 
   const error = queryError ? queryError.message : null;
@@ -105,12 +111,15 @@ export default function MappaMobile() {
           ref={mapContainerRef}
           className="flex-1 relative overflow-hidden touch-manipulation"
         >
-          {isLoading ? (
-              <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-[100000]">
-                  <Loader subText="Caricamento mappa..." />
-              </div>          
+          {mapLoadingState.showSkeleton ? (
+            <SkeletonMapMobile />
           ) : (
-            <div className="h-full w-full">
+            <motion.div
+              className="h-full w-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            >
               <Map
                 images={images}
                 isLoading={isLoading}
@@ -124,16 +133,14 @@ export default function MappaMobile() {
                   focusedImage: mapState.focusedImage
                 } : undefined}
               />
-            </div>
+            </motion.div>
           )}
         </div>
       ) : (
         /* Contenitore delle statistiche in stile iOS 18 */
         <div className="flex-1 overflow-auto p-4 pt-6 pb-8">
           {isLoading ? (
-            <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-[100000]">
-              <Loader subText="Caricamento statistiche..." />
-            </div>
+            <SkeletonStatsMobile />
           ) : (
             <div className="space-y-6">
               {/* Quick Stats in stile iOS 18 */}

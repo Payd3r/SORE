@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getMemories, Memory, MemoryType } from '../../api/memory';
 import { getIdeas, Idea } from '../../api/ideas';
-import Loader from '../../desktop/components/Layout/Loader';
 import {
   IoFilter,
   IoSearch,
@@ -13,6 +12,9 @@ import {
 import IdeaCardMobile from '../components/IdeaCardMobile';
 import CardRicordoMobile from '../components/CardRicordoMobile';
 import DetailIdeaModal from '../../desktop/components/Idee/DetailIdeaModal';
+import { usePullToRefresh } from '../gestures';
+import { SkeletonIdeasListMobile, SkeletonMemoryCardMobile } from '../components/skeletons';
+import { useMobileLoadingState } from '../hooks/useMobileLoadingState';
 
 // Definizione tipi mancanti
 type RicordoTypeFilter = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
@@ -47,27 +49,40 @@ const HomeMobile = () => {
   const [isRefreshingData, setIsRefreshingData] = useState(false);
 
   // Query per i ricordi
-  const { data: memoriesData = [], isLoading: isLoadingMemories, refetch: refetchMemories } = useQuery<Memory[]>({
+  const {
+    data: memoriesData = [],
+    isLoading: isLoadingMemories,
+    isFetching: isFetchingMemories,
+    refetch: refetchMemories,
+  } = useQuery<Memory[]>({
     queryKey: ['memories'],
     queryFn: getMemories,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 
   // Query per le idee
-  const { data: ideasData = [], isLoading: isLoadingIdeas, refetch: refetchIdeas } = useQuery<Idea[]>({
+  const {
+    data: ideasData = [],
+    isLoading: isLoadingIdeas,
+    isFetching: isFetchingIdeas,
+    refetch: refetchIdeas,
+  } = useQuery<Idea[]>({
     queryKey: ['ideas'],
     queryFn: getIdeas,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Stati per pull-to-refresh
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
-  const [isPulling, setIsPulling] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasMovedEnough, setHasMovedEnough] = useState(false);
+  const memoriesLoadingState = useMobileLoadingState({
+    isLoading: isLoadingMemories,
+    isFetching: isFetchingMemories,
+    data: memoriesData,
+  });
+  const ideasLoadingState = useMobileLoadingState({
+    isLoading: isLoadingIdeas,
+    isFetching: isFetchingIdeas,
+    data: ideasData,
+  });
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   // Refs per tracciare se il touch è iniziato su una card
@@ -390,136 +405,48 @@ const HomeMobile = () => {
     };
   }, [isFilterMenuOpen, isSearchOpen]);
 
+  const pullToRefresh = usePullToRefresh({
+    enabled: activeTab === 'ricordi',
+    onRefresh: async () => {
+      await handleRefreshRicordi();
+    },
+  });
+
   // Handler touch per pull-to-refresh
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (activeTab !== 'ricordi') return;
-    
-    // PRIMA verifica: se target è interattivo (card, bottone, etc.), return early
     const target = e.target as HTMLElement;
     if (isInteractiveElement(target)) {
       touchStartedOnCardRef.current = true;
       return;
     }
-    
     touchStartedOnCardRef.current = false;
-    
-    // Solo se siamo in cima e non stiamo già facendo pull
-    if (scrollAreaRef.current && scrollAreaRef.current.scrollTop === 0 && !isPulling && !isRefreshing) {
-      setTouchStartY(e.touches[0].clientY);
-      setTouchStartX(e.touches[0].clientX);
-      setTouchStartTime(Date.now());
-      setPullDistance(0);
-      setHasMovedEnough(false);
-    }
+    pullToRefresh.onTouchStart(e, scrollAreaRef.current?.scrollTop ?? 0);
   };
   
   const handleTouchMove = (e: React.TouchEvent) => {
-    // Se il touch è iniziato su una card, non interferire
     if (touchStartedOnCardRef.current) {
       return;
     }
-    
-    // Se non abbiamo un punto di partenza, esci immediatamente senza interferire
-    if (touchStartY === null || touchStartX === null || touchStartTime === null) return;
-    
-    // Controlla sempre lo scrollTop - se l'utente ha scrollato, resetta tutto
-    const currentScrollTop = scrollAreaRef.current?.scrollTop ?? 0;
-    if (currentScrollTop > 0) {
-      setTouchStartY(null);
-      setTouchStartX(null);
-      setTouchStartTime(null);
-      setIsPulling(false);
-      setPullDistance(0);
-      setHasMovedEnough(false);
-      return;
-    }
-
-    const deltaY = e.touches[0].clientY - touchStartY;
-    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-    const elapsedTime = Date.now() - touchStartTime;
-    
-    // Se l'utente scrolla verso il basso (deltaY negativo), permetti scroll normale
-    // Reset immediato senza interferenze
-    if (deltaY < 0) {
-      setTouchStartY(null);
-      setTouchStartX(null);
-      setTouchStartTime(null);
-      setIsPulling(false);
-      setPullDistance(0);
-      setHasMovedEnough(false);
-      return;
-    }
-    
-    // Se c'è movimento orizzontale significativo, non è un pull-to-refresh
-    if (deltaX > 25) {
-      setTouchStartY(null);
-      setTouchStartX(null);
-      setTouchStartTime(null);
-      setIsPulling(false);
-      setPullDistance(0);
-      setHasMovedEnough(false);
-      return;
-    }
-
-    // Attiva pull-to-refresh se:
-    // 1. Il movimento verticale supera 20px E il tempo trascorso è > 50ms (per distinguere tap veloce da drag)
-    // 2. OPPURE se il movimento è > 35px (anche se veloce, è chiaramente un drag)
-    const isSignificantPull = (deltaY > 20 && elapsedTime > 50) || deltaY > 35;
-    
-    if (isSignificantPull) {
-      setIsPulling(true);
-      setHasMovedEnough(true);
-      const distance = deltaY > 120 ? 120 : deltaY;
-      setPullDistance(distance);
-      // Previeni lo scroll SOLO quando siamo sicuri che è un pull-to-refresh (distance > 40)
-      if (distance > 40) {
-        e.preventDefault();
-      }
-    } else {
-      // Movimento minimo, non ancora abbastanza - permetti scroll normale
-      setIsPulling(false);
-      setPullDistance(0);
-      setHasMovedEnough(false);
-    }
+    pullToRefresh.onTouchMove(e, scrollAreaRef.current?.scrollTop ?? 0);
   };
   const handleTouchEnd = async () => {
-    // Se il touch era iniziato su una card, resetta e return early
     if (touchStartedOnCardRef.current) {
       touchStartedOnCardRef.current = false;
       return;
     }
-    
-    // Se non era un pull valido, resetta tutto
-    if (!isPulling || !hasMovedEnough || pullDistance < 30) {
-      setIsPulling(false);
-      setPullDistance(0);
-      setTouchStartY(null);
-      setTouchStartX(null);
-      setTouchStartTime(null);
-      setHasMovedEnough(false);
-      return;
-    }
-    
-    // Se il pull era abbastanza forte, attiva il refresh
-    if (pullDistance > 50) {
-      setIsRefreshing(true);
-      await handleRefreshRicordi();
-      setIsRefreshing(false);
-    }
-    
-    // Reset completo
-    setIsPulling(false);
-    setPullDistance(0);
-    setTouchStartY(null);
-    setTouchStartX(null);
-    setTouchStartTime(null);
-    setHasMovedEnough(false);
+    await pullToRefresh.onTouchEnd();
   };
 
   if (isLoadingMemories || isLoadingIdeas) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-[100000]">
-        <Loader />
+      <div className="fixed inset-0 overflow-auto bg-[#F2F2F7] px-4 pb-20 pt-24 dark:bg-black z-[100000]">
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-white/70 p-3 dark:bg-gray-800/60">
+            <div className="h-10 w-full animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+          </div>
+          <SkeletonMemoryCardMobile count={6} />
+          <SkeletonIdeasListMobile count={3} />
+        </div>
       </div>
     );
   }
@@ -990,41 +917,41 @@ const HomeMobile = () => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={activeTab === 'ricordi' && isPulling && pullDistance > 40 ? { touchAction: 'pan-y' } : {}}
+        style={activeTab === 'ricordi' && pullToRefresh.isPulling && pullToRefresh.pullDistance > 40 ? { touchAction: 'pan-y' } : {}}
       >
         {/* Indicatore di pull-to-refresh - Container fisso con overflow hidden */}
-        {activeTab === 'ricordi' && (pullDistance > 0 || isRefreshing) && (
+        {activeTab === 'ricordi' && (pullToRefresh.pullDistance > 0 || pullToRefresh.isRefreshing) && (
           <div
             className="absolute top-0 left-0 right-0 overflow-hidden pointer-events-none z-10"
             style={{
-              height: Math.max(pullDistance, isRefreshing ? 60 : 0),
-              transition: isPulling || isRefreshing ? 'none' : 'height 0.3s ease-out',
+              height: Math.max(pullToRefresh.pullDistance, pullToRefresh.isRefreshing ? 60 : 0),
+              transition: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 'none' : 'height 0.3s ease-out',
             }}
           >
             <div
               className="flex flex-col items-center justify-end w-full h-full px-4"
               style={{
                 paddingBottom: 8,
-                transform: `translateY(${Math.max(0, (pullDistance || (isRefreshing ? 60 : 0)) - 60)}px)`,
-                transition: isPulling || isRefreshing ? 'none' : 'transform 0.3s ease-out',
-                opacity: pullDistance > 0 || isRefreshing ? Math.min(1, (pullDistance || (isRefreshing ? 60 : 0)) / 30) : 0,
+                transform: `translateY(${Math.max(0, (pullToRefresh.pullDistance || (pullToRefresh.isRefreshing ? 60 : 0)) - 60)}px)`,
+                transition: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 'none' : 'transform 0.3s ease-out',
+                opacity: pullToRefresh.pullDistance > 0 || pullToRefresh.isRefreshing ? Math.min(1, (pullToRefresh.pullDistance || (pullToRefresh.isRefreshing ? 60 : 0)) / 30) : 0,
               }}
             >
               <svg 
-                className={`w-7 h-7 ${isRefreshing ? 'animate-spin' : ''} text-blue-500`} 
+                className={`w-7 h-7 ${pullToRefresh.isRefreshing ? 'animate-spin' : ''} text-blue-500`} 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
                 style={{
-                  transform: isRefreshing ? 'rotate(0deg)' : `rotate(${Math.min(180, ((pullDistance || 0) / 120) * 180)}deg)`,
-                  transition: isPulling || isRefreshing ? 'none' : 'transform 0.2s ease-out',
+                  transform: pullToRefresh.isRefreshing ? 'rotate(0deg)' : `rotate(${Math.min(180, ((pullToRefresh.pullDistance || 0) / 120) * 180)}deg)`,
+                  transition: pullToRefresh.isPulling || pullToRefresh.isRefreshing ? 'none' : 'transform 0.2s ease-out',
                 }}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582M20 20v-5h-.581M5 19A9 9 0 1119 5" />
               </svg>
-              {(pullDistance > 15 || isRefreshing) && (
-                <span className="text-xs text-blue-500 mt-1" style={{ opacity: (pullDistance || (isRefreshing ? 60 : 0)) > 30 ? 1 : (pullDistance || 0) / 30 }}>
-                  {isRefreshing ? 'Aggiornamento...' : 'Trascina per aggiornare'}
+              {(pullToRefresh.pullDistance > 15 || pullToRefresh.isRefreshing) && (
+                <span className="text-xs text-blue-500 mt-1" style={{ opacity: (pullToRefresh.pullDistance || (pullToRefresh.isRefreshing ? 60 : 0)) > 30 ? 1 : (pullToRefresh.pullDistance || 0) / 30 }}>
+                  {pullToRefresh.isRefreshing ? 'Aggiornamento...' : 'Trascina per aggiornare'}
                 </span>
               )}
             </div>
@@ -1032,6 +959,11 @@ const HomeMobile = () => {
         )}
         {activeTab === 'ricordi' ? (
           <div className="space-y-4">
+            {memoriesLoadingState.showSoftRefreshing && (
+              <div className="flex items-center justify-center">
+                <span className="text-xs text-blue-500">Aggiornamento ricordi...</span>
+              </div>
+            )}
             {filteredRicordi.length === 0 ? (
               <div className="flex flex-col items-center justify-center pt-10 pb-20">
                 <IoListOutline className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
@@ -1088,6 +1020,11 @@ const HomeMobile = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
+            {ideasLoadingState.showSoftRefreshing && (
+              <div className="flex items-center justify-center">
+                <span className="text-xs text-blue-500">Aggiornamento idee...</span>
+              </div>
+            )}
             {filteredIdeas.length === 0 ? (
               <div className="flex flex-col items-center justify-center pt-10 pb-20">
                 <svg className="w-12 h-12 text-gray-400 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
