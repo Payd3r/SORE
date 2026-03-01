@@ -1,39 +1,51 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback, useEffect } from "react";
 
-interface UseBottomSheetDragOptions {
+type UseBottomSheetDragOptions = {
   closeThreshold?: number;
   onClose: () => void;
-}
+  open?: boolean;
+};
 
-export function useBottomSheetDrag({ closeThreshold = 110, onClose }: UseBottomSheetDragOptions) {
-  const startYRef = useRef<number | null>(null);
-  const translateYRef = useRef(0);
+export function useBottomSheetDrag({
+  closeThreshold = 110,
+  onClose,
+  open = true,
+}: UseBottomSheetDragOptions) {
   const [translateY, setTranslateY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
+  const startTranslate = useRef(0);
+  const currentTranslate = useRef(0);
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 0) return;
-    startYRef.current = e.touches[0].clientY;
+  useEffect(() => {
+    currentTranslate.current = translateY;
+  }, [translateY]);
+
+  useEffect(() => {
+    if (!open) setTranslateY(0);
+  }, [open]);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    startY.current = e.touches[0].clientY;
+    startTranslate.current = currentTranslate.current;
     setIsDragging(true);
-  };
+  }, []);
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || startYRef.current === null || e.touches.length === 0) return;
-    const delta = e.touches[0].clientY - startYRef.current;
-    const nextTranslateY = Math.max(0, Math.min(220, delta));
-    translateYRef.current = nextTranslateY;
-    setTranslateY(nextTranslateY);
-  };
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    const delta = e.touches[0].clientY - startY.current;
+    const next = Math.max(0, startTranslate.current + delta);
+    setTranslateY(next);
+  }, []);
 
-  const onTouchEnd = () => {
-    if (translateYRef.current >= closeThreshold) {
-      onClose();
-    }
-    translateYRef.current = 0;
-    setTranslateY(0);
+  const onTouchEnd = useCallback(() => {
+    const value = currentTranslate.current;
     setIsDragging(false);
-    startYRef.current = null;
-  };
+    if (value >= closeThreshold) {
+      onClose();
+    } else {
+      setTranslateY(0);
+    }
+  }, [closeThreshold, onClose]);
 
   return { translateY, isDragging, onTouchStart, onTouchMove, onTouchEnd };
 }

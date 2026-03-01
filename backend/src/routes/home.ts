@@ -60,18 +60,19 @@ router.get('/', auth, async (req: any, res) => {
       [coupleId]
     );
 
-    // Get latest completed ideas
+    // Get latest ideas (completed and recent) for home
     const [ideas] = await pool.promise().query<Idea[]>(
       `SELECT 
         id,
         title,
         description,
+        type,
         created_at,
         date_checked
        FROM ideas 
-       WHERE couple_id = ? AND date_checked IS NOT NULL
-       ORDER BY date_checked DESC
-       LIMIT 5`,
+       WHERE couple_id = ?
+       ORDER BY date_checked DESC, created_at DESC
+       LIMIT 10`,
       [coupleId]
     );
 
@@ -84,6 +85,45 @@ router.get('/', auth, async (req: any, res) => {
        AND song IS NOT NULL 
        AND song != ''       
        LIMIT 3`,
+      [coupleId]
+    );
+
+    const [recentlyViewedMemories] = await pool.promise().query<Memory[]>(
+      `SELECT 
+        m.id,
+        m.title,
+        m.type,
+        m.start_date,
+        m.end_date,
+        m.view_count,
+        m.last_viewed_at,
+        MIN(i.thumb_big_path) as image
+      FROM memories m
+      LEFT JOIN images i ON i.memory_id = m.id
+      WHERE m.couple_id = ?
+      AND m.last_viewed_at IS NOT NULL
+      GROUP BY m.id
+      ORDER BY m.last_viewed_at DESC
+      LIMIT 10`,
+      [coupleId]
+    );
+
+    const [mostViewedMemories] = await pool.promise().query<Memory[]>(
+      `SELECT 
+        m.id,
+        m.title,
+        m.type,
+        m.start_date,
+        m.end_date,
+        m.view_count,
+        m.last_viewed_at,
+        MIN(i.thumb_big_path) as image
+      FROM memories m
+      LEFT JOIN images i ON i.memory_id = m.id
+      WHERE m.couple_id = ?
+      GROUP BY m.id
+      ORDER BY m.view_count DESC, m.last_viewed_at DESC, m.created_at DESC
+      LIMIT 10`,
       [coupleId]
     );
 
@@ -111,6 +151,8 @@ router.get('/', auth, async (req: any, res) => {
         num_idee: stats[0].num_idee,
         num_luoghi: stats[0].num_luoghi,
         Ricordi: memories,
+        recently_viewed_memories: recentlyViewedMemories,
+        most_viewed_memories: mostViewedMemories,
         Images: validImages,
         Ideas: ideas,
         Songs: songs

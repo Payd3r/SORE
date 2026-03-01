@@ -1,55 +1,98 @@
-import type { Memory } from '../../../api/memory';
-import { getImageUrl } from '../../../api/images';
-import MaterialIcon from '../ui/MaterialIcon';
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
+import { FaSpotify } from "react-icons/fa";
+import type { Memory, MemoryType } from "../../../api/memory";
+import { getImageUrl } from "../../../api/images";
 
-interface GalleryMemoryCardProps {
+const TYPE_LABELS: Record<MemoryType, string> = {
+  VIAGGIO: "Viaggio",
+  EVENTO: "Evento",
+  SEMPLICE: "Semplice",
+  FUTURO: "Futuro",
+};
+
+type GalleryMemoryCardProps = {
   memory: Memory;
-  onClick: (id: number) => void;
-}
+  /** Se fornito, per i ricordi FUTURO si apre questo callback invece di navigare al dettaglio */
+  onFuturoClick?: (memory: Memory) => void;
+};
 
-function formatCardDate(dateString: string): string {
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return '';
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-  return `${day}-${String(month).padStart(2, '0')} ${year}`;
-}
+export default function GalleryMemoryCard({ memory, onFuturoClick }: GalleryMemoryCardProps) {
+  const navigate = useNavigate();
+  const isFuturo = memory.type?.toUpperCase() === "FUTURO";
+  const imagePath =
+    !isFuturo && (memory.images?.[0]?.webp_path || memory.images?.[0]?.thumb_big_path)
+      ? (memory.images?.[0]?.webp_path || memory.images?.[0]?.thumb_big_path || "")
+      : "";
 
-export default function GalleryMemoryCard({ memory, onClick }: GalleryMemoryCardProps) {
-  const firstImage = memory.images?.[0];
-  const imageUrl = firstImage?.thumb_big_path ? getImageUrl(firstImage.thumb_big_path) : '';
-  const dateLabel = formatCardDate(memory.start_date || memory.created_at);
+  const startDate = memory.start_date ? new Date(memory.start_date) : null;
+  const endDate = memory.end_date ? new Date(memory.end_date) : null;
+
+  const formatDateStr = (d: Date, includeYear: boolean) =>
+    format(d, includeYear ? "d MMM yyyy" : "d MMM", { locale: it });
+
+  let dateStr = "";
+  if (startDate && endDate) {
+    const sameYear = startDate.getFullYear() === endDate.getFullYear();
+    const sameDay = startDate.getTime() === endDate.getTime();
+    if (sameDay) {
+      dateStr = formatDateStr(startDate, true);
+    } else if (sameYear) {
+      dateStr = `${formatDateStr(startDate, false)} – ${formatDateStr(endDate, false)} ${startDate.getFullYear()}`;
+    } else {
+      dateStr = `${formatDateStr(startDate, true)} – ${formatDateStr(endDate, true)}`;
+    }
+  } else if (startDate) {
+    dateStr = formatDateStr(startDate, true);
+  } else if (endDate) {
+    dateStr = formatDateStr(endDate, true);
+  }
+  const typeLabel = TYPE_LABELS[memory.type] ?? memory.type;
+  const hasSong = Boolean(memory.song?.trim());
+
+  const handleClick = () => {
+    if (isFuturo && onFuturoClick) {
+      onFuturoClick(memory);
+    } else {
+      navigate(`/ricordo/${memory.id}`);
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={() => onClick(memory.id)}
-      className="flex flex-col gap-2 overflow-hidden text-left transition-transform active:scale-[0.985] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
+      className="pwa-gallery-memory-card"
+      onClick={handleClick}
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-3xl shadow-sm">
-        {imageUrl ? (
+      <div className="pwa-gallery-memory-card-media">
+        {imagePath ? (
           <img
-            src={imageUrl}
+            src={getImageUrl(imagePath)}
             alt={memory.title}
-            className="h-full w-full object-cover"
-            loading="lazy"
+            className="pwa-gallery-memory-card-img"
           />
         ) : (
-          <div className="h-full w-full bg-[var(--bg-secondary)]" />
+          <div className={`pwa-gallery-memory-card-placeholder ${isFuturo ? "pwa-gallery-memory-card-placeholder-futuro" : ""}`}>
+            {isFuturo && <span className="material-symbols-outlined pwa-gallery-memory-card-placeholder-icon" aria-hidden>schedule</span>}
+          </div>
         )}
-        <div className="absolute top-3 right-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur-md">
-            <MaterialIcon name="favorite" size={18} />
-          </span>
-        </div>
+        <div className="pwa-gallery-memory-card-overlay" />
+        <span className="pwa-gallery-memory-card-type-badge">{typeLabel}</span>
       </div>
-      <div>
-        <h4 className="line-clamp-1 text-sm font-bold text-[var(--text-primary)]">
-          {memory.title}
-        </h4>
-        <p className="text-xs text-[var(--text-secondary)]">{dateLabel}</p>
+      <div className="pwa-gallery-memory-card-content">
+        <h3 className="pwa-gallery-memory-card-title">{memory.title}</h3>
+        <p className="pwa-gallery-memory-card-date">{dateStr}</p>
       </div>
+      {hasSong && (
+        <span
+          className="pwa-gallery-memory-card-song-icon"
+          title="Ha una canzone"
+          aria-hidden
+        >
+          <FaSpotify className="pwa-gallery-memory-card-spotify-icon" />
+        </span>
+      )}
     </button>
   );
 }

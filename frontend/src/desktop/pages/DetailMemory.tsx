@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getMemory, getMemoryCarousel, updateMemory, deleteMemory } from '../../api/memory';
+import { getMemory, getMemoryCarousel, updateMemory, deleteMemory, createShareLink } from '../../api/memory';
 import type { Memory } from '../../api/memory';
 import { getImageUrl } from '../../api/images';
 import { IoArrowBack } from 'react-icons/io5';
@@ -201,6 +201,35 @@ export default function DetailMemory() {
     } finally {
       setIsDeleting(false);
       closeDeleteModal();
+    }
+  };
+
+  const handleShare = async () => {
+    if (!id || !memory) return;
+
+    try {
+      const response = await createShareLink(id);
+      const shareUrl = response.data.url;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: memory.title,
+          text: `Guarda questo ricordo su SORE: ${memory.title}`,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        window.alert('Link di condivisione copiato negli appunti.');
+        return;
+      }
+
+      window.prompt('Copia questo link:', shareUrl);
+    } catch (error) {
+      console.error('Errore durante la condivisione del ricordo:', error);
+      window.alert('Impossibile creare il link di condivisione.');
     }
   };
 
@@ -469,6 +498,16 @@ export default function DetailMemory() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   <span className="hidden sm:inline">Modifica</span>
+                </button>
+                <button
+                  onClick={handleButtonTouch(handleShare)}
+                  className="p-2 sm:px-4 sm:py-2 text-sm rounded-lg font-medium bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors focus:outline-none flex items-center justify-center"
+                  title="Condividi"
+                >
+                  <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342a3 3 0 110-2.684m6.632 2.684a3 3 0 110-2.684m-6.632 2.684L15.316 17m-6.632-10L15.316 7" />
+                  </svg>
+                  <span className="hidden sm:inline">Condividi</span>
                 </button>
                 <button
                   onClick={handleButtonTouch(openDeleteModal)}

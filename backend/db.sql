@@ -98,7 +98,9 @@ CREATE TABLE `memories` (
   `start_date` date DEFAULT NULL,
   `end_date` date DEFAULT NULL,
   `location` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `song` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL
+  `song` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `view_count` bigint unsigned NOT NULL DEFAULT '0',
+  `last_viewed_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -191,7 +193,9 @@ ALTER TABLE `images`
 ALTER TABLE `memories`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_memories_couple_id` (`couple_id`),
-  ADD KEY `idx_memories_created_by` (`created_by_user_id`);
+  ADD KEY `idx_memories_created_by` (`created_by_user_id`),
+  ADD KEY `idx_memories_couple_view_count` (`couple_id`,`view_count`,`id`),
+  ADD KEY `idx_memories_last_viewed_at` (`last_viewed_at`);
 
 --
 -- Indici per le tabelle `notifications`

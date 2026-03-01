@@ -9,7 +9,6 @@ import {
   PlusIcon,
   ArrowUpTrayIcon,
   ChevronRightIcon,
-  HeartIcon,
   BookmarkIcon,
   CheckIcon,
   MusicalNoteIcon
@@ -345,7 +344,7 @@ const Home = () => {
                   {stats.length > 0 && (
                     <div className="lg:col-span-4 bg-white/80 dark:bg-transparent rounded-xl border-2 border-gray-200/80 dark:border-white/10 p-4 sm:p-6">
                       <div className="flex items-center gap-2 mb-3">
-                        <HeartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+                        <PhotoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
                         <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">La vostra storia</h2>
                       </div>
                       <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:mt-8">

@@ -1,9 +1,8 @@
-export { default as HomeHeader } from './HomeHeader';
-export { default as HomeUploadBar } from './HomeUploadBar';
-export { default as FeaturedTrips } from './FeaturedTrips';
-export { default as FeaturedTripCard } from './FeaturedTripCard';
-export { default as LatestMemories } from './LatestMemories';
-export { default as LatestMemoryCard } from './LatestMemoryCard';
-export { default as OurIdeas } from './OurIdeas';
-export { default as IdeaCardNew } from './IdeaCardNew';
-export { default as MonthlyHighlightCard } from './MonthlyHighlightCard';
+export { default as ProfileDropdown } from "./ProfileDropdown";
+export { default as TripCard } from "./TripCard";
+export { default as TripCardsCarousel } from "./TripCardsCarousel";
+export { default as IdeaListItem } from "./IdeaListItem";
+export { default as MemoryCardSmall } from "./MemoryCardSmall";
+export { default as IdeaDetailSheet } from "./IdeaDetailSheet";
+export { default as UploadBanner } from "./UploadBanner";
+export { default as UploadDetailSheet } from "./UploadDetailSheet";

@@ -1,0 +1,12 @@
+export { default as HomeMobile } from "./HomeMobile";
+export { default as IdeasMobile } from "./IdeasMobile";
+export { default as GalleryMobile } from "./GalleryMobile";
+export { default as MappaMobile } from "./MappaMobile";
+export { default as ProfileMobile } from "./ProfileMobile";
+export { default as DetailMemoryMobile } from "./DetailMemoryMobile";
+export { default as UploadMobile } from "./UploadMobile";
+export { default as AddMobile } from "./AddMobile";
+export { default as CouplesConnectionMobile } from "./CouplesConnectionMobile";
+export { default as PrivacySecurityMobile } from "./PrivacySecurityMobile";
+export { default as ShareSpaceMobile } from "./ShareSpaceMobile";
+export { default as HelpCenterMobile } from "./HelpCenterMobile";

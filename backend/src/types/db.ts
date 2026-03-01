@@ -35,6 +35,15 @@ export interface Memory extends DbRow {
   description: string;
   date: Date;
   location: string;
+  type: string;
+  start_date?: Date | null;
+  end_date?: Date | null;
+  song?: string | null;
+  view_count?: number;
+  last_viewed_at?: Date | null;
+  tot_img?: number;
+  img_limit?: number;
+  created_by_name?: string;
   couple_id: number;
   created_by_user_id: number;
   created_at: Date;

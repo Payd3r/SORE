@@ -12,6 +12,19 @@ export interface ImageLocation {
   thumb_small_path: string;
 }
 
+export interface MapMemory {
+  id: number;
+  title: string;
+  type: string;
+  start_date: string | null;
+  end_date: string | null;
+  lat: number;
+  lon: number;
+  thumb_path: string | null;
+  thumb_small_path: string | null;
+  image_id: number;
+}
+
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
@@ -78,3 +91,15 @@ export const getMapImagesByBounds = async (
     throw error;
   }
 }; 
+
+export const getMapMemories = async (): Promise<MapMemory[]> => {
+  try {
+    const response = await axiosInstance.get(`${API_URLS.base}/api/map/memories`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Errore nel caricamento dei ricordi della mappa:', error);
+    throw error;
+  }
+};

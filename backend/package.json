@@ -9,8 +9,10 @@
     "build": "tsc",
     "test": "jest",
     "populate-hashes": "ts-node scripts/populateHashes.ts",
+    "seed": "ts-node scripts/seed.ts",
     "remove-duplicates": "ts-node scripts/removeDuplicates.ts",
-    "remove-duplicates:execute": "ts-node scripts/removeDuplicates.ts --execute"
+    "remove-duplicates:execute": "ts-node scripts/removeDuplicates.ts --execute",
+    "add-map-coordinates": "ts-node scripts/add-map-coordinates.ts"
   },
   "dependencies": {
     "@google-cloud/vision": "^5.1.0",

@@ -2,18 +2,20 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { UploadProvider } from './contexts/UploadContext';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './lib/react-query';
+import { createAppQueryClient, setupPwaQueryPersistence } from './lib/react-query';
 import ProtectedRoute from './desktop/components/Layout/ProtectedRoute';
 import ScrollToTop from './desktop/components/Layout/ScrollToTop';
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
 import Layout from './desktop/components/Layout/Layout';
 import { SidebarProvider } from './desktop/components/Layout/Layout';
-import Loader from './desktop/components/Layout/Loader';
+import DesktopLoader from './desktop/components/Layout/Loader';
+import PwaLoadingScreen from './mobile/components/ui/PwaLoadingScreen';
 import { useIsPwa } from './utils/isPwa';
 import MappaMobile from './mobile/pages/MappaMobile';
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./desktop/pages/WelcomeAuthenticate'));
+const WelcomeMobile = lazy(() => import('./mobile/pages/WelcomeMobile'));
 const Home = lazy(() => import('./desktop/pages/Home'));
 const HomeMobile = lazy(() => import('./mobile/pages/HomeMobile'));
 const Profile = lazy(() => import('./desktop/pages/Profile'));
@@ -24,6 +26,7 @@ const ShareSpaceMobile = lazy(() => import('./mobile/pages/ShareSpaceMobile'));
 const HelpCenterMobile = lazy(() => import('./mobile/pages/HelpCenterMobile'));
 const Gallery = lazy(() => import('./desktop/pages/Gallery'));
 const GalleryMobile = lazy(() => import('./mobile/pages/GalleryMobile'));
+const IdeasMobile = lazy(() => import('./mobile/pages/IdeasMobile'));
 const Memory = lazy(() => import('./desktop/pages/Memory'));
 const DetailMemory = lazy(() => import('./desktop/pages/DetailMemory'));
 const DetailMemoryMobile = lazy(() => import('./mobile/pages/DetailMemoryMobile'));
@@ -31,6 +34,9 @@ const Ideas = lazy(() => import('./desktop/pages/Ideas'));
 const Recap = lazy(() => import('./desktop/pages/Recap'));
 const Mappa = lazy(() => import('./desktop/pages/Mappa'));
 const UploadMobile = lazy(() => import('./mobile/pages/UploadMobile'));
+const AddMobile = lazy(() => import('./mobile/pages/AddMobile'));
+const SettingsMobile = lazy(() => import('./mobile/pages/SettingsMobile'));
+const SharedMemoryPage = lazy(() => import('./pages/SharedMemoryPage'));
 
 // Layout PWA
 const PwaLayout = lazy(() => import('./mobile/pwa/PwaLayout'));
@@ -47,6 +53,10 @@ const GallerySelector = () => {
   return isPwa ? <GalleryMobile /> : <Gallery />;
 };
 
+const IdeasSelector = () => {
+  const isPwa = useIsPwa();
+  return isPwa ? <IdeasMobile /> : <Ideas />;
+};
 
 // Per altre pagine che potrebbero avere una versione mobile in futuro
 const MappaSelector = () => {
@@ -94,6 +104,8 @@ const LayoutSelector = () => {
 
 function App() {
   const isPwa = useIsPwa();
+  const persistenceCleanupRef = useRef<(() => void) | null>(null);
+  const queryClient = useMemo(() => createAppQueryClient(isPwa), [isPwa]);
 
   useEffect(() => {
     if (!isPwa) {
@@ -122,6 +134,16 @@ function App() {
     }
   }, [isPwa]);
 
+  useEffect(() => {
+    persistenceCleanupRef.current?.();
+    persistenceCleanupRef.current = setupPwaQueryPersistence(queryClient, isPwa);
+
+    return () => {
+      persistenceCleanupRef.current?.();
+      persistenceCleanupRef.current = null;
+    };
+  }, [queryClient, isPwa]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -131,23 +153,31 @@ function App() {
               <ScrollToTop />
               <div className="min-h-[100dvh] w-full overflow-hidden">
                 <Suspense fallback={
-                  <Loader
-                    type="spinner"
-                    size="lg"
-                    fullScreen
-                    text="Caricamento in corso..."
-                    subText="Stiamo preparando l'app per te"
-                  />
+                  isPwa ? (
+                    <PwaLoadingScreen
+                      text="Caricamento..."
+                      subText="Stiamo preparando la tua esperienza."
+                    />
+                  ) : (
+                    <DesktopLoader
+                      type="spinner"
+                      size="lg"
+                      fullScreen
+                      text="Caricamento in corso..."
+                      subText="Stiamo preparando l'app per te"
+                    />
+                  )
                 }>
                   <Routes>
-                    <Route path="/welcome" element={<WelcomeAuthenticate />} />
+                    <Route path="/welcome" element={isPwa ? <WelcomeMobile /> : <WelcomeAuthenticate />} />
+                    <Route path="/condividi/:token" element={<SharedMemoryPage />} />
                     <Route element={<ProtectedRoute />}>
                       <Route element={<LayoutSelector />}>
                         <Route path="/" element={<HomeSelector />} />
                         <Route path="/ricordi" element={<MemorySelector />} />
                         <Route path="/ricordo/:id" element={<DetailMemorySelector />} />
                         <Route path="/galleria" element={<GallerySelector />} />
-                        <Route path="/idee" element={<Ideas />} />
+                        <Route path="/idee" element={<IdeasSelector />} />
                         <Route path="/mappa" element={<MappaSelector />} />
                         <Route path="/recap" element={<Recap />} />
                         <Route path="/profilo" element={<ProfileSelector />} />
@@ -155,8 +185,10 @@ function App() {
                         <Route path="/profilo/privacy" element={<ProfileSubpageSelector page="privacy" />} />
                         <Route path="/profilo/condivisione" element={<ProfileSubpageSelector page="condivisione" />} />
                         <Route path="/profilo/aiuto" element={<ProfileSubpageSelector page="aiuto" />} />
+                        <Route path="/impostazioni" element={isPwa ? <SettingsMobile /> : <Navigate to="/profilo" replace />} />
                         <Route path="/logout" element={<div>Logout...</div>} />
                         <Route path="/upload" element={<UploadMobile />} />
+                        <Route path="/add" element={<AddMobile />} />
                       </Route>
                     </Route>
                     <Route path="*" element={<Navigate to="/welcome" replace />} />

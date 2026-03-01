@@ -1,0 +1,234 @@
+body.pwa-mode .pwa-map-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--pwa-app-bg);
+}
+
+body.pwa-mode .pwa-map-container {
+  width: 100%;
+  height: 100%;
+}
+
+body.pwa-mode .pwa-map-status-overlay {
+  position: absolute;
+  top: var(--pwa-spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  padding: var(--pwa-spacing-sm) var(--pwa-spacing-md);
+  border-radius: var(--pwa-radius-lg);
+  background: color-mix(in srgb, var(--pwa-card-bg) 92%, transparent);
+  color: var(--pwa-text-primary);
+  border: 1px solid var(--pwa-divider);
+  box-shadow: var(--pwa-shadow-card);
+  font-size: var(--pwa-font-size-sm);
+}
+
+body.pwa-mode .pwa-map-status-overlay-error {
+  color: var(--pwa-error, #b91c1c);
+}
+
+body.pwa-mode .pwa-map-marker-wrapper {
+  background: transparent;
+  border: 0;
+}
+
+body.pwa-mode .pwa-map-marker {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--pwa-card-bg);
+  background: var(--pwa-card-bg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+body.pwa-mode .pwa-map-marker img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body.pwa-mode .pwa-map-marker-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pwa-text-secondary);
+}
+
+body.pwa-mode .pwa-map-marker-placeholder .material-symbols-outlined {
+  font-size: 20px;
+}
+
+body.pwa-mode .pwa-map-cluster-wrapper {
+  background: transparent;
+  border: 0;
+}
+
+body.pwa-mode .pwa-map-cluster {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  border: 1px solid var(--pwa-divider);
+  background: var(--pwa-card-bg);
+  color: var(--pwa-text-primary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+body.pwa-mode .pwa-map-cluster-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 4px;
+  border-radius: 16px;
+}
+
+body.pwa-mode .pwa-map-cluster-thumb {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--pwa-surface-muted, #f3f4f6);
+}
+
+body.pwa-mode .pwa-map-cluster-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body.pwa-mode .pwa-map-cluster-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--pwa-font-weight-bold);
+  font-size: var(--pwa-font-size-md);
+}
+
+body.pwa-mode .pwa-map-memory-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pwa-spacing-sm);
+  padding: var(--pwa-spacing-sm) var(--pwa-spacing-md);
+  margin: 0 var(--pwa-spacing-md) var(--pwa-spacing-sm);
+}
+
+body.pwa-mode .pwa-map-memory-sheet-main {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: var(--pwa-spacing-md);
+  width: 100%;
+  cursor: pointer;
+}
+
+body.pwa-mode .pwa-map-memory-sheet-media {
+  width: 86px;
+  height: 86px;
+  border-radius: var(--pwa-radius-lg);
+  overflow: hidden;
+  background: var(--pwa-surface-muted, #f3f4f6);
+}
+
+body.pwa-mode .pwa-map-memory-sheet-image,
+body.pwa-mode .pwa-map-memory-sheet-image-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body.pwa-mode .pwa-map-memory-sheet-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+body.pwa-mode .pwa-map-memory-sheet-type {
+  margin: 0;
+  font-size: var(--pwa-font-size-xs);
+  color: var(--pwa-text-secondary);
+}
+
+body.pwa-mode .pwa-map-memory-sheet-title {
+  margin: 0;
+  color: var(--pwa-text-primary);
+  font-size: var(--pwa-font-size-lg);
+  line-height: var(--pwa-line-height-tight);
+  font-weight: var(--pwa-font-weight-semibold);
+}
+
+body.pwa-mode .pwa-map-memory-sheet-date {
+  margin: 0;
+  font-size: var(--pwa-font-size-sm);
+  color: var(--pwa-text-secondary);
+}
+
+body.pwa-mode .pwa-map-memory-sheet-cta {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: var(--pwa-radius-lg);
+  padding: var(--pwa-spacing-md) var(--pwa-spacing-lg);
+  text-align: center;
+  background: var(--pwa-btn-primary-bg);
+  color: var(--pwa-btn-primary-fg);
+  font-size: var(--pwa-font-size-md);
+  font-weight: var(--pwa-font-weight-semibold);
+  cursor: pointer;
+}
+
+/* Nascondi i controlli zoom a sinistra (default Leaflet) */
+body.pwa-mode .pwa-map-screen .leaflet-top.leaflet-left .leaflet-control-zoom {
+  display: none !important;
+}
+
+/* Zoom + / -: stile PWA, posizionati a destra */
+body.pwa-mode .leaflet-control-zoom {
+  border: 0 !important;
+  margin: var(--pwa-spacing-md) !important;
+  background: transparent !important;
+}
+
+body.pwa-mode .leaflet-control-zoom-in,
+body.pwa-mode .leaflet-control-zoom-out {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  line-height: 44px !important;
+  font-size: 22px !important;
+  font-weight: var(--pwa-font-weight-medium) !important;
+  border: 1px solid var(--pwa-divider) !important;
+  color: var(--pwa-text-primary) !important;
+  background: var(--pwa-card-bg) !important;
+  border-radius: var(--pwa-radius-md) !important;
+  box-shadow: var(--pwa-shadow-elevation-1) !important;
+  transition: box-shadow var(--pwa-transition-fast), background var(--pwa-transition-fast) !important;
+}
+
+body.pwa-mode .leaflet-control-zoom-in {
+  margin-bottom: var(--pwa-spacing-xs) !important;
+}
+
+body.pwa-mode .leaflet-control-zoom-in:active,
+body.pwa-mode .leaflet-control-zoom-out:active {
+  background: var(--pwa-bg-tertiary) !important;
+  box-shadow: var(--pwa-shadow-elevation-2) !important;
+}
+
+body.pwa-mode .leaflet-control-zoom-in.leaflet-disabled,
+body.pwa-mode .leaflet-control-zoom-out.leaflet-disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+body.pwa-mode .leaflet-control-attribution {
+  display: none !important;
+}

@@ -1,0 +1,378 @@
+/**
+ * Design System PWA – ispirato a TripGlide / app booking
+ * Tema chiaro (default) e scuro (prefers-color-scheme: dark)
+ */
+
+:root {
+  /* Typography */
+  --pwa-font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --pwa-font-size-xs: 0.75rem;   /* 12px */
+  --pwa-font-size-sm: 0.875rem;  /* 14px */
+  --pwa-font-size-md: 1rem;      /* 16px */
+  --pwa-font-size-lg: 1.125rem;  /* 18px */
+  --pwa-font-size-xl: 1.375rem;  /* 22px */
+  --pwa-font-size-2xl: 1.75rem;  /* 28px */
+  --pwa-font-weight-regular: 400;
+  --pwa-font-weight-medium: 500;
+  --pwa-font-weight-semibold: 600;
+  --pwa-font-weight-bold: 700;
+  --pwa-line-height-tight: 1.2;
+  --pwa-line-height-normal: 1.35;
+  --pwa-line-height-relaxed: 1.5;
+
+  /* Spacing */
+  --pwa-spacing-xxs: 4px;
+  --pwa-spacing-xs: 8px;
+  --pwa-spacing-sm: 12px;
+  --pwa-spacing-md: 16px;
+  --pwa-spacing-lg: 20px;
+  --pwa-spacing-xl: 24px;
+  --pwa-spacing-2xl: 32px;
+  --pwa-spacing-3xl: 40px;
+
+  /* Border radius */
+  --pwa-radius-sm: 8px;
+  --pwa-radius-md: 12px;
+  --pwa-radius-lg: 16px;
+  --pwa-radius-xl: 20px;
+  --pwa-radius-2xl: 24px;
+  --pwa-radius-pill: 9999px;
+
+  /* Shadows (bar/fab override in tema chiaro sotto) */
+  --pwa-shadow-elevation-1: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --pwa-shadow-elevation-2: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --pwa-shadow-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --pwa-shadow-bar: 0 -2px 20px rgba(0, 0, 0, 0.15);
+  --pwa-shadow-fab: 0 8px 18px rgba(0, 0, 0, 0.22);
+  --pwa-shadow-card: var(--pwa-shadow-elevation-1);
+
+  /* Transitions */
+  --pwa-transition-fast: 160ms ease;
+  --pwa-transition-normal: 240ms ease;
+}
+
+/* === TEMA CHIARO (default) === */
+:root {
+  --pwa-bg-primary: #ffffff;
+  --pwa-bg-secondary: #f5f5f5;
+  --pwa-bg-tertiary: #f0f0f0;
+  --pwa-bg-accent: #2c2c2e;
+
+  --pwa-text-primary: #1c1c1e;
+  --pwa-text-secondary: #6c6c6e;
+  --pwa-text-tertiary: #8e8e93;
+
+  --pwa-divider: #e5e5ea;
+  --pwa-border: #d1d1d6;
+
+  --pwa-icon-outline: #1c1c1e;
+  --pwa-icon-outline-muted: #6c6c6e;
+
+  --pwa-overlay-dark: rgba(0, 0, 0, 0.4);
+
+  /* Bottom bar & FAB – tema chiaro: barra e FAB chiari */
+  --pwa-bg-bar: #ffffff;
+  --pwa-bg-active-pill: #f0f0f0;
+  --pwa-fg-active: #1c1c1e;
+  --pwa-fg-inactive: #6c6c6e;
+  --pwa-fab-bg: #ffffff;
+  --pwa-fab-fg: #1c1c1e;
+  --pwa-shadow-bar: 0 -2px 20px rgba(0, 0, 0, 0.08);
+
+  /* Buttons */
+  --pwa-btn-primary-bg: #2c2c2e;
+  --pwa-btn-primary-fg: #ffffff;
+  --pwa-btn-secondary-bg: #f0f0f0;
+  --pwa-btn-secondary-fg: #1c1c1e;
+  --pwa-btn-ghost-fg: #1c1c1e;
+
+  /* Pills / tags */
+  --pwa-pill-active-bg: #2c2c2e;
+  --pwa-pill-active-fg: #ffffff;
+  --pwa-pill-inactive-bg: #f0f0f0;
+  --pwa-pill-inactive-fg: #1c1c1e;
+  --pwa-pill-inactive-border: #d1d1d6;
+
+  /* Input / search */
+  --pwa-input-bg: #f5f5f5;
+  --pwa-input-placeholder: #6c6c6e;
+
+  /* Card */
+  --pwa-card-bg: #ffffff;
+  --pwa-card-border: #e5e5ea;
+  --pwa-skeleton-bg: #ececf0;
+  --pwa-skeleton-card-bg: #f7f7f9;
+
+  /* Accent (brand, badge) */
+  --pwa-accent-green: #6ccf78;
+  --pwa-accent-red: #ff453a;
+
+  /* Overlay e stati (tema chiaro) */
+  --pwa-text-on-overlay: #ffffff;
+  --pwa-thumb-bg: #ffffff;
+  --pwa-error-bg: rgba(255, 69, 58, 0.12);
+  --pwa-success-bg: rgba(108, 207, 120, 0.2);
+
+  /* Scrollbar */
+  --pwa-scrollbar-track: #e8e8ed;
+  --pwa-scrollbar-thumb: #c7c7cc;
+  --pwa-scrollbar-thumb-hover: #aeaeb2;
+  --pwa-scrollbar-width: 8px;
+  --pwa-scrollbar-radius: 4px;
+}
+
+/* === TEMA SCURO === */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pwa-bg-primary: #121212;
+    --pwa-bg-secondary: #1c1c1e;
+    --pwa-bg-tertiary: #2c2c2e;
+
+    --pwa-text-primary: #ffffff;
+    --pwa-text-secondary: #b0b0b0;
+    --pwa-text-tertiary: #8e8e93;
+
+    --pwa-divider: #38383a;
+    --pwa-border: #48484a;
+
+    --pwa-icon-outline: #ffffff;
+    --pwa-icon-outline-muted: #b0b0b0;
+
+    --pwa-overlay-dark: rgba(0, 0, 0, 0.6);
+
+    /* Bottom bar & FAB – tema scuro: barra e FAB adattati */
+    --pwa-bg-bar: #2c2c2e;
+    --pwa-bg-active-pill: #e8e8ed;
+    --pwa-fg-active: #1c1c1e;
+    --pwa-fg-inactive: #ffffff;
+    --pwa-fab-bg: #e8e8ed;
+    --pwa-fab-fg: #1c1c1e;
+
+    /* Buttons */
+    --pwa-btn-primary-bg: #e8e8ed;
+    --pwa-btn-primary-fg: #1c1c1e;
+    --pwa-btn-secondary-bg: #2c2c2e;
+    --pwa-btn-secondary-fg: #ffffff;
+    --pwa-btn-ghost-fg: #ffffff;
+
+    /* Pills */
+    --pwa-pill-active-bg: #e8e8ed;
+    --pwa-pill-active-fg: #1c1c1e;
+    --pwa-pill-inactive-bg: #2c2c2e;
+    --pwa-pill-inactive-fg: #b0b0b0;
+    --pwa-pill-inactive-border: #48484a;
+
+    /* Input */
+    --pwa-input-bg: #2c2c2e;
+    --pwa-input-placeholder: #8e8e93;
+
+    /* Card */
+    --pwa-card-bg: #1c1c1e;
+    --pwa-card-border: #38383a;
+    --pwa-skeleton-bg: #2e2e33;
+    --pwa-skeleton-card-bg: #26262b;
+
+    /* Shadows – più marcate in dark */
+    --pwa-shadow-elevation-1: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --pwa-shadow-elevation-2: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --pwa-shadow-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --pwa-shadow-bar: 0 -2px 20px rgba(0, 0, 0, 0.5);
+    --pwa-shadow-fab: 0 8px 18px rgba(0, 0, 0, 0.5);
+
+    /* Scrollbar dark */
+    --pwa-scrollbar-track: #2c2c2e;
+    --pwa-scrollbar-thumb: #48484a;
+    --pwa-scrollbar-thumb-hover: #636366;
+
+    --pwa-text-on-overlay: #ffffff;
+    --pwa-thumb-bg: #ffffff;
+    --pwa-error-bg: rgba(255, 69, 58, 0.2);
+    --pwa-success-bg: rgba(108, 207, 120, 0.25);
+  }
+}
+
+/* === Variabili layout (invariate per tema) === */
+:root {
+  --pwa-app-bg: var(--pwa-bg-secondary);
+  --pwa-page-bg: var(--pwa-bg-primary);
+  --pwa-content-padding: var(--pwa-spacing-md);
+  --pwa-side-padding: var(--pwa-spacing-md);
+
+  /* Bottom bar: stessa altezza del FAB (+) */
+  --pwa-bar-height: var(--pwa-fab-size);
+  --pwa-bar-radius: 28px;
+  --pwa-bar-inner-padding: 8px;
+  --pwa-bar-inner-radius: calc(var(--pwa-bar-radius) - var(--pwa-bar-inner-padding));
+  --pwa-nav-icon-size: 22px;
+  --pwa-fab-size: 52px;
+  --pwa-safe-bottom: env(safe-area-inset-bottom);
+}
+
+/* === Body PWA (usa variabili del design system) === */
+body.pwa-mode {
+  color: var(--pwa-text-primary);
+  background: var(--pwa-app-bg);
+  font-family: var(--pwa-font-family);
+}
+
+/* === Tema scuro via classe (preferenza utente in app) === */
+html.dark {
+  --pwa-bg-primary: #121212;
+  --pwa-bg-secondary: #1c1c1e;
+  --pwa-bg-tertiary: #2c2c2e;
+  --pwa-text-primary: #ffffff;
+  --pwa-text-secondary: #b0b0b0;
+  --pwa-text-tertiary: #8e8e93;
+  --pwa-divider: #38383a;
+  --pwa-border: #48484a;
+  --pwa-icon-outline: #ffffff;
+  --pwa-icon-outline-muted: #b0b0b0;
+  --pwa-overlay-dark: rgba(0, 0, 0, 0.6);
+  --pwa-bg-bar: #2c2c2e;
+  --pwa-bg-active-pill: #e8e8ed;
+  --pwa-fg-active: #1c1c1e;
+  --pwa-fg-inactive: #ffffff;
+  --pwa-fab-bg: #e8e8ed;
+  --pwa-fab-fg: #1c1c1e;
+  --pwa-btn-primary-bg: #e8e8ed;
+  --pwa-btn-primary-fg: #1c1c1e;
+  --pwa-btn-secondary-bg: #2c2c2e;
+  --pwa-btn-secondary-fg: #ffffff;
+  --pwa-btn-ghost-fg: #ffffff;
+  --pwa-pill-active-bg: #e8e8ed;
+  --pwa-pill-active-fg: #1c1c1e;
+  --pwa-pill-inactive-bg: #2c2c2e;
+  --pwa-pill-inactive-fg: #b0b0b0;
+  --pwa-pill-inactive-border: #48484a;
+  --pwa-input-bg: #2c2c2e;
+  --pwa-input-placeholder: #8e8e93;
+  --pwa-card-bg: #1c1c1e;
+  --pwa-card-border: #38383a;
+  --pwa-skeleton-bg: #2e2e33;
+  --pwa-skeleton-card-bg: #26262b;
+  --pwa-shadow-elevation-1: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --pwa-shadow-elevation-2: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --pwa-shadow-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --pwa-shadow-bar: 0 -2px 20px rgba(0, 0, 0, 0.5);
+  --pwa-shadow-fab: 0 8px 18px rgba(0, 0, 0, 0.5);
+  --pwa-scrollbar-track: #2c2c2e;
+  --pwa-scrollbar-thumb: #48484a;
+  --pwa-scrollbar-thumb-hover: #636366;
+  --pwa-text-on-overlay: #ffffff;
+  --pwa-thumb-bg: #ffffff;
+  --pwa-error-bg: rgba(255, 69, 58, 0.2);
+  --pwa-success-bg: rgba(108, 207, 120, 0.25);
+}
+
+/* === Tema chiaro via classe (forza chiaro anche con prefers-color-scheme: dark) === */
+html.light {
+  --pwa-bg-primary: #ffffff;
+  --pwa-bg-secondary: #f5f5f5;
+  --pwa-bg-tertiary: #f0f0f0;
+  --pwa-text-primary: #1c1c1e;
+  --pwa-text-secondary: #6c6c6e;
+  --pwa-text-tertiary: #8e8e93;
+  --pwa-divider: #e5e5ea;
+  --pwa-border: #d1d1d6;
+  --pwa-icon-outline: #1c1c1e;
+  --pwa-icon-outline-muted: #6c6c6e;
+  --pwa-overlay-dark: rgba(0, 0, 0, 0.4);
+  --pwa-bg-bar: #ffffff;
+  --pwa-bg-active-pill: #f0f0f0;
+  --pwa-fg-active: #1c1c1e;
+  --pwa-fg-inactive: #6c6c6e;
+  --pwa-fab-bg: #ffffff;
+  --pwa-fab-fg: #1c1c1e;
+  --pwa-shadow-bar: 0 -2px 20px rgba(0, 0, 0, 0.08);
+  --pwa-btn-primary-bg: #2c2c2e;
+  --pwa-btn-primary-fg: #ffffff;
+  --pwa-btn-secondary-bg: #f0f0f0;
+  --pwa-btn-secondary-fg: #1c1c1e;
+  --pwa-btn-ghost-fg: #1c1c1e;
+  --pwa-pill-active-bg: #2c2c2e;
+  --pwa-pill-active-fg: #ffffff;
+  --pwa-pill-inactive-bg: #f0f0f0;
+  --pwa-pill-inactive-fg: #1c1c1e;
+  --pwa-pill-inactive-border: #d1d1d6;
+  --pwa-input-bg: #f5f5f5;
+  --pwa-input-placeholder: #6c6c6e;
+  --pwa-card-bg: #ffffff;
+  --pwa-card-border: #e5e5ea;
+  --pwa-skeleton-bg: #ececf0;
+  --pwa-skeleton-card-bg: #f7f7f9;
+  --pwa-shadow-elevation-1: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --pwa-shadow-elevation-2: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --pwa-shadow-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --pwa-shadow-bar: 0 -2px 20px rgba(0, 0, 0, 0.15);
+  --pwa-shadow-fab: 0 8px 18px rgba(0, 0, 0, 0.22);
+  --pwa-scrollbar-track: #e8e8ed;
+  --pwa-scrollbar-thumb: #c7c7cc;
+  --pwa-scrollbar-thumb-hover: #aeaeb2;
+  --pwa-text-on-overlay: #ffffff;
+  --pwa-thumb-bg: #ffffff;
+  --pwa-error-bg: rgba(255, 69, 58, 0.12);
+  --pwa-success-bg: rgba(108, 207, 120, 0.2);
+}
+
+/* === Pagina di caricamento PWA === */
+.pwa-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pwa-app-bg);
+  font-family: var(--pwa-font-family);
+  color: var(--pwa-text-primary);
+  padding: var(--pwa-spacing-xl);
+  box-sizing: border-box;
+}
+
+.pwa-loading-screen-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pwa-spacing-xl);
+  max-width: 280px;
+  text-align: center;
+}
+
+.pwa-loading-screen-logo {
+  font-size: var(--pwa-font-size-2xl);
+  font-weight: var(--pwa-font-weight-bold);
+  letter-spacing: 0.02em;
+  color: var(--pwa-text-primary);
+  opacity: 0.95;
+}
+
+.pwa-loading-screen-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--pwa-divider);
+  border-top-color: var(--pwa-bg-bar);
+  animation: pwa-loading-spin 0.9s linear infinite;
+}
+
+.pwa-loading-screen-text {
+  margin: 0;
+  font-size: var(--pwa-font-size-md);
+  font-weight: var(--pwa-font-weight-semibold);
+  color: var(--pwa-text-primary);
+  line-height: var(--pwa-line-height-normal);
+}
+
+.pwa-loading-screen-subtext {
+  margin: 0;
+  font-size: var(--pwa-font-size-sm);
+  color: var(--pwa-text-secondary);
+  line-height: var(--pwa-line-height-normal);
+}
+
+@keyframes pwa-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

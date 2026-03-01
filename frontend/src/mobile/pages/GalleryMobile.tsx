@@ -1,211 +1,349 @@
-import { useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { getMemories, type Memory } from '../../api/memory';
-import { MobileHeader, MobilePageWrapper } from '../components/layout';
-import { PullToRefreshIndicator, SearchBar } from '../components/ui';
-import { usePullToRefresh } from '../gestures';
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getMemories, getMemory, updateMemory, deleteMemory } from "../../api/memory";
+import type { Memory, MemoryType, MemoriesSortBy } from "../../api/memory";
+import GalleryHeader from "../components/layout/GalleryHeader";
 import {
-  CategoryFilters,
-  GalleryFiltersBottomSheet,
+  GalleryCategoryBadges,
+  GalleryFiltersSheet,
   GalleryMemoryCard,
-  type GalleryCategory,
-  type GallerySortBy,
-  type GalleryTimePeriod,
-} from '../components/gallery';
+  GalleryYearDivider,
+  DEFAULT_FILTERS,
+  type GalleryFiltersState,
+} from "../components/gallery";
+import { GallerySkeleton } from "../components/skeletons";
+import PwaBottomSheet from "../components/ui/BottomSheet";
+import MobileLoader from "../components/ui/Loader";
+import MemoryDetailSheetFuturo from "../components/detail/MemoryDetailSheetFuturo";
+import { invalidateOnMemoryChange } from "../utils/queryInvalidations";
+import { usePwaPrefetch } from "../hooks";
 
-function getMemoryDate(memory: Memory): Date {
-  return new Date(memory.start_date || memory.created_at);
+function filterBySearch(memories: Memory[], query: string): Memory[] {
+  if (!query.trim()) return memories;
+  const q = query.trim().toLowerCase();
+  return memories.filter((m) => m.title.toLowerCase().includes(q));
 }
 
-function isInTimePeriod(memoryDate: Date, timePeriod: GalleryTimePeriod): boolean {
+function filterByCategory(
+  memories: Memory[],
+  category: "Tutti" | MemoryType
+): Memory[] {
+  if (category === "Tutti") return memories;
+  const typeUpper = (t: string | undefined) => (t ?? "").toUpperCase();
+  return memories.filter(
+    (m) => typeUpper(m.type) === typeUpper(category)
+  );
+}
+
+function filterByDate(
+  memories: Memory[],
+  dateFilter: GalleryFiltersState["dateFilter"]
+): Memory[] {
+  if (dateFilter === "all") return memories;
   const now = new Date();
-  if (Number.isNaN(memoryDate.getTime())) return false;
-  switch (timePeriod) {
-    case 'allTime':
-      return true;
-    case 'thisMonth':
-      return (
-        memoryDate.getFullYear() === now.getFullYear() &&
-        memoryDate.getMonth() === now.getMonth()
+  const thisYear = now.getFullYear();
+  const oneYearAgo = new Date(now);
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+  return memories.filter((m) => {
+    const d = m.start_date ? new Date(m.start_date) : null;
+    if (!d) return false;
+    if (dateFilter === "this_year") return d.getFullYear() === thisYear;
+    if (dateFilter === "last_12_months") return d >= oneYearAgo;
+    return true;
+  });
+}
+
+function filterBySong(memories: Memory[], withSongOnly: boolean): Memory[] {
+  if (!withSongOnly) return memories;
+  return memories.filter((m) => Boolean(m.song?.trim()));
+}
+
+function sortMemories(
+  memories: Memory[],
+  sortBy: GalleryFiltersState["sortBy"]
+): Memory[] {
+  const out = [...memories];
+  switch (sortBy) {
+    case "most_viewed":
+      return out.sort((a, b) => {
+        const viewsA = a.view_count ?? 0;
+        const viewsB = b.view_count ?? 0;
+        if (viewsA !== viewsB) return viewsB - viewsA;
+        const viewedA = a.last_viewed_at ? new Date(a.last_viewed_at).getTime() : 0;
+        const viewedB = b.last_viewed_at ? new Date(b.last_viewed_at).getTime() : 0;
+        return viewedB - viewedA;
+      });
+    case "date_desc":
+      return out.sort((a, b) => {
+        const da = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const db = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return db - da;
+      });
+    case "date_asc":
+      return out.sort((a, b) => {
+        const da = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const db = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return da - db;
+      });
+    case "title_asc":
+      return out.sort((a, b) =>
+        (a.title || "").localeCompare(b.title || "", "it")
       );
-    case 'thisYear':
-      return memoryDate.getFullYear() === now.getFullYear();
-    case 'year2025':
-      return memoryDate.getFullYear() === 2025;
-    case 'year2024':
-      return memoryDate.getFullYear() === 2024;
+    case "title_desc":
+      return out.sort((a, b) =>
+        (b.title || "").localeCompare(a.title || "", "it")
+      );
     default:
-      return true;
+      return out;
   }
 }
 
-function groupMemoriesByYear(memories: Memory[]): Map<number, Memory[]> {
+function groupByYear(memories: Memory[]): Map<number, Memory[]> {
   const map = new Map<number, Memory[]>();
   for (const m of memories) {
-    const year = getMemoryDate(m).getFullYear();
-    if (!map.has(year)) map.set(year, []);
-    map.get(year)!.push(m);
+    const year = m.start_date
+      ? new Date(m.start_date).getFullYear()
+      : new Date().getFullYear();
+    const list = map.get(year) ?? [];
+    list.push(m);
+    map.set(year, list);
   }
-  const sorted = new Map([...map.entries()].sort((a, b) => b[0] - a[0]));
+  const sorted = new Map(
+    [...map.entries()].sort((a, b) => b[0] - a[0])
+  );
   return sorted;
 }
 
 export default function GalleryMobile() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [selectedType, setSelectedType] = useState<GalleryCategory>('ALL');
-  const [sortBy, setSortBy] = useState<GallerySortBy>('newest');
-  const [timePeriod, setTimePeriod] = useState<GalleryTimePeriod>('allTime');
-  const [showFilters, setShowFilters] = useState(false);
+  const queryClient = useQueryClient();
+  const { prefetchMemoryDetails } = usePwaPrefetch();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"Tutti" | MemoryType>(
+    "Tutti"
+  );
+  const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
+  const [filters, setFilters] = useState<GalleryFiltersState>(DEFAULT_FILTERS);
+  const [futuroSheetMemoryId, setFuturoSheetMemoryId] = useState<number | null>(null);
+  const [futuroDeleteConfirmOpen, setFuturoDeleteConfirmOpen] = useState(false);
+  const [futuroDeleting, setFuturoDeleting] = useState(false);
 
-  const { data: memories = [], isLoading, refetch } = useQuery<Memory[]>({
-    queryKey: ['memories', 'gallery-mobile-redesign'],
-    queryFn: getMemories,
+  const serverSort: MemoriesSortBy =
+    filters.sortBy === "most_viewed" ? "most_viewed" : "created_desc";
+
+  const { data: memories = [], isLoading, error } = useQuery({
+    queryKey: ["memories", { sort: serverSort }],
+    queryFn: () => getMemories({ sort: serverSort }),
+    staleTime: 5 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
   });
 
-  const pullToRefresh = usePullToRefresh({
-    onRefresh: async (): Promise<void> => {
-      await refetch();
+  const { data: futuroMemory } = useQuery({
+    queryKey: ["memory", futuroSheetMemoryId],
+    queryFn: async () => {
+      const res = await getMemory(String(futuroSheetMemoryId!));
+      return res.data;
     },
+    enabled: futuroSheetMemoryId != null,
+    staleTime: 3 * 60 * 1000,
+    placeholderData: () =>
+      memories.find((memory) => memory.id === futuroSheetMemoryId),
   });
 
-  const filteredMemories = useMemo(() => {
-    let list = memories.filter((memory) => memory.images?.length > 0);
+  const handleSaveFuturoMemory = async (data: Partial<Memory>) => {
+    if (futuroSheetMemoryId == null) return;
+    await updateMemory(String(futuroSheetMemoryId), data);
+    await invalidateOnMemoryChange(queryClient, futuroSheetMemoryId);
+  };
 
-    if (selectedType !== 'ALL') {
-      list = list.filter((memory) => (memory.type || '').toUpperCase() === selectedType);
+  const handleConfirmFuturoDelete = async () => {
+    if (futuroSheetMemoryId == null) return;
+    setFuturoDeleting(true);
+    try {
+      await deleteMemory(String(futuroSheetMemoryId));
+      await invalidateOnMemoryChange(queryClient, futuroSheetMemoryId);
+      setFuturoDeleteConfirmOpen(false);
+      setFuturoSheetMemoryId(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFuturoDeleting(false);
     }
+  };
 
-    const normalizedSearch = search.trim().toLowerCase();
-    if (normalizedSearch) {
-      list = list.filter((memory) => {
-        const title = memory.title?.toLowerCase() || '';
-        const location = memory.location?.toLowerCase() || '';
-        const type = memory.type?.toLowerCase() || '';
-        return (
-          title.includes(normalizedSearch) ||
-          location.includes(normalizedSearch) ||
-          type.includes(normalizedSearch)
-        );
-      });
+  const filteredAndSorted = useMemo(() => {
+    let result = filterBySearch(memories, searchQuery);
+    result = filterByCategory(result, categoryFilter);
+    result = filterByDate(result, filters.dateFilter);
+    result = filterBySong(result, filters.withSongOnly);
+    result = sortMemories(result, filters.sortBy);
+    return result;
+  }, [
+    memories,
+    searchQuery,
+    categoryFilter,
+    filters.dateFilter,
+    filters.withSongOnly,
+    filters.sortBy,
+  ]);
+
+  const byYear = useMemo(
+    () => groupByYear(filteredAndSorted),
+    [filteredAndSorted]
+  );
+
+  useEffect(() => {
+    const visibleCandidateIds = filteredAndSorted.slice(0, 3).map((memory) => memory.id);
+    if (visibleCandidateIds.length > 0) {
+      void prefetchMemoryDetails(visibleCandidateIds);
     }
+  }, [filteredAndSorted, prefetchMemoryDetails]);
 
-    list = list.filter((memory) => isInTimePeriod(getMemoryDate(memory), timePeriod));
+  if (isLoading) {
+    return <GallerySkeleton />;
+  }
 
-    list.sort((a, b) => {
-      if (sortBy === 'mostPhotos') {
-        return (b.tot_img || 0) - (a.tot_img || 0);
-      }
-      const aDate = getMemoryDate(a).getTime();
-      const bDate = getMemoryDate(b).getTime();
-      return sortBy === 'newest' ? bDate - aDate : aDate - bDate;
-    });
-
-    return list;
-  }, [memories, search, selectedType, sortBy, timePeriod]);
-
-  const memoriesByYear = useMemo(() => groupMemoriesByYear(filteredMemories), [filteredMemories]);
+  if (error) {
+    return (
+      <section className="pwa-page">
+        <GalleryHeader />
+        <header className="pwa-page-header">
+          <h2 className="pwa-page-title">Errore</h2>
+          <p className="pwa-page-subtitle">
+            Non è stato possibile caricare i ricordi. Riprova più tardi.
+          </p>
+        </header>
+      </section>
+    );
+  }
 
   return (
-    <>
-      <MobilePageWrapper
-        accentBg
-        ref={scrollRef}
-        className="h-full overflow-auto overflow-x-hidden pb-24"
-        onTouchStart={(e) => {
-          pullToRefresh.onTouchStart(e, scrollRef.current?.scrollTop ?? 0);
-        }}
-        onTouchMove={(e) => {
-          pullToRefresh.onTouchMove(e, scrollRef.current?.scrollTop ?? 0);
-        }}
-        onTouchEnd={() => void pullToRefresh.onTouchEnd()}
-      >
-        <PullToRefreshIndicator pullDistance={pullToRefresh.pullDistance} />
+    <section className="pwa-page">
+      <GalleryHeader />
 
-        <MobileHeader title="Galleria" showBack={false} />
-
-        <section className="px-6 py-4">
-          <div className="flex items-center gap-2">
-            <SearchBar
-              className="flex-1"
-              placeholder="Search memories, places..."
-              value={search}
-              onChange={setSearch}
-              onFilterClick={() => setShowFilters(true)}
-            />
-          </div>
-        </section>
-
-        <section className="mt-4">
-          <div className="px-6 mb-4">
-            <h2 className="text-xl font-bold text-[var(--text-primary)]">Select your collection</h2>
-          </div>
-          <CategoryFilters
-            value={selectedType}
-            onChange={setSelectedType}
-            options={[
-              { key: 'VIAGGIO', label: 'Trips' },
-              { key: 'EVENTO', label: 'Events' },
-              { key: 'SEMPLICE', label: 'Simple' },
-              { key: 'FUTURO', label: 'Future' },
-              { key: 'ALL', label: 'Archive' },
-            ]}
+      <div className="pwa-gallery-toolbar">
+        <div className="pwa-gallery-search-wrap">
+          <input
+            type="search"
+            className="pwa-gallery-search-input"
+            placeholder="Cerca ricordi"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Cerca ricordi"
           />
-        </section>
+        </div>
+        <button
+          type="button"
+          className="pwa-gallery-filter-btn"
+          onClick={() => setFiltersSheetOpen(true)}
+          aria-label="Apri filtri"
+        >
+          <span className="material-symbols-outlined">tune</span>
+        </button>
+      </div>
 
-        <section className="mt-6 px-6">
-          {isLoading ? (
-            <div className="grid grid-cols-2 gap-4" aria-hidden="true">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={`gallery-skeleton-${index}`}
-                  className="aspect-square animate-pulse rounded-3xl bg-[var(--bg-input)]"
-                />
-              ))}
-            </div>
-          ) : filteredMemories.length === 0 ? (
-            <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--bg-card)] px-4 py-8 text-center">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">
-                No memories found with these filters.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {Array.from(memoriesByYear.entries()).map(([year, yearMemories]) => (
-                <div key={year} className="mb-8">
-                  <div className="mb-4 flex items-center gap-4">
-                    <h3 className="text-lg font-bold text-[var(--text-primary)]">{year}</h3>
-                    <div className="h-px flex-1 bg-[var(--border-default)]" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {yearMemories.map((memory) => (
-                      <GalleryMemoryCard
-                        key={memory.id}
-                        memory={memory}
-                        onClick={(id) => navigate(`/ricordo/${id}`)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </MobilePageWrapper>
-
-      <GalleryFiltersBottomSheet
-        open={showFilters}
-        onClose={() => setShowFilters(false)}
-        selectedType={selectedType}
-        sortBy={sortBy}
-        timePeriod={timePeriod}
-        onTypeChange={setSelectedType}
-        onSortChange={setSortBy}
-        onTimePeriodChange={setTimePeriod}
-        onApply={() => {}}
+      <GalleryCategoryBadges
+        selected={categoryFilter}
+        onSelect={setCategoryFilter}
       />
-    </>
+
+      {filteredAndSorted.length === 0 ? (
+        <div className="pwa-gallery-empty">
+          <p className="pwa-gallery-empty-text">Nessun ricordo trovato.</p>
+          <p className="pwa-gallery-empty-sub">
+            Prova a cambiare filtri o ricerca.
+          </p>
+        </div>
+      ) : (
+        <>
+          {Array.from(byYear.entries()).map(([year, yearMemories]) => (
+            <div key={year} className="pwa-gallery-year-section">
+              <GalleryYearDivider year={year} />
+              <div className="pwa-gallery-grid">
+                {yearMemories.map((memory) => (
+                  <GalleryMemoryCard
+                    key={memory.id}
+                    memory={memory}
+                    onFuturoClick={(m) => setFuturoSheetMemoryId(m.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      <PwaBottomSheet
+        open={filtersSheetOpen}
+        onClose={() => setFiltersSheetOpen(false)}
+      >
+        <GalleryFiltersSheet
+          open={filtersSheetOpen}
+          initialFilters={filters}
+          onApply={setFilters}
+          onClose={() => setFiltersSheetOpen(false)}
+        />
+      </PwaBottomSheet>
+
+      <PwaBottomSheet
+        open={futuroSheetMemoryId != null}
+        onClose={() => {
+          setFuturoSheetMemoryId(null);
+          setFuturoDeleteConfirmOpen(false);
+        }}
+      >
+        {futuroMemory && (
+          <MemoryDetailSheetFuturo
+            memory={futuroMemory}
+            onClose={() => setFuturoSheetMemoryId(null)}
+            onSave={handleSaveFuturoMemory}
+            onDelete={() => setFuturoDeleteConfirmOpen(true)}
+          />
+        )}
+        {futuroSheetMemoryId != null && !futuroMemory && (
+          <div className="pwa-page">
+            <MobileLoader text="Caricamento..." subText="Stiamo preparando il ricordo" />
+          </div>
+        )}
+      </PwaBottomSheet>
+
+      <PwaBottomSheet
+        open={futuroDeleteConfirmOpen}
+        onClose={() => !futuroDeleting && setFuturoDeleteConfirmOpen(false)}
+      >
+        <div
+          className="pwa-idea-detail-sheet"
+          role="alertdialog"
+          aria-labelledby="futuro-delete-title"
+          aria-describedby="futuro-delete-desc"
+        >
+          <h2 id="futuro-delete-title" className="pwa-memory-edit-sheet-title">
+            Elimina ricordo
+          </h2>
+          <p id="futuro-delete-desc" className="pwa-idea-detail-desc">
+            Vuoi eliminare questo ricordo? Questa azione non si può annullare.
+          </p>
+          <div className="pwa-idea-detail-actions">
+            <button
+              type="button"
+              className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel"
+              onClick={() => setFuturoDeleteConfirmOpen(false)}
+              disabled={futuroDeleting}
+            >
+              Annulla
+            </button>
+            <button
+              type="button"
+              className="pwa-idea-detail-btn pwa-idea-detail-btn-save"
+              style={{ background: "var(--pwa-accent-red, #dc2626)" }}
+              onClick={handleConfirmFuturoDelete}
+              disabled={futuroDeleting}
+            >
+              {futuroDeleting ? "Eliminazione..." : "Elimina"}
+            </button>
+          </div>
+        </div>
+      </PwaBottomSheet>
+    </section>
   );
 }

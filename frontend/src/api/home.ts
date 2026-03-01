@@ -14,6 +14,26 @@ export interface HomeStats {
       data_fine: string | null;
       image: string;
     }>;
+    recently_viewed_memories: Array<{
+      id: number;
+      title: string;
+      type: string;
+      start_date: string | null;
+      end_date: string | null;
+      view_count: number;
+      last_viewed_at: string;
+      image: string | null;
+    }>;
+    most_viewed_memories: Array<{
+      id: number;
+      title: string;
+      type: string;
+      start_date: string | null;
+      end_date: string | null;
+      view_count: number;
+      last_viewed_at: string | null;
+      image: string | null;
+    }>;
     Images: Array<{
       id: number;
       created_at: string;
@@ -23,8 +43,9 @@ export interface HomeStats {
       id: number;
       title: string;
       description: string;
+      type?: string | null;
       created_at: string;
-      completed_at: string | null;
+      date_checked?: string | null;
     }>;
     Songs: Array<{
       id: number;

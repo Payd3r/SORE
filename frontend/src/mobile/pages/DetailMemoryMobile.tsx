@@ -1,357 +1,270 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { getMemory, getMemoryCarousel, updateMemory, deleteMemory, type Memory } from '../../api/memory';
-import { getImageUrl } from '../../api/images';
-import { getTrackDetails, type SpotifyTrack } from '../../api/spotify';
-import MemoryEditModal from '../../desktop/components/Memory/MemoryEditModal';
-import DeleteModal from '../../desktop/components/Memory/DeleteModal';
-import { MobileHeader } from '../components/layout';
-import { SegmentedControl, Button } from '../components/ui';
-import MaterialIcon from '../components/ui/MaterialIcon';
-
-interface ExtendedMemory extends Memory {
-  description?: string | null;
-  created_by_name: string;
-  created_by_user_id: number;
-}
-
-interface CarouselImage {
-  image: string;
-  processedUrl: string;
-}
-
-type DetailTab = 'overview' | 'galleria' | 'info';
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getMemory, updateMemory, deleteMemory, createShareLink } from "../../api/memory";
+import type { Memory } from "../../api/memory";
+import DetailMemoryHeader from "../components/detail/DetailMemoryHeader";
+import MemoryDetailSheetFuturo from "../components/detail/MemoryDetailSheetFuturo";
+import MemoryEditSheet from "../components/detail/MemoryEditSheet";
+import DetailGalleryUploadSheet from "../components/detail/DetailGalleryUploadSheet";
+import DetailInfoSection from "../components/detail/DetailInfoSection";
+import DetailGallerySection from "../components/detail/DetailGallerySection";
+import DetailMemoryEventoViaggioLayout from "../components/detail/DetailMemoryEventoViaggioLayout";
+import { DetailMemorySkeleton } from "../components/skeletons";
+import PwaBottomSheet from "../components/ui/BottomSheet";
+import { invalidateOnMemoryChange } from "../utils/queryInvalidations";
 
 export default function DetailMemoryMobile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
-  const [expandedDescription, setExpandedDescription] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [touchStartX, setTouchStartX] = useState(0);
 
-  const { data: memory, isLoading } = useQuery<ExtendedMemory>({
-    queryKey: ['memory', id],
+  const { data: memory, isLoading, error } = useQuery({
+    queryKey: ["memory", id],
     queryFn: async () => {
-      const response = await getMemory(id!);
-      return response.data as ExtendedMemory;
+      const res = await getMemory(id!);
+      return res.data;
     },
-    enabled: Boolean(id),
+    enabled: !!id,
+    staleTime: 3 * 60 * 1000,
+    placeholderData: () => {
+      const memories = queryClient.getQueryData<Memory[]>(["memories"]);
+      return memories?.find((item) => String(item.id) === id);
+    },
   });
 
-  const { data: carouselImages = [] } = useQuery<CarouselImage[]>({
-    queryKey: ['memoryCarousel', id],
-    queryFn: async () => {
-      const response = await getMemoryCarousel(id!);
-      return response.data.map((image: { image: string }) => ({
-        image: image.image,
-        processedUrl: getImageUrl(image.image),
-      }));
-    },
-    enabled: Boolean(id),
-  });
+  const handleBack = () => navigate(-1);
+  const handleEdit = () => setEditSheetOpen(true);
+  const handleDelete = () => setDeleteConfirmOpen(true);
 
-  const { data: spotifyTrack } = useQuery<SpotifyTrack | null>({
-    queryKey: ['memoryTrack', memory?.id, memory?.song],
-    queryFn: async () => {
-      if (!memory?.song) return null;
-      const trackName = memory.song.split(' - ')[0];
-      return getTrackDetails(trackName);
-    },
-    enabled: Boolean(memory?.song),
-  });
+  const handleShare = async () => {
+    if (!id || !memory) return;
 
-  useEffect(() => {
-    document.body.classList.add('detail-memory-active');
-    return () => document.body.classList.remove('detail-memory-active');
-  }, []);
+    try {
+      const response = await createShareLink(id);
+      const shareUrl = response.data.url;
 
-  const imageToShow = useMemo(() => {
-    if (carouselImages.length > 0) return carouselImages[currentImageIndex]?.processedUrl;
-    const fallback = memory?.images?.[0]?.thumb_big_path;
-    return fallback ? getImageUrl(fallback) : '';
-  }, [carouselImages, currentImageIndex, memory?.images]);
+      if (navigator.share) {
+        await navigator.share({
+          title: memory.title,
+          text: `Guarda questo ricordo su SORE: ${memory.title}`,
+          url: shareUrl,
+        });
+        return;
+      }
 
-  const locationAndDate = useMemo(() => {
-    if (!memory) return '';
-    const startDate = memory.start_date ? format(parseISO(memory.start_date), 'd MMM yyyy', { locale: it }) : '';
-    const endDate = memory.end_date ? format(parseISO(memory.end_date), 'd MMM yyyy', { locale: it }) : '';
-    const dateLabel = endDate && endDate !== startDate ? `${startDate} - ${endDate}` : startDate;
-    if (memory.location && dateLabel) return `${memory.location} • ${dateLabel}`;
-    return memory.location || dateLabel;
-  }, [memory]);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        window.alert("Link di condivisione copiato negli appunti.");
+        return;
+      }
 
-  const handlePrevImage = () => {
-    if (carouselImages.length <= 1) return;
-    setCurrentImageIndex((prev) => (prev === 0 ? carouselImages.length - 1 : prev - 1));
+      window.prompt("Copia questo link:", shareUrl);
+    } catch (err) {
+      console.error(err);
+      window.alert("Impossibile creare il link di condivisione.");
+    }
   };
 
-  const handleNextImage = () => {
-    if (carouselImages.length <= 1) return;
-    setCurrentImageIndex((prev) => (prev === carouselImages.length - 1 ? 0 : prev + 1));
-  };
-
-  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => setTouchStartX(e.touches[0].clientX);
-
-  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    const distance = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(distance) < 40) return;
-    if (distance > 0) handlePrevImage();
-    else handleNextImage();
-  };
-
-  const handleSaveMemory = async (updatedData: Partial<Memory>) => {
-    if (!id) return;
-    await updateMemory(id, updatedData);
-    await queryClient.invalidateQueries({ queryKey: ['memory', id] });
-    setIsEditOpen(false);
-  };
-
-  const handleDeleteMemory = async () => {
+  const handleConfirmDelete = async () => {
     if (!id) return;
     setIsDeleting(true);
     try {
       await deleteMemory(id);
-      await queryClient.invalidateQueries({ queryKey: ['memories'] });
-      navigate('/');
+      await invalidateOnMemoryChange(queryClient, id);
+      setDeleteConfirmOpen(false);
+      navigate(-1);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsDeleting(false);
-      setIsDeleteOpen(false);
     }
   };
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    const title = memory?.title || 'Ricordo';
-    if (navigator.share) {
-      await navigator.share({ title, url });
-      return;
-    }
-    await navigator.clipboard.writeText(url);
-  };
+  if (isLoading) {
+    return <DetailMemorySkeleton />;
+  }
 
-  if (isLoading || !memory) {
+  if (error || !memory) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-page)] text-[var(--text-secondary)]">
-        Caricamento ricordo...
-      </div>
+      <section className="pwa-page">
+        <header className="pwa-page-header">
+          <h1 className="pwa-page-title">Errore</h1>
+          <p className="pwa-page-subtitle">
+            Ricordo non trovato o non disponibile.
+          </p>
+        </header>
+        <div className="pwa-page-card">
+          <button
+            type="button"
+            className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel"
+            onClick={() => navigate(-1)}
+          >
+            Indietro
+          </button>
+        </div>
+      </section>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[var(--bg-page)]">
-      <div className="relative">
-        <div className="absolute inset-x-0 top-0 z-20">
-          <MobileHeader
-            variant="overlay"
-            title={memory.title}
-            onBack={() => navigate(-1)}
-            rightActions={
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
-                  aria-label="Condividi"
-                >
-                  <MaterialIcon name="share" size={20} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsFavorite((prev) => !prev)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
-                  aria-label="Preferiti"
-                >
-                  <MaterialIcon
-                    name="favorite"
-                    size={20}
-                    fill={isFavorite ? 1 : 0}
-                    className={isFavorite ? 'text-[var(--color-accent-pink)]' : ''}
-                  />
-                </button>
-              </div>
-            }
+  const handleSaveMemory = async (data: Partial<Memory>) => {
+    if (!id) return;
+    await updateMemory(id, data);
+    await invalidateOnMemoryChange(queryClient, id);
+    setEditSheetOpen(false);
+  };
+
+  const isFuturo = memory.type?.toUpperCase() === "FUTURO";
+  if (isFuturo) {
+    return (
+      <>
+        <PwaBottomSheet open onClose={handleBack}>
+          <MemoryDetailSheetFuturo
+            memory={memory}
+            onClose={handleBack}
+            onSave={handleSaveMemory}
+            onDelete={handleDelete}
+            onShare={handleShare}
           />
-        </div>
-
-        <div className="relative h-[45vh] w-full overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          {imageToShow ? (
-            <img src={imageToShow} alt={memory.title} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
-              Nessuna immagine disponibile
-            </div>
-          )}
-
-          <span className="absolute left-4 top-20 rounded-full border border-white/30 bg-black/30 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white backdrop-blur-md">
-            {memory.type}
-          </span>
-
-          {carouselImages.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1">
-              {carouselImages.map((_, idx) => (
-                <span
-                  key={idx}
-                  className={`h-1.5 rounded-full ${idx === currentImageIndex ? 'w-6 bg-white' : 'w-2 bg-white/60'}`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <section className="relative z-10 -mt-[30px] rounded-t-[32px] bg-[var(--bg-card)] px-6 pb-28 pt-6 shadow-[var(--shadow-md)]">
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">{memory.title}</h1>
-        {locationAndDate && (
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">{locationAndDate}</p>
-        )}
-
-        <div className="mt-4">
-          <SegmentedControl<DetailTab>
-            options={[
-              { key: 'overview', label: 'Overview' },
-              { key: 'galleria', label: 'Galleria' },
-              { key: 'info', label: 'Info' },
-            ]}
-            value={activeTab}
-            onChange={setActiveTab}
-          />
-        </div>
-
-        {activeTab === 'overview' && (
-          <div className="mt-4 space-y-4">
-            {memory.description && (
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-[var(--text-primary)]">Descrizione</h3>
-                <p className={`text-sm text-[var(--text-secondary)] ${expandedDescription ? '' : 'line-clamp-4'}`}>
-                  {memory.description}
-                </p>
-                {memory.description.length > 180 && (
-                  <button
-                    type="button"
-                    onClick={() => setExpandedDescription((prev) => !prev)}
-                    className="mt-1 text-sm font-medium text-[var(--color-primary)]"
-                  >
-                    {expandedDescription ? 'Mostra meno' : 'Leggi tutto'}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {(memory.start_date || memory.location) && (
-              <div className="grid gap-2 text-sm text-[var(--text-secondary)]">
-                {memory.start_date && (
-                  <div className="flex items-center gap-2">
-                    <MaterialIcon name="calendar_today" size={16} />
-                    <span>{locationAndDate.split('•').pop()?.trim() || locationAndDate}</span>
-                  </div>
-                )}
-                {memory.location && (
-                  <div className="flex items-center gap-2">
-                    <MaterialIcon name="location_on" size={16} />
-                    <span>{memory.location}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {(memory.song || spotifyTrack) && (
-              <div className="inline-flex items-center gap-2 rounded-[20px] bg-[#1DB954] px-3 py-1.5 text-[0.75rem] font-semibold text-white">
-                <MaterialIcon name="graphic_eq" size={16} />
-                <span>{spotifyTrack?.name ?? memory.song}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'galleria' && (
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {(memory.images || []).map((image, index) => (
-              <button
-                key={image.id}
-                type="button"
-                onClick={() => {
-                  const selected = carouselImages.findIndex((carousel) => carousel.image === image.webp_path || carousel.image === image.thumb_big_path);
-                  setCurrentImageIndex(selected >= 0 ? selected : index % Math.max(carouselImages.length, 1));
-                }}
-                className="aspect-square overflow-hidden rounded-lg bg-[var(--bg-secondary)]"
-              >
-                <img
-                  src={image.thumb_big_path ? getImageUrl(image.thumb_big_path) : ''}
-                  alt={`Immagine ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'info' && (
-          <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
-            <p>
-              <span className="font-medium text-[var(--text-primary)]">Tipo:</span> {memory.type}
-            </p>
-            <p>
-              <span className="font-medium text-[var(--text-primary)]">Creato il:</span>{' '}
-              {format(parseISO(memory.created_at), 'd MMMM yyyy', { locale: it })}
-            </p>
-            <p>
-              <span className="font-medium text-[var(--text-primary)]">Ultimo aggiornamento:</span>{' '}
-              {format(parseISO(memory.updated_at), 'd MMMM yyyy', { locale: it })}
-            </p>
-            {memory.created_by_name && (
-              <p>
-                <span className="font-medium text-[var(--text-primary)]">Creato da:</span> {memory.created_by_name}
+        </PwaBottomSheet>
+        {deleteConfirmOpen && (
+          <PwaBottomSheet
+            open={deleteConfirmOpen}
+            onClose={() => !isDeleting && setDeleteConfirmOpen(false)}
+          >
+            <div
+              className="pwa-idea-detail-sheet"
+              role="alertdialog"
+              aria-labelledby="delete-memory-title"
+              aria-describedby="delete-memory-desc"
+            >
+              <h2 id="delete-memory-title" className="pwa-memory-edit-sheet-title">
+                Elimina ricordo
+              </h2>
+              <p id="delete-memory-desc" className="pwa-idea-detail-desc">
+                Vuoi eliminare &quot;{memory.title}&quot;? Questa azione non si può annullare.
               </p>
-            )}
-          </div>
+              <div className="pwa-idea-detail-actions">
+                <button
+                  type="button"
+                  className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  disabled={isDeleting}
+                >
+                  Annulla
+                </button>
+                <button
+                  type="button"
+                  className="pwa-idea-detail-btn pwa-idea-detail-btn-save"
+                  style={{ background: "var(--pwa-accent-red, #dc2626)" }}
+                  onClick={handleConfirmDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Eliminazione..." : "Elimina"}
+                </button>
+              </div>
+            </div>
+          </PwaBottomSheet>
         )}
-      </section>
+      </>
+    );
+  }
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border-default)] bg-[var(--bg-card)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        <div className="grid grid-cols-3 gap-2">
-          <Button variant="secondary" onClick={handleShare}>
-            Condividi
-          </Button>
-          <Button variant="secondary" onClick={() => setIsEditOpen(true)}>
-            Modifica
-          </Button>
-          <Button variant="danger" onClick={() => setIsDeleteOpen(true)}>
-            Elimina
-          </Button>
-        </div>
-      </div>
+  const isSimple = memory.type === "SEMPLICE";
 
-      {isEditOpen && (
-        <MemoryEditModal
-          isOpen={isEditOpen}
-          onClose={() => setIsEditOpen(false)}
-          memory={{
-            ...memory,
-            created_by_name: memory.created_by_name ?? '',
-            created_by_user_id: memory.created_by_user_id ?? 0,
-          }}
-          onSave={handleSaveMemory}
+  return (
+    <>
+      {editSheetOpen && (
+        <PwaBottomSheet
+          open={editSheetOpen}
+          onClose={() => setEditSheetOpen(false)}
+        >
+          <MemoryEditSheet
+            memory={memory}
+            onClose={() => setEditSheetOpen(false)}
+            onSave={handleSaveMemory}
+          />
+        </PwaBottomSheet>
+      )}
+      {uploadSheetOpen && (
+        <PwaBottomSheet
+          open={uploadSheetOpen}
+          onClose={() => setUploadSheetOpen(false)}
+        >
+          <DetailGalleryUploadSheet
+            memoryId={memory.id}
+            onClose={() => setUploadSheetOpen(false)}
+          />
+        </PwaBottomSheet>
+      )}
+      {deleteConfirmOpen && (
+        <PwaBottomSheet
+          open={deleteConfirmOpen}
+          onClose={() => !isDeleting && setDeleteConfirmOpen(false)}
+        >
+          <div
+            className="pwa-idea-detail-sheet"
+            role="alertdialog"
+            aria-labelledby="delete-memory-title"
+            aria-describedby="delete-memory-desc"
+          >
+            <h2 id="delete-memory-title" className="pwa-memory-edit-sheet-title">
+              Elimina ricordo
+            </h2>
+            <p id="delete-memory-desc" className="pwa-idea-detail-desc">
+              Vuoi eliminare &quot;{memory.title}&quot;? Questa azione non si può annullare.
+            </p>
+            <div className="pwa-idea-detail-actions">
+              <button
+                type="button"
+                className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel"
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={isDeleting}
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                className="pwa-idea-detail-btn pwa-idea-detail-btn-save"
+                style={{ background: "var(--pwa-accent-red, #dc2626)" }}
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Eliminazione..." : "Elimina"}
+              </button>
+            </div>
+          </div>
+        </PwaBottomSheet>
+      )}
+      {isSimple ? (
+        <section className="pwa-page pwa-page-detail-memory">
+          <DetailMemoryHeader
+            memory={memory}
+            onBack={handleBack}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onShare={handleShare}
+          />
+          <div className="pwa-page-card">
+            <DetailInfoSection memory={memory} />
+            <DetailGallerySection memory={memory} onAddPhotos={() => setUploadSheetOpen(true)} />
+          </div>
+        </section>
+      ) : (
+        <DetailMemoryEventoViaggioLayout
+          memory={memory}
+          memoryId={id!}
+          onBack={handleBack}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onShare={handleShare}
+          onAddPhotos={() => setUploadSheetOpen(true)}
         />
       )}
-
-      {isDeleteOpen && (
-        <DeleteModal
-          isOpen={isDeleteOpen}
-          onClose={() => setIsDeleteOpen(false)}
-          onDelete={handleDeleteMemory}
-          isDeleting={isDeleting}
-        />
-      )}
-    </div>
+    </>
   );
 }

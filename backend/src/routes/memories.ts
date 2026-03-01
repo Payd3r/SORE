@@ -5,6 +5,7 @@ import { Memory, ResultSetHeader, Image } from '../types/db';
 import { RowDataPacket } from 'mysql2';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { updateMemoryDates } from '../services/memoryDateUpdater';
 import { createMemoryNotification } from '../services/notificationService';
 
@@ -22,16 +23,25 @@ router.get('/', auth, async (req: any, res) => {
         display_order ASC, 
         created_at DESC
     `;
+  const sort = typeof req.query.sort === 'string' ? req.query.sort : 'created_desc';
+  const sortClauses: Record<string, string> = {
+    created_desc: 'm.created_at DESC',
+    most_viewed: 'm.view_count DESC, m.last_viewed_at DESC, m.created_at DESC',
+  };
+  const orderByClause = sortClauses[sort] ?? sortClauses.created_desc;
   const memoriesQuery = `
       SELECT 
         m.id,
         m.title,
         m.created_at,
+        m.updated_at,
         m.type,
         m.start_date,
         m.end_date,
         m.location,
         m.song,
+        m.view_count,
+        m.last_viewed_at,
         CASE 
           WHEN m.type = 'VIAGGIO' THEN 4
           WHEN m.type = 'EVENTO' THEN 4
@@ -40,7 +50,7 @@ router.get('/', auth, async (req: any, res) => {
         (SELECT COUNT(*) FROM images WHERE memory_id = m.id) as tot_img
       FROM memories m
       WHERE m.couple_id = ?
-      ORDER BY m.created_at DESC
+      ORDER BY ${orderByClause}
     `;
 
   try {
@@ -66,9 +76,17 @@ router.get('/', auth, async (req: any, res) => {
 
     const memoriesWithImages = await Promise.all(memories.map(async (memory: Memory) => {
       // Ordina già per display_order ASC NULLS LAST, poi created_at DESC
-      const relatedImages = (images as Image[])
-        .filter((img: Image) => img.memory_id === memory.id)
-        .slice(0, memory.img_limit);
+      const memoryImages = (images as Image[])
+        .filter((img: Image) => img.memory_id === memory.id);
+      const hasPrioritizedImages = memoryImages.some(
+        (img) => img.display_order !== null && img.display_order !== undefined
+      );
+
+      const relatedImages = hasPrioritizedImages
+        ? memoryImages.slice(0, memory.img_limit)
+        : [...memoryImages]
+            .sort(() => Math.random() - 0.5)
+            .slice(0, memory.img_limit);
       console.log(`[MEMORIES-DEBUG] Memory id=${memory.id} (${memory.title}) - immagini associate (dopo filtro per memory_id e slice):`, relatedImages.map(img => ({id: img.id, display_order: img.display_order})));
 
       const imgagesConParametri = await Promise.all(
@@ -105,8 +123,8 @@ router.get('/', auth, async (req: any, res) => {
         (img.thumb_big_path !== null || img.webp_path !== null)
       );
       console.log(`[MEMORIES-DEBUG] Memory id=${memory.id} - immagini restituite dopo filtro validità:`, validImages.map(img => img.id));
-      if (!relatedImages.some(img => img.display_order !== null && img.display_order !== undefined)) {
-        console.log(`[MEMORIES-DEBUG] ATTENZIONE: Nessuna immagine con display_order prioritario per memory id=${memory.id}`);
+      if (!hasPrioritizedImages) {
+        console.log(`[MEMORIES-DEBUG] ATTENZIONE: Nessuna immagine con display_order prioritario per memory id=${memory.id}. Uso selezione random.`);
       }
 
       return {
@@ -120,6 +138,53 @@ router.get('/', auth, async (req: any, res) => {
   } catch (error) {
     console.error('[Memories] Error fetching memories:', error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({ error: 'Failed to fetch memories' });
+  }
+});
+
+// Get a single memory
+router.post('/:memoryId/share', auth, async (req: any, res) => {
+  try {
+    const { memoryId } = req.params;
+    const coupleId = req.user.coupleId;
+
+    const [memoryRows] = await pool.promise().query<RowDataPacket[]>(
+      'SELECT id FROM memories WHERE id = ? AND couple_id = ? LIMIT 1',
+      [memoryId, coupleId]
+    );
+
+    if (!memoryRows || memoryRows.length === 0) {
+      return res.status(404).json({ error: 'Memory not found' });
+    }
+
+    const ttlDaysEnv = Number(process.env.SHARE_LINK_TTL_DAYS || '30');
+    const ttlDays = Number.isFinite(ttlDaysEnv) && ttlDaysEnv > 0 ? ttlDaysEnv : 30;
+
+    const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
+    const token = randomUUID();
+
+    await pool.promise().query(
+      `INSERT INTO memory_share_tokens (memory_id, token, expires_at)
+       VALUES (?, ?, ?)`,
+      [memoryId, token, expiresAt]
+    );
+
+    const publicBaseUrl =
+      process.env.SHARE_BASE_URL ||
+      process.env.API_PUBLIC_URL ||
+      `http://localhost:${process.env.PORT || 3002}`;
+
+    const url = `${publicBaseUrl.replace(/\/$/, '')}/share/${token}`;
+
+    return res.status(201).json({
+      data: {
+        url,
+        token,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('[Memory] Error creating share link:', error instanceof Error ? error.message : 'Unknown error');
+    return res.status(500).json({ error: 'Failed to create share link' });
   }
 });
 
@@ -155,6 +220,19 @@ router.get('/:memoryId', auth, async (req: any, res) => {
       return res.status(403).json({ error: 'Not authorized to view this memory' });
     }
 
+    // Aggiorna metadati visualizzazione per supportare "più visti" e "ultimi visti"
+    const [viewUpdateResult] = await pool.promise().query<ResultSetHeader>(
+      `UPDATE memories
+       SET view_count = view_count + 1,
+           last_viewed_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND couple_id = ?`,
+      [memoryId, coupleId]
+    );
+
+    if (viewUpdateResult.affectedRows === 0) {
+      return res.status(403).json({ error: 'Not authorized to view this memory' });
+    }
+
     // Poi recuperiamo le immagini associate
     const [imageRows] = await pool.promise().query<Image[]>(
       `SELECT 
@@ -172,6 +250,8 @@ router.get('/:memoryId', auth, async (req: any, res) => {
 
     const processedMemory: Memory = {
       ...memory,
+      view_count: Number(memory.view_count ?? 0) + 1,
+      last_viewed_at: new Date(),
       images: []
     };
 
@@ -445,7 +525,7 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
       return res.status(404).json({ error: 'Memory not found or not authorized' });
     }
 
-    // Recupera 5 immagini casuali
+    // Recupera max 6 immagini casuali
     const [imageRows] = await pool.promise().query<Image[]>(
       `SELECT 
         webp_path,
@@ -455,7 +535,7 @@ router.get('/carousel/:memoryId', auth, async (req: any, res) => {
       FROM images 
       WHERE memory_id = ?
       ORDER BY RAND()
-      LIMIT 5`,
+      LIMIT 6`,
       [memoryId]
     );
 

@@ -1,5 +1,5 @@
 import pool from '../config/db';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { sendPushToUser } from './pushService';
 
 /**
@@ -30,6 +30,8 @@ export interface NotificationData {
   icon?: string;
   /** Tipo per filtraggio e opt-out per tipo in futuro */
   type?: string;
+  /** Per tipo new_photos: numero di foto (default 1) */
+  photo_count?: number;
 }
 
 /**
@@ -40,7 +42,8 @@ export interface NotificationData {
 export async function createNotification(data: NotificationData): Promise<number> {
   try {
     // Deduplicazione: evita notifiche duplicate per stesso evento (user + url) nello stesso giorno
-    if (data.url) {
+    // Per new_photos la dedupe/aggregazione è gestita in createNewPhotosNotification
+    if (data.url && data.type !== NotificationType.NEW_PHOTOS) {
       const [existing] = await pool.promise().query(
         `SELECT id FROM notifications 
          WHERE user_id = ? AND url = ? AND DATE(created_at) = CURDATE() 
@@ -52,10 +55,11 @@ export async function createNotification(data: NotificationData): Promise<number
       }
     }
 
+    const photoCount = data.photo_count ?? 1;
     const [result] = await pool.promise().query<ResultSetHeader>(
-      `INSERT INTO notifications (user_id, title, body, url, icon, status, type, created_at) 
-       VALUES (?, ?, ?, ?, ?, 0, ?, NOW())`,
-      [data.user_id, data.title, data.body, data.url || null, data.icon || null, data.type || null]
+      `INSERT INTO notifications (user_id, title, body, url, icon, status, type, photo_count, created_at) 
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, NOW())`,
+      [data.user_id, data.title, data.body, data.url || null, data.icon || null, data.type || null, photoCount]
     );
 
     // Invia la push in background senza bloccare la creazione notifica su DB.
@@ -168,10 +172,10 @@ export async function createIdeaCompletedNotification(
 /**
  * Crea notifiche per nuove foto aggiunte
  * @param uploaderName Nome dell'utente che ha caricato le foto
- * @param count Numero di foto caricate
+ * @param count Numero di foto caricate in questo upload (solitamente 1)
  * @param recipientIds Array di ID degli utenti destinatari
  * @param memoryId ID del ricordo (opzionale): se presente, l'URL punta a /ricordo/:id invece di /galleria
- * @returns Array degli ID delle notifiche create
+ * @returns Array degli ID delle notifiche create o aggiornate (raggruppate per ricordo)
  */
 export async function createNewPhotosNotification(
   uploaderName: string,
@@ -181,17 +185,48 @@ export async function createNewPhotosNotification(
 ): Promise<number[]> {
   try {
     const url = memoryId ? `/ricordo/${memoryId}` : '/galleria';
-    const notificationPromises = recipientIds.map(userId =>
-      createNotification({
-        user_id: userId,
-        title: 'Nuove foto',
-        body: `${uploaderName} ha aggiunto ${count} ${count === 1 ? 'nuova foto' : 'nuove foto'}!`,
-        url,
-        type: NotificationType.NEW_PHOTOS
-      })
-    );
+    const results: number[] = [];
 
-    return Promise.all(notificationPromises);
+    for (const userId of recipientIds) {
+      const [existing] = await pool.promise().query<RowDataPacket[]>(
+        `SELECT id, photo_count FROM notifications 
+         WHERE user_id = ? AND url = ? AND type = ? AND status = 0 AND DATE(created_at) = CURDATE() 
+         LIMIT 1`,
+        [userId, url, NotificationType.NEW_PHOTOS]
+      );
+
+      if (existing && existing.length > 0) {
+        const row = existing[0];
+        const currentCount = row.photo_count != null ? Number(row.photo_count) : 1;
+        const newCount = currentCount + count;
+        const body = `${uploaderName} ha aggiunto ${newCount} ${newCount === 1 ? 'nuova foto' : 'nuove foto'}!`;
+        await pool.promise().query(
+          `UPDATE notifications SET photo_count = ?, body = ?, created_at = NOW() WHERE id = ?`,
+          [newCount, body, row.id]
+        );
+        void sendPushToUser(userId, {
+          title: 'Nuove foto',
+          body,
+          url,
+          icon: '/icons/icon-152x152.png',
+          notificationId: row.id,
+          createdAt: new Date().toISOString(),
+        });
+        results.push(row.id);
+      } else {
+        const id = await createNotification({
+          user_id: userId,
+          title: 'Nuove foto',
+          body: `${uploaderName} ha aggiunto ${count} ${count === 1 ? 'nuova foto' : 'nuove foto'}!`,
+          url,
+          type: NotificationType.NEW_PHOTOS,
+          photo_count: count,
+        });
+        if (id > 0) results.push(id);
+      }
+    }
+
+    return results;
   } catch (error) {
     console.error('Error creating new photos notifications:', error);
     throw error;

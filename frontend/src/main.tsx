@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/base.css'
+import './mobile/styles/design-system-pwa.css'
 import App from './App.tsx'
 import 'lazysizes'
 import 'lazysizes/plugins/attrchange/ls.attrchange'

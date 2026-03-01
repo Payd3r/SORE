@@ -20,15 +20,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const applyTheme = (preference: 'light' | 'dark' | 'system') => {
+    const el = document.documentElement;
+    el.classList.remove('dark', 'light');
+    if (preference === 'dark') {
+      el.classList.add('dark');
+    } else if (preference === 'light') {
+      el.classList.add('light');
+    } else {
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        el.classList.add('dark');
+      } else {
+        el.classList.add('light');
+      }
+    }
+  };
+
   useEffect(() => {
     const checkAuth = () => {
       const savedToken = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
 
       if (savedToken && savedUser) {
+        const parsed = JSON.parse(savedUser) as AuthResponse['user'];
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+        setUser(parsed);
         setIsAuthenticated(true);
+        applyTheme(parsed.theme_preference);
       } else {
         setToken(null);
         setUser(null);
@@ -40,6 +58,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const interval = setInterval(checkAuth, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (user?.theme_preference) {
+      applyTheme(user.theme_preference);
+    }
+  }, [user?.theme_preference]);
 
   // Impostiamo isLoading a false solo dopo il primo controllo
   useEffect(() => {
@@ -56,37 +80,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(response.token);
     setUser(response.user);
     setIsAuthenticated(true);
-
-    // Applica il tema preferito dell'utente
-    if (response.user.theme_preference === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else if (response.user.theme_preference === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else if (response.user.theme_preference === 'system') {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
+    applyTheme(response.user.theme_preference);
   };
 
   const logout = () => {
-    // Rimuovi tutti i dati di autenticazione
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
-    // Rimuovi eventuali altri dati salvati
     localStorage.removeItem('darkMode');
     localStorage.removeItem('lastVisit');
-    
-    // Pulisci lo stato
+    document.documentElement.classList.remove('dark', 'light');
+
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
-    
-    // Forza il refresh della pagina per pulire tutti gli stati
-    window.location.href = '/welcome';
   };
 
   const updateUser = (updatedUser: AuthResponse['user']) => {

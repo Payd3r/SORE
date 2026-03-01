@@ -5,6 +5,7 @@ import type { CarouselImage } from '../desktop/pages/DetailMemory';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
+export type MemoriesSortBy = 'created_desc' | 'most_viewed';
 
 export interface Memory {
   id: number;
@@ -24,6 +25,8 @@ export interface Memory {
   created_at: string;
   updated_at: string;
   tot_img: number;
+  view_count?: number;
+  last_viewed_at?: string | null;
 }
 
 export interface CreateMemoryRequest {
@@ -62,6 +65,14 @@ export interface MemoryWithImages extends Memory {
   images: MemoryImage[];
 }
 
+export interface CreateShareLinkResponse {
+  data: {
+    url: string;
+    token: string;
+    expiresAt: string;
+  };
+}
+
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -73,10 +84,19 @@ const getAuthHeaders = () => {
   };
 };
 
-export const getMemories = async (): Promise<Memory[]> => {
+export const getMemories = async (options?: { sort?: MemoriesSortBy }): Promise<Memory[]> => {
   try {
     const headers = getAuthHeaders();
-    const response = await fetchWithAuth(`${API_URLS.base}/api/memories/`, {
+    const query = new URLSearchParams();
+    if (options?.sort) {
+      query.set('sort', options.sort);
+    }
+
+    const endpoint = query.toString()
+      ? `${API_URLS.base}/api/memories/?${query.toString()}`
+      : `${API_URLS.base}/api/memories/`;
+
+    const response = await fetchWithAuth(endpoint, {
       headers,
     });
 
@@ -175,5 +195,20 @@ export const deleteMemory = async (id: string): Promise<void> => {
   } catch (error) {
     throw error;
   }
+};
+
+export const createShareLink = async (memoryId: string): Promise<CreateShareLinkResponse> => {
+  const response = await fetchWithAuth(`${API_URLS.base}/api/memories/${memoryId}/share`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Errore durante la creazione del link di condivisione');
+  }
+
+  return response.json();
 };
 

@@ -16,6 +16,7 @@ import recapRoutes from './routes/recap';
 import mapRoutes from './routes/map';
 import notificationRoutes from './routes/notifications';
 import pushRoutes from './routes/push';
+import shareRoutes, { sharePreviewHandler } from './routes/share';
 
 // Import servizi
 import { setupNotificationCron } from './cron/notifications';
@@ -104,6 +105,8 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.get('/share/:token', sharePreviewHandler);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/memories', memoriesRoutes);
@@ -116,6 +119,7 @@ app.use('/api/recap', recapRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/share', shareRoutes);
 
 
 // Inizializza i cron job
@@ -155,5 +159,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('- /api/map/*');
   console.log('- /api/notifications/*');
   console.log('- /api/push/*');
+  console.log('- /api/share/*');
+  console.log('- /share/:token');
   console.log('=================================');
 });

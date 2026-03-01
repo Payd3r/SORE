@@ -1,108 +1,214 @@
-import { useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import Map from '../../desktop/components/Maps/Map';
-import MaterialIcon from '../components/ui/MaterialIcon';
-import { getMapImages } from '../../api/map';
-import { Button, Card } from '../components/ui';
-import { MobileHeader } from '../components/layout';
-import { useMobileLoadingState } from '../hooks/useMobileLoadingState';
-import { SkeletonMapMobile } from '../components/skeletons';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { MapContainer, Marker, TileLayer, useMap, ZoomControl } from "react-leaflet";
+import type { Marker as LeafletMarker } from "leaflet";
+import L from "leaflet";
+import MarkerClusterGroup from "react-leaflet-markercluster";
+import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import { getImageUrl } from "../../api/images";
+import { getMapMemories, type MapMemory } from "../../api/map";
+import PwaBottomSheet from "../components/ui/BottomSheet";
+import MapMemoryPreviewSheet from "../components/detail/MapMemoryPreviewSheet";
+import "../styles/map-mobile.css";
 
-export default function MappaMobile() {
-  const location = useLocation();
+const DEFAULT_CENTER: [number, number] = [42.5, 12.5];
+const DEFAULT_ZOOM = 5;
 
-  const mapState = location.state as
-    | {
-        latitude?: number;
-        longitude?: number;
-        imageId?: string;
-        imagePath?: string;
-        zoom?: number;
-        focusedImage?: boolean;
-      }
-    | null;
+function cleanCoordinates(lat: number | string, lon: number | string): [number, number] | null {
+  const numLat = typeof lat === "string" ? parseFloat(lat) : Number(lat);
+  const numLon = typeof lon === "string" ? parseFloat(lon) : Number(lon);
+  if (!Number.isFinite(numLat) || !Number.isFinite(numLon)) return null;
+  if (numLat < -90 || numLat > 90 || numLon < -180 || numLon > 180) return null;
+  return [numLat, numLon];
+}
 
-  const {
-    data: images = [],
-    isLoading,
-    isFetching,
-    error: queryError,
-    refetch
-  } = useQuery({
-    queryKey: ['mapImages'],
-    queryFn: getMapImages,
-    staleTime: 5 * 60 * 1000
+function createMemoryIcon(memory: MapMemory) {
+  const cover = memory.thumb_small_path || memory.thumb_path;
+  const html = cover
+    ? `<div class="pwa-map-marker"><img src="${getImageUrl(cover)}" alt="marker-${memory.id}" /></div>`
+    : `<div class="pwa-map-marker pwa-map-marker-placeholder"><span class="material-symbols-outlined">photo</span></div>`;
+
+  return new L.DivIcon({
+    html,
+    className: "pwa-map-marker-wrapper",
+    iconSize: L.point(40, 40),
+    iconAnchor: L.point(20, 40),
   });
+}
 
-  const mapLoadingState = useMobileLoadingState({
-    isLoading,
-    data: images
-  });
+function createClusterIcon(isDark: boolean) {
+  return (cluster: L.MarkerCluster) => {
+    const childCount = cluster.getChildCount();
+    const markers = cluster.getAllChildMarkers();
+    const thumbs = markers
+      .slice(0, 3)
+      .map((marker: any) => marker.options?.memoryThumb as string | undefined)
+      .filter(Boolean);
 
-  const error = queryError ? queryError.message : null;
+    if (childCount <= 3 && thumbs.length >= 2) {
+      const imagesHtml = thumbs
+        .map((thumb) => `<span class="pwa-map-cluster-thumb"><img src="${getImageUrl(thumb)}" alt="" /></span>`)
+        .join("");
+      return new L.DivIcon({
+        html: `<div class="pwa-map-cluster pwa-map-cluster-thumbs">${imagesHtml}</div>`,
+        className: isDark
+          ? "pwa-map-cluster-wrapper pwa-map-cluster-wrapper-dark"
+          : "pwa-map-cluster-wrapper",
+        iconSize: L.point(62, 62),
+        iconAnchor: L.point(31, 31),
+      });
+    }
+
+    return new L.DivIcon({
+      html: `<div class="pwa-map-cluster pwa-map-cluster-badge"><span>${childCount}</span></div>`,
+      className: isDark
+        ? "pwa-map-cluster-wrapper pwa-map-cluster-wrapper-dark"
+        : "pwa-map-cluster-wrapper",
+      iconSize: L.point(52, 52),
+      iconAnchor: L.point(26, 26),
+    });
+  };
+}
+
+function FitMapToMemories({ memories }: { memories: MapMemory[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const valid = memories
+      .map((memory) => cleanCoordinates(memory.lat, memory.lon))
+      .filter((coords): coords is [number, number] => Boolean(coords));
+
+    if (!valid.length) return;
+
+    const bounds = L.latLngBounds(valid);
+    map.fitBounds(bounds, {
+      padding: [48, 48],
+      maxZoom: 15,
+      animate: false,
+    });
+  }, [map, memories]);
+
+  return null;
+}
+
+function MemoryMarker({
+  memory,
+  onPress,
+}: {
+  memory: MapMemory;
+  onPress: (memory: MapMemory) => void;
+}) {
+  const markerRef = useRef<LeafletMarker | null>(null);
+  const coords = cleanCoordinates(memory.lat, memory.lon);
+
+  useEffect(() => {
+    if (!markerRef.current) return;
+    const markerOptions = markerRef.current.options as any;
+    markerOptions.memoryId = memory.id;
+    markerOptions.memoryThumb = memory.thumb_small_path || memory.thumb_path || undefined;
+  }, [memory.id, memory.thumb_small_path, memory.thumb_path]);
+
+  if (!coords) return null;
 
   return (
-    <div className="relative h-full overflow-hidden bg-[var(--bg-page)]">
-      <MobileHeader
-        title="Mappa"
-        className="absolute inset-x-0 top-0 z-50"
-        variant="overlay"
-        rightActions={
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-slate-200 text-slate-700 shadow-sm"
-            aria-label="Layers"
-          >
-            <MaterialIcon name="layers" size={20} />
-          </button>
-        }
-      />
+    <Marker
+      ref={markerRef}
+      position={coords}
+      icon={createMemoryIcon(memory)}
+      eventHandlers={{
+        click: () => onPress(memory),
+      }}
+    />
+  );
+}
 
-      <div className="h-full pt-[calc(env(safe-area-inset-top)+3.5rem)]">
-        {mapLoadingState.showSkeleton ? (
-          <SkeletonMapMobile />
-        ) : (
-          <Map
-            images={images}
-            isLoading={isLoading}
-            error={error}
-            initialLocation={
-              mapState
-                ? {
-                    lat: mapState.latitude,
-                    lon: mapState.longitude,
-                    zoom: mapState.zoom || 18,
-                    imageId: mapState.imageId,
-                    imagePath: mapState.imagePath,
-                    focusedImage: mapState.focusedImage
-                  }
-                : undefined
-            }
-          />
-        )}
-      </div>
+export default function MappaMobile() {
+  const [selectedMemory, setSelectedMemory] = useState<MapMemory | null>(null);
+  const [isDark, setIsDark] = useState(
+    document.documentElement.classList.contains("dark")
+  );
 
-      <div className="pointer-events-none absolute right-4 top-32 z-40">
-        <div className="pointer-events-auto ml-auto flex w-fit flex-col gap-2">
-          <Button
-            variant="icon"
-            className="h-12 w-12 rounded-xl border border-slate-100 bg-white/90 text-slate-600 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300"
-            icon={<MaterialIcon name="my_location" size={20} />}
-            onClick={() => void refetch()}
-          />
+  const { data: memories = [], isLoading, isError } = useQuery({
+    queryKey: ["mapMemories"],
+    queryFn: getMapMemories,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+  const tileAttribution = isDark
+    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CartoDB</a>'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+  const clusterIcon = useMemo(() => createClusterIcon(isDark), [isDark]);
+
+  return (
+    <section className="pwa-map-screen">
+      <MapContainer
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
+        className="pwa-map-container"
+        zoomControl={false}
+      >
+        <ZoomControl position="topright" />
+        <TileLayer key={isDark ? "dark" : "light"} url={tileUrl} attribution={tileAttribution} />
+        <FitMapToMemories memories={memories} />
+        <MarkerClusterGroup
+          chunkedLoading
+          showCoverageOnHover={false}
+          spiderfyOnMaxZoom
+          zoomToBoundsOnClick
+          maxClusterRadius={70}
+          disableClusteringAtZoom={18}
+          iconCreateFunction={clusterIcon}
+        >
+          {memories.map((memory) => (
+            <MemoryMarker
+              key={memory.id}
+              memory={memory}
+              onPress={setSelectedMemory}
+            />
+          ))}
+        </MarkerClusterGroup>
+      </MapContainer>
+
+      {isLoading ? (
+        <div className="pwa-map-status-overlay">Caricamento mappa...</div>
+      ) : null}
+      {isError ? (
+        <div className="pwa-map-status-overlay pwa-map-status-overlay-error">
+          Impossibile caricare la mappa.
         </div>
-      </div>
+      ) : null}
 
-      {(isFetching || error) && (
-        <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-40 px-4">
-          <Card className="p-3">
-            <p className="text-xs text-[var(--text-secondary)]">
-              {error ? 'Errore nel caricamento della mappa. Riprovo quando aggiorni.' : 'Aggiornamento mappa in corso...'}
-            </p>
-          </Card>
-        </div>
-      )}
-    </div>
+      <PwaBottomSheet
+        open={Boolean(selectedMemory)}
+        onClose={() => setSelectedMemory(null)}
+        panelClassName="pwa-bottom-sheet-panel-map"
+        contentClassName="pwa-bottom-sheet-content-map"
+      >
+        {selectedMemory ? (
+          <MapMemoryPreviewSheet
+            memory={selectedMemory}
+            onClose={() => setSelectedMemory(null)}
+          />
+        ) : null}
+      </PwaBottomSheet>
+    </section>
   );
 }

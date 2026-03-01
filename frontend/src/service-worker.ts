@@ -10,282 +10,327 @@ interface PushNotificationPayload {
   badge?: string;
 }
 
-// Definizione delle strategie di cache
 const CACHE_STRATEGIES = {
-  STATIC: 'static',        // Per risorse statiche (HTML, CSS, JS, immagini)
-  DYNAMIC: 'dynamic',      // Per risorse dinamiche (API calls)
-  NETWORK_FIRST: 'network-first', // Per dati che devono essere sempre aggiornati
-  STALE_WHILE_REVALIDATE: 'stale-while-revalidate' // Per risorse che possono essere mostrate da cache ma aggiornate in background
+  STATIC: "static",
+  DYNAMIC: "dynamic",
+  NETWORK_FIRST: "network-first",
+  STALE_WHILE_REVALIDATE: "stale-while-revalidate",
+  IMAGE_CACHE_FIRST: "image-cache-first",
 } as const;
 
-// Configurazione delle cache
+type CacheStrategy = (typeof CACHE_STRATEGIES)[keyof typeof CACHE_STRATEGIES];
+
+const CACHE_TTL = {
+  API_SHORT: 60 * 1000, // notifications
+  API_DEFAULT: 5 * 60 * 1000,
+  API_LONG: 10 * 60 * 1000,
+  DYNAMIC: 24 * 60 * 60 * 1000,
+  IMAGES: 7 * 24 * 60 * 60 * 1000,
+} as const;
+
+const FETCH_TIMEOUT_MS = 5000;
+const CACHE_HEADER_CACHED_AT = "x-sw-cached-at";
+
 const CACHE_CONFIG = {
   STATIC: {
-    name: 'memory-grove-static-v1',
-    urls: [
-      '/',
-      '/index.html',
-      '/manifest.json',
-      '/offline.html'
-    ]
+    name: "memory-grove-static-v2",
+    urls: ["/", "/index.html", "/manifest.json", "/offline.html"],
   },
   DYNAMIC: {
-    name: 'memory-grove-dynamic-v1',
-    maxAge: 24 * 60 * 60 * 1000, // 24 ore
-    maxEntries: 100
+    name: "memory-grove-dynamic-v2",
+    maxEntries: 100,
+    ttl: CACHE_TTL.DYNAMIC,
   },
   NETWORK_FIRST: {
-    name: 'memory-grove-network-first-v1',
-    maxAge: 5 * 60 * 1000, // 5 minuti
-    maxEntries: 50
-  }
+    name: "memory-grove-network-first-v2",
+    maxEntries: 50,
+    ttl: CACHE_TTL.API_DEFAULT,
+  },
+  IMAGES: {
+    name: "memory-grove-images-v1",
+    maxEntries: 200,
+    ttl: CACHE_TTL.IMAGES,
+  },
 } as const;
 
-// Funzione per determinare la strategia di cache per una richiesta
-const getCacheStrategy = (request: Request): string => {
-  const url = new URL(request.url);
-
-  // Risorse statiche
-  if (request.mode === 'navigate' ||
-    url.pathname === '/' ||
-    url.pathname.endsWith('.html') ||
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.webp') ||
-    url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.ico')) {
-    return CACHE_STRATEGIES.STATIC;
-  }
-
-  // API calls
-  if (url.pathname.startsWith('/api/')) {
-    // Per le API di lettura, usa stale-while-revalidate
-    if (request.method === 'GET') {
-      return CACHE_STRATEGIES.STALE_WHILE_REVALIDATE;
-    }
-    // Per le API di scrittura, usa network-first
-    return CACHE_STRATEGIES.NETWORK_FIRST;
-  }
-
-  // Default per altre risorse se necessario
-  return CACHE_STRATEGIES.DYNAMIC;
+type ApiRule = {
+  pattern: RegExp;
+  ttl: number;
+  strategy: CacheStrategy;
 };
 
-// Funzione per gestire la cache statica
+const API_RULES: ApiRule[] = [
+  { pattern: /^\/api\/notifications(\/|$)/, ttl: CACHE_TTL.API_SHORT, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },
+  { pattern: /^\/api\/(users|couples)(\/|$)/, ttl: CACHE_TTL.API_LONG, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },
+  { pattern: /^\/api\/(home|memories|ideas|map)(\/|$)/, ttl: CACHE_TTL.API_DEFAULT, strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE },
+];
+
+type CacheDescriptor = {
+  strategy: CacheStrategy;
+  cacheName: string;
+  ttl: number;
+  maxEntries: number;
+};
+
+const isStaticAsset = (request: Request, pathname: string): boolean => {
+  return (
+    request.mode === "navigate" ||
+    pathname === "/" ||
+    pathname.endsWith(".html") ||
+    pathname.endsWith(".css") ||
+    pathname.endsWith(".js") ||
+    pathname.endsWith(".woff2") ||
+    pathname.endsWith(".woff") ||
+    pathname.endsWith(".ttf")
+  );
+};
+
+const isImageRequest = (request: Request, pathname: string): boolean => {
+  const accept = request.headers.get("accept") || "";
+  return (
+    accept.includes("image/") ||
+    pathname.includes("/uploads/") ||
+    pathname.endsWith(".png") ||
+    pathname.endsWith(".webp") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".jpg") ||
+    pathname.endsWith(".jpeg") ||
+    pathname.endsWith(".gif") ||
+    pathname.endsWith(".ico")
+  );
+};
+
+const getApiRule = (pathname: string): ApiRule | null => {
+  const found = API_RULES.find((rule) => rule.pattern.test(pathname));
+  return found || null;
+};
+
+const getCacheDescriptor = (request: Request): CacheDescriptor => {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+
+  if (isStaticAsset(request, pathname)) {
+    return {
+      strategy: CACHE_STRATEGIES.STATIC,
+      cacheName: CACHE_CONFIG.STATIC.name,
+      ttl: Number.MAX_SAFE_INTEGER,
+      maxEntries: CACHE_CONFIG.STATIC.urls.length + 20,
+    };
+  }
+
+  if (isImageRequest(request, pathname)) {
+    return {
+      strategy: CACHE_STRATEGIES.IMAGE_CACHE_FIRST,
+      cacheName: CACHE_CONFIG.IMAGES.name,
+      ttl: CACHE_CONFIG.IMAGES.ttl,
+      maxEntries: CACHE_CONFIG.IMAGES.maxEntries,
+    };
+  }
+
+  if (pathname.startsWith("/api/")) {
+    const rule = getApiRule(pathname);
+    return {
+      strategy: rule?.strategy || CACHE_STRATEGIES.STALE_WHILE_REVALIDATE,
+      cacheName: CACHE_CONFIG.DYNAMIC.name,
+      ttl: rule?.ttl || CACHE_TTL.API_DEFAULT,
+      maxEntries: CACHE_CONFIG.DYNAMIC.maxEntries,
+    };
+  }
+
+  return {
+    strategy: CACHE_STRATEGIES.DYNAMIC,
+    cacheName: CACHE_CONFIG.DYNAMIC.name,
+    ttl: CACHE_CONFIG.DYNAMIC.ttl,
+    maxEntries: CACHE_CONFIG.DYNAMIC.maxEntries,
+  };
+};
+
+const isCacheableResponse = (response: Response): boolean => {
+  return response.ok || response.type === "opaque";
+};
+
+const withCacheMetadata = (response: Response): Response => {
+  const headers = new Headers(response.headers);
+  headers.set(CACHE_HEADER_CACHED_AT, String(Date.now()));
+  return new Response(response.clone().body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+};
+
+const getCachedAt = (response: Response): number | null => {
+  const value = response.headers.get(CACHE_HEADER_CACHED_AT);
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isFreshCache = (response: Response, ttl: number): boolean => {
+  const cachedAt = getCachedAt(response);
+  if (!cachedAt) return false;
+  return Date.now() - cachedAt < ttl;
+};
+
+const enforceCacheLimit = async (cacheName: string, maxEntries: number): Promise<void> => {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= maxEntries) return;
+
+  const itemsToRemove = keys.length - maxEntries;
+  for (let i = 0; i < itemsToRemove; i += 1) {
+    await cache.delete(keys[i]);
+  }
+};
+
+const putInCache = async (
+  cacheName: string,
+  request: Request,
+  response: Response,
+  maxEntries: number
+): Promise<void> => {
+  if (!isCacheableResponse(response)) return;
+  const cache = await caches.open(cacheName);
+  await cache.put(request, withCacheMetadata(response));
+  await enforceCacheLimit(cacheName, maxEntries);
+};
+
+const fetchWithTimeout = async (request: Request, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const fallbackResponseFor = async (request: Request): Promise<Response> => {
+  if (request.url.includes("/api/")) {
+    return new Response(
+      JSON.stringify({
+        error: "Connessione di rete non disponibile",
+        offline: true,
+        message: "Verifica la tua connessione di rete",
+      }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  if (request.mode === "navigate") {
+    const offlineUrl = new URL("/offline.html", self.location.origin).href;
+    const offlineResponse = await caches.match(offlineUrl);
+    if (offlineResponse) return offlineResponse;
+  }
+
+  return new Response("", {
+    status: 408,
+    statusText: "Request Timeout",
+  });
+};
+
 const handleStaticCache = async (request: Request): Promise<Response> => {
   const cache = await caches.open(CACHE_CONFIG.STATIC.name);
   const cachedResponse = await cache.match(request);
+  if (cachedResponse) return cachedResponse;
 
-  if (cachedResponse) {
+  const networkResponse = await fetch(request);
+  if (isCacheableResponse(networkResponse)) {
+    await cache.put(request, networkResponse.clone());
+  }
+  return networkResponse;
+};
+
+const revalidateInBackground = (request: Request, descriptor: CacheDescriptor): void => {
+  void fetch(request)
+    .then(async (networkResponse) => {
+      if (isCacheableResponse(networkResponse)) {
+        await putInCache(descriptor.cacheName, request, networkResponse, descriptor.maxEntries);
+      }
+    })
+    .catch(() => {
+      // Ignoriamo errori di rete durante revalidate in background
+    });
+};
+
+const handleStaleWhileRevalidate = async (
+  request: Request,
+  descriptor: CacheDescriptor
+): Promise<Response> => {
+  const cache = await caches.open(descriptor.cacheName);
+  const cachedResponse = await cache.match(request);
+
+  if (cachedResponse && isFreshCache(cachedResponse, descriptor.ttl)) {
+    revalidateInBackground(request, descriptor);
     return cachedResponse;
   }
 
-  const networkResponse = await fetch(request);
-  cache.put(request, networkResponse.clone());
-  return networkResponse;
+  try {
+    const networkResponse = await fetchWithTimeout(request);
+    if (isCacheableResponse(networkResponse)) {
+      await putInCache(descriptor.cacheName, request, networkResponse, descriptor.maxEntries);
+    }
+    return networkResponse;
+  } catch (error) {
+    if (cachedResponse) return cachedResponse;
+    return fallbackResponseFor(request);
+  }
 };
 
-// Funzione per gestire la cache dinamica
-const handleDynamicCache = async (request: Request): Promise<Response> => {
-  const cache = await caches.open(CACHE_CONFIG.DYNAMIC.name);
+const handleDynamicCache = async (request: Request, descriptor: CacheDescriptor): Promise<Response> => {
+  const cache = await caches.open(descriptor.cacheName);
   const cachedResponse = await cache.match(request);
-
-  if (cachedResponse) {
-    try {
-      const cachedData = await cachedResponse.clone().json();
-      if (cachedData && cachedData.timestamp) {
-        const cacheAge = Date.now() - new Date(cachedData.timestamp).getTime();
-        if (cacheAge < CACHE_CONFIG.DYNAMIC.maxAge) {
-          return cachedResponse;
-        }
-      }
-    } catch (e) {
-      // Se non è JSON o non ha timestamp, logica fallita, facciamo cmq fallback a network
-    }
+  if (cachedResponse && isFreshCache(cachedResponse, descriptor.ttl)) {
+    return cachedResponse;
   }
-
-  const networkResponse = await fetch(request);
-  const responseToCache = networkResponse.clone();
 
   try {
-    const contentType = responseToCache.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const responseData = await responseToCache.json();
-      responseData.timestamp = new Date().toISOString();
-
-      const cacheResponse = new Response(JSON.stringify(responseData), {
-        headers: networkResponse.headers,
-        status: networkResponse.status,
-        statusText: networkResponse.statusText
-      });
-      cache.put(request, cacheResponse);
-    } else {
-      cache.put(request, networkResponse.clone());
+    const networkResponse = await fetchWithTimeout(request);
+    if (isCacheableResponse(networkResponse)) {
+      await putInCache(descriptor.cacheName, request, networkResponse, descriptor.maxEntries);
     }
+    return networkResponse;
   } catch (error) {
-    cache.put(request, networkResponse.clone());
+    if (cachedResponse) return cachedResponse;
+    return fallbackResponseFor(request);
   }
-
-  return networkResponse;
 };
 
-// Funzione per gestire la strategia network-first
-const handleNetworkFirst = async (request: Request): Promise<Response> => {
-  const cache = await caches.open(CACHE_CONFIG.NETWORK_FIRST.name);
-
+const handleNetworkFirst = async (request: Request, descriptor: CacheDescriptor): Promise<Response> => {
   try {
-    // Impostiamo un timeout per le richieste di rete
-    const controller = new AbortController();
-    const signal = controller.signal;
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondi di timeout
-
-    try {
-      const networkResponse = await fetch(request, { signal });
-      clearTimeout(timeoutId);
-
-      // Se la risposta non è OK (es. 404, 500), lanciamo un errore
-      if (!networkResponse.ok) {
-        throw new Error(`HTTP error! status: ${networkResponse.status}`);
-      }
-
-      // Salva nella cache e restituisci la risposta
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      throw fetchError; // Rilancia l'errore per gestirlo sotto
+    const networkResponse = await fetchWithTimeout(request);
+    if (isCacheableResponse(networkResponse)) {
+      await putInCache(descriptor.cacheName, request, networkResponse, descriptor.maxEntries);
     }
+    return networkResponse;
   } catch (error) {
-    //console.log(`[SW] Errore di rete per ${request.url}. Cerco nella cache...`);
-
+    const cache = await caches.open(descriptor.cacheName);
     const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      //console.log(`[SW] Risposta trovata nella cache per ${request.url}`);
-      return cachedResponse;
-    }
-
-    // Se non c'è risposta nella cache, restituisci una risposta generica di errore
-    //console.log(`[SW] Nessuna risposta nella cache per ${request.url}`);
-
-    // Se la richiesta è per un'API, restituisci un JSON di errore
-    if (request.url.includes('/api/')) {
-      return new Response(JSON.stringify({
-        error: 'Connessione di rete non disponibile',
-        offline: true,
-        message: 'Verifica la tua connessione di rete'
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Fallback alla pagina offline per le richieste di navigazione
-    if (request.mode === 'navigate') {
-      const offlineUrl = new URL('/offline.html', self.location.origin).href;
-      const offlineResponse = await caches.match(offlineUrl);
-      if (offlineResponse) {
-        return offlineResponse;
-      }
-    }
-
-    // Per altre richieste (es. immagini, CSS, JS), ritorna una risposta vuota
-    return new Response('', {
-      status: 408,
-      statusText: 'Request Timeout'
-    });
+    if (cachedResponse) return cachedResponse;
+    return fallbackResponseFor(request);
   }
 };
 
-// Funzione per gestire la strategia stale-while-revalidate
-const handleStaleWhileRevalidate = async (request: Request): Promise<Response> => {
-  const cache = await caches.open(CACHE_CONFIG.DYNAMIC.name);
+const handleImageCacheFirst = async (request: Request, descriptor: CacheDescriptor): Promise<Response> => {
+  const cache = await caches.open(descriptor.cacheName);
   const cachedResponse = await cache.match(request);
-
-  // Ritorna immediatamente la risposta dalla cache se disponibile
-  if (cachedResponse) {
-    // Aggiorna la cache in background
-    fetch(request).then(async (networkResponse) => {
-      try {
-        if (!networkResponse.ok) {
-          throw new Error(`HTTP error! status: ${networkResponse.status}`);
-        }
-
-        const responseToCache = networkResponse.clone();
-        const contentType = responseToCache.headers.get('content-type');
-
-        if (contentType && contentType.includes('application/json')) {
-          const responseData = await responseToCache.json();
-          responseData.timestamp = new Date().toISOString();
-
-          const newResponse = new Response(JSON.stringify(responseData), {
-            headers: networkResponse.headers,
-            status: networkResponse.status,
-            statusText: networkResponse.statusText
-          });
-          cache.put(request, newResponse);
-        } else {
-          cache.put(request, networkResponse.clone());
-        }
-      } catch (error) {
-        console.error(`[SW] Errore nell'aggiornamento della cache:`, error);
-        // Non lanciamo l'errore, perché l'operazione è in background
-      }
-    }).catch(error => {
-      console.error(`[SW] Errore nel fetch di rete:`, error);
-      // Non facciamo nulla, perché abbiamo già restituito la risposta dalla cache
-    });
-
+  if (cachedResponse && isFreshCache(cachedResponse, descriptor.ttl)) {
     return cachedResponse;
   }
 
-  // Se non c'è cache, fai la richiesta di rete
   try {
-    const networkResponse = await fetch(request);
-
-    if (!networkResponse.ok) {
-      throw new Error(`HTTP error! status: ${networkResponse.status}`);
+    const networkResponse = await fetchWithTimeout(request);
+    if (isCacheableResponse(networkResponse)) {
+      await putInCache(descriptor.cacheName, request, networkResponse, descriptor.maxEntries);
     }
-
-    const responseToCache = networkResponse.clone();
-    const contentType = responseToCache.headers.get('content-type');
-
-    if (contentType && contentType.includes('application/json')) {
-      const responseData = await responseToCache.json();
-      responseData.timestamp = new Date().toISOString();
-
-      const newResponse = new Response(JSON.stringify(responseData), {
-        headers: networkResponse.headers,
-        status: networkResponse.status,
-        statusText: networkResponse.statusText
-      });
-      cache.put(request, newResponse.clone());
-      return newResponse;
-    } else {
-      cache.put(request, networkResponse.clone());
-      return networkResponse;
-    }
+    return networkResponse;
   } catch (error) {
-    console.error(`[SW] Errore nella richiesta di rete:`, error);
-
-    // Per richieste di API, ritorna un JSON di errore
-    if (request.url.includes('/api/')) {
-      return new Response(JSON.stringify({
-        error: 'Connessione di rete non disponibile',
-        offline: true,
-        message: 'Verifica la tua connessione di rete'
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Per altre richieste, ritorna una risposta vuota
-    return new Response('', {
-      status: 408,
-      statusText: 'Request Timeout'
-    });
+    if (cachedResponse) return cachedResponse;
+    return fallbackResponseFor(request);
   }
 };
 
@@ -307,6 +352,7 @@ self.addEventListener('install', (event: ExtendableEvent) => {
         await Promise.all([
           caches.open(CACHE_CONFIG.DYNAMIC.name),
           caches.open(CACHE_CONFIG.NETWORK_FIRST.name),
+          caches.open(CACHE_CONFIG.IMAGES.name),
         ]);
       } catch (error) {
         console.error('[SW] Errore durante installazione service worker:', error);
@@ -335,20 +381,22 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     return;
   }
 
-  const strategy = getCacheStrategy(event.request);
+  const descriptor = getCacheDescriptor(event.request);
 
   event.respondWith(
     (async () => {
       try {
-        switch (strategy) {
+        switch (descriptor.strategy) {
           case CACHE_STRATEGIES.STATIC:
             return handleStaticCache(event.request);
           case CACHE_STRATEGIES.DYNAMIC:
-            return handleDynamicCache(event.request);
+            return handleDynamicCache(event.request, descriptor);
           case CACHE_STRATEGIES.NETWORK_FIRST:
-            return handleNetworkFirst(event.request);
+            return handleNetworkFirst(event.request, descriptor);
           case CACHE_STRATEGIES.STALE_WHILE_REVALIDATE:
-            return handleStaleWhileRevalidate(event.request);
+            return handleStaleWhileRevalidate(event.request, descriptor);
+          case CACHE_STRATEGIES.IMAGE_CACHE_FIRST:
+            return handleImageCacheFirst(event.request, descriptor);
           default:
             return fetch(event.request);
         }

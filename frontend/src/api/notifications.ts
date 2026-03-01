@@ -8,7 +8,10 @@ export interface Notification {
   body: string;
   icon: string | null;
   url: string | null;
-  status: 'read' | 'unread';
+  /** Backend invia 0/1, il frontend può normalizzare in 'read' | 'unread' */
+  status: 'read' | 'unread' | 0 | 1;
+  /** Tipo per icona (es. new_memory, new_idea, new_photos, memory_anniversary, ...) */
+  type?: string | null;
   created_at?: string;
 }
 
