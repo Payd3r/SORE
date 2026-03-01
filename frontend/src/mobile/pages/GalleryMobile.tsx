@@ -1,186 +1,210 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { IoFunnelOutline } from 'react-icons/io5';
-import { getGalleryImages, getImageUrl, type ImageType } from '../../api/images';
-import ImageDetailMobile from './ImageDetailMobile';
+import { useNavigate } from 'react-router-dom';
+import { getMemories, type Memory } from '../../api/memory';
 import { MobileHeader, MobilePageWrapper } from '../components/layout';
-import { SearchBar, SegmentedControl, Button } from '../components/ui';
-import { usePinchGrid, usePullToRefresh } from '../gestures';
+import { PullToRefreshIndicator, SearchBar } from '../components/ui';
+import { usePullToRefresh } from '../gestures';
+import {
+  CategoryFilters,
+  GalleryFiltersBottomSheet,
+  GalleryMemoryCard,
+  type GalleryCategory,
+  type GallerySortBy,
+  type GalleryTimePeriod,
+} from '../components/gallery';
 
-type GalleryType = 'ALL' | 'PAESAGGIO' | 'COPPIA' | 'SINGOLO' | 'CIBO';
-type SortBy = 'newest' | 'oldest';
+function getMemoryDate(memory: Memory): Date {
+  return new Date(memory.start_date || memory.created_at);
+}
 
-const PAGE_SIZE = 60;
+function isInTimePeriod(memoryDate: Date, timePeriod: GalleryTimePeriod): boolean {
+  const now = new Date();
+  if (Number.isNaN(memoryDate.getTime())) return false;
+  switch (timePeriod) {
+    case 'allTime':
+      return true;
+    case 'thisMonth':
+      return (
+        memoryDate.getFullYear() === now.getFullYear() &&
+        memoryDate.getMonth() === now.getMonth()
+      );
+    case 'thisYear':
+      return memoryDate.getFullYear() === now.getFullYear();
+    case 'year2025':
+      return memoryDate.getFullYear() === 2025;
+    case 'year2024':
+      return memoryDate.getFullYear() === 2024;
+    default:
+      return true;
+  }
+}
+
+function groupMemoriesByYear(memories: Memory[]): Map<number, Memory[]> {
+  const map = new Map<number, Memory[]>();
+  for (const m of memories) {
+    const year = getMemoryDate(m).getFullYear();
+    if (!map.has(year)) map.set(year, []);
+    map.get(year)!.push(m);
+  }
+  const sorted = new Map([...map.entries()].sort((a, b) => b[0] - a[0]));
+  return sorted;
+}
 
 export default function GalleryMobile() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [selectedType, setSelectedType] = useState<GalleryType>('ALL');
-  const [sortBy, setSortBy] = useState<SortBy>('newest');
-  const [compactGrid, setCompactGrid] = useState(true);
+  const [selectedType, setSelectedType] = useState<GalleryCategory>('ALL');
+  const [sortBy, setSortBy] = useState<GallerySortBy>('newest');
+  const [timePeriod, setTimePeriod] = useState<GalleryTimePeriod>('allTime');
   const [showFilters, setShowFilters] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
 
-  const { data: images = [], isLoading, isFetching, refetch } = useQuery<ImageType[]>({
-    queryKey: ['galleryImages', 'redesign'],
-    queryFn: getGalleryImages,
+  const { data: memories = [], isLoading, refetch } = useQuery<Memory[]>({
+    queryKey: ['memories', 'gallery-mobile-redesign'],
+    queryFn: getMemories,
   });
 
   const pullToRefresh = usePullToRefresh({
-    onRefresh: async () => {
-      setVisibleCount(PAGE_SIZE);
+    onRefresh: async (): Promise<void> => {
       await refetch();
     },
   });
 
-  const pinchGrid = usePinchGrid({
-    compact: compactGrid,
-    onCompactChange: setCompactGrid,
-  });
-
-  const filteredImages = useMemo(() => {
-    let list = [...images];
+  const filteredMemories = useMemo(() => {
+    let list = memories.filter((memory) => memory.images?.length > 0);
 
     if (selectedType !== 'ALL') {
-      list = list.filter((image) => (image.type || '').toUpperCase() === selectedType);
+      list = list.filter((memory) => (memory.type || '').toUpperCase() === selectedType);
     }
 
-    if (search.trim()) {
-      const query = search.toLowerCase();
-      list = list.filter((image) => {
-        const createdBy = image.created_by_name?.toLowerCase() || '';
-        return createdBy.includes(query) || String(image.memory_id).includes(query);
+    const normalizedSearch = search.trim().toLowerCase();
+    if (normalizedSearch) {
+      list = list.filter((memory) => {
+        const title = memory.title?.toLowerCase() || '';
+        const location = memory.location?.toLowerCase() || '';
+        const type = memory.type?.toLowerCase() || '';
+        return (
+          title.includes(normalizedSearch) ||
+          location.includes(normalizedSearch) ||
+          type.includes(normalizedSearch)
+        );
       });
     }
 
+    list = list.filter((memory) => isInTimePeriod(getMemoryDate(memory), timePeriod));
+
     list.sort((a, b) => {
-      const aDate = new Date(a.created_at).getTime();
-      const bDate = new Date(b.created_at).getTime();
+      if (sortBy === 'mostPhotos') {
+        return (b.tot_img || 0) - (a.tot_img || 0);
+      }
+      const aDate = getMemoryDate(a).getTime();
+      const bDate = getMemoryDate(b).getTime();
       return sortBy === 'newest' ? bDate - aDate : aDate - bDate;
     });
 
     return list;
-  }, [images, search, selectedType, sortBy]);
+  }, [memories, search, selectedType, sortBy, timePeriod]);
 
-  const visibleImages = filteredImages.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredImages.length;
-
-  const handleScroll = () => {
-    const container = scrollRef.current;
-    if (!container || !hasMore) return;
-    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 280;
-    if (nearBottom) {
-      setVisibleCount((prev) => prev + PAGE_SIZE);
-    }
-  };
+  const memoriesByYear = useMemo(() => groupMemoriesByYear(filteredMemories), [filteredMemories]);
 
   return (
     <>
-      <div
+      <MobilePageWrapper
+        accentBg
         ref={scrollRef}
-        className="h-full overflow-y-auto"
-        onScroll={handleScroll}
+        className="h-full overflow-auto overflow-x-hidden pb-24"
         onTouchStart={(e) => {
-          pinchGrid.onTouchStart(e);
           pullToRefresh.onTouchStart(e, scrollRef.current?.scrollTop ?? 0);
         }}
         onTouchMove={(e) => {
-          pinchGrid.onTouchMove(e);
           pullToRefresh.onTouchMove(e, scrollRef.current?.scrollTop ?? 0);
         }}
-        onTouchEnd={() => {
-          pinchGrid.onTouchEnd();
-          void pullToRefresh.onTouchEnd();
-        }}
+        onTouchEnd={() => void pullToRefresh.onTouchEnd()}
       >
-        <MobilePageWrapper className="pb-24">
-          <div
-            className="mx-auto mb-2 h-1.5 w-14 rounded-full bg-[var(--color-primary)]/30 transition-all"
-            style={{ transform: `scaleX(${Math.min(1, pullToRefresh.pullDistance / 56)})` }}
-          />
+        <PullToRefreshIndicator pullDistance={pullToRefresh.pullDistance} />
 
-          <MobileHeader
-            title="Galleria"
-            showBack={false}
-            rightActions={
-              <button
-                type="button"
-                onClick={() => setShowFilters((prev) => !prev)}
-                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--bg-input)] text-[var(--text-primary)]"
-                aria-label="Filtri"
-              >
-                <IoFunnelOutline className="h-5 w-5" />
-              </button>
-            }
-          />
+        <MobileHeader title="Galleria" showBack={false} />
 
-          <div className="mt-4 space-y-3">
-            <SearchBar placeholder="Cerca foto..." value={search} onChange={setSearch} />
-            <SegmentedControl<GalleryType>
-              options={[
-                { key: 'ALL', label: 'Tutte' },
-                { key: 'PAESAGGIO', label: 'Paesaggio' },
-                { key: 'COPPIA', label: 'Coppia' },
-                { key: 'SINGOLO', label: 'Singolo' },
-                { key: 'CIBO', label: 'Cibo' },
-              ]}
-              value={selectedType}
-              onChange={setSelectedType}
+        <section className="px-6 py-4">
+          <div className="flex items-center gap-2">
+            <SearchBar
+              className="flex-1"
+              placeholder="Search memories, places..."
+              value={search}
+              onChange={setSearch}
+              onFilterClick={() => setShowFilters(true)}
             />
           </div>
+        </section>
 
-          {showFilters && (
-            <div className="mt-3 rounded-card border border-[var(--border-default)] bg-[var(--bg-card)] p-3">
-              <p className="mb-2 text-xs font-semibold uppercase text-[var(--text-tertiary)]">Ordina</p>
-              <div className="flex gap-2">
-                <Button size="sm" variant={sortBy === 'newest' ? 'primary' : 'secondary'} onClick={() => setSortBy('newest')}>
-                  Più recenti
-                </Button>
-                <Button size="sm" variant={sortBy === 'oldest' ? 'primary' : 'secondary'} onClick={() => setSortBy('oldest')}>
-                  Più vecchie
-                </Button>
-              </div>
+        <section className="mt-4">
+          <div className="px-6 mb-4">
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">Select your collection</h2>
+          </div>
+          <CategoryFilters
+            value={selectedType}
+            onChange={setSelectedType}
+            options={[
+              { key: 'VIAGGIO', label: 'Trips' },
+              { key: 'EVENTO', label: 'Events' },
+              { key: 'SEMPLICE', label: 'Simple' },
+              { key: 'FUTURO', label: 'Future' },
+              { key: 'ALL', label: 'Archive' },
+            ]}
+          />
+        </section>
+
+        <section className="mt-6 px-6">
+          {isLoading ? (
+            <div className="grid grid-cols-2 gap-4" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={`gallery-skeleton-${index}`}
+                  className="aspect-square animate-pulse rounded-3xl bg-[var(--bg-input)]"
+                />
+              ))}
+            </div>
+          ) : filteredMemories.length === 0 ? (
+            <div className="rounded-3xl border border-[var(--border-default)] bg-[var(--bg-card)] px-4 py-8 text-center">
+              <p className="text-sm font-medium text-[var(--text-secondary)]">
+                No memories found with these filters.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {Array.from(memoriesByYear.entries()).map(([year, yearMemories]) => (
+                <div key={year} className="mb-8">
+                  <div className="mb-4 flex items-center gap-4">
+                    <h3 className="text-lg font-bold text-[var(--text-primary)]">{year}</h3>
+                    <div className="h-px flex-1 bg-[var(--border-default)]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {yearMemories.map((memory) => (
+                      <GalleryMemoryCard
+                        key={memory.id}
+                        memory={memory}
+                        onClick={(id) => navigate(`/ricordo/${id}`)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
+        </section>
+      </MobilePageWrapper>
 
-          <div className="mt-4">
-            {isLoading ? (
-              <p className="text-sm text-[var(--text-tertiary)]">Caricamento immagini...</p>
-            ) : visibleImages.length === 0 ? (
-              <p className="text-sm text-[var(--text-tertiary)]">Nessuna immagine trovata.</p>
-            ) : (
-              <div className={`grid gap-2 ${compactGrid ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
-                {visibleImages.map((image) => (
-                  <button
-                    key={image.id}
-                    type="button"
-                    onClick={() => setSelectedImage(image)}
-                    className="aspect-square overflow-hidden rounded-lg bg-[var(--bg-secondary)]"
-                  >
-                    <img
-                      src={getImageUrl(image.thumb_big_path)}
-                      alt={`Immagine ${image.id}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isFetching && <p className="mt-3 text-center text-xs text-[var(--text-tertiary)]">Aggiornamento galleria...</p>}
-            {hasMore && !isLoading && (
-              <p className="mt-3 text-center text-xs text-[var(--text-tertiary)]">Scorri per caricare altre immagini</p>
-            )}
-          </div>
-        </MobilePageWrapper>
-      </div>
-
-      <ImageDetailMobile
-        isOpen={Boolean(selectedImage)}
-        image={selectedImage}
-        onClose={() => setSelectedImage(null)}
+      <GalleryFiltersBottomSheet
+        open={showFilters}
+        onClose={() => setShowFilters(false)}
+        selectedType={selectedType}
+        sortBy={sortBy}
+        timePeriod={timePeriod}
+        onTypeChange={setSelectedType}
+        onSortChange={setSortBy}
+        onTimePeriodChange={setTimePeriod}
+        onApply={() => {}}
       />
     </>
   );

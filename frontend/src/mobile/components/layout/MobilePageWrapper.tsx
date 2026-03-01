@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../../components/ui/cn';
 
 interface MobilePageWrapperProps extends HTMLAttributes<HTMLDivElement> {
@@ -10,20 +10,18 @@ interface MobilePageWrapperProps extends HTMLAttributes<HTMLDivElement> {
 /**
  * Wrapper per pagine mobile con padding, safe-area e sfondo coerente con il design system.
  */
-export default function MobilePageWrapper({
-  children,
-  accentBg = false,
-  className,
-  ...rest
-}: MobilePageWrapperProps) {
+const MobilePageWrapper = forwardRef<HTMLDivElement, MobilePageWrapperProps>(function MobilePageWrapper(
+  { children, accentBg = false, className, ...rest },
+  ref
+) {
   return (
     <div
+      ref={ref}
       className={cn(
-        'min-h-full w-full py-4',
-        'pl-[max(2rem,env(safe-area-inset-left))]',
-        'pr-[max(2rem,env(safe-area-inset-right))]',
+        'min-h-full w-full overflow-y-auto',
+        'px-6 pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))]',
         'pt-[max(1rem,env(safe-area-inset-top))]',
-        'pb-[max(1rem,env(safe-area-inset-bottom))]',
+        'pb-[max(6rem,calc(4.5rem+env(safe-area-inset-bottom)))]',
         accentBg ? 'bg-[var(--bg-page-accent)]' : 'bg-[var(--bg-page)]',
         className
       )}
@@ -32,4 +30,6 @@ export default function MobilePageWrapper({
       {children}
     </div>
   );
-}
+});
+
+export default MobilePageWrapper;

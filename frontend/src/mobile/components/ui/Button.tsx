@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../../components/ui/cn';
 
-type ButtonVariant = 'primary' | 'secondary' | 'icon';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'icon';
 
 interface ButtonProps {
   children?: ReactNode;
@@ -16,6 +16,7 @@ interface ButtonProps {
   /** Dimensione piccola */
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  'aria-label'?: string;
 }
 
 /**
@@ -32,6 +33,7 @@ export default function Button({
   fullWidth = false,
   size = 'md',
   className,
+  'aria-label': ariaLabel,
 }: ButtonProps) {
   const sizeClasses = {
     sm: 'h-8 min-h-[32px] px-3 text-sm',
@@ -61,7 +63,7 @@ export default function Button({
           'focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
           className
         )}
-        aria-label={typeof children === 'string' ? children : 'Azione'}
+        aria-label={ariaLabel ?? (typeof children === 'string' ? children : 'Azione')}
       >
         {icon ?? children}
       </button>
@@ -86,6 +88,33 @@ export default function Button({
           'focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
           className
         )}
+        aria-label={ariaLabel}
+      >
+        {icon}
+        {children}
+      </button>
+    );
+  }
+
+  if (variant === 'danger') {
+    return (
+      <button
+        type={type}
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          'flex items-center justify-center gap-2 rounded-input font-medium',
+          sizeClasses[size],
+          fullWidth && 'w-full',
+          'bg-[var(--color-danger)] text-[var(--text-inverse)]',
+          'transition-all duration-[var(--duration-fast)]',
+          'hover:bg-[var(--color-danger-hover)] hover:scale-[1.02]',
+          'active:bg-[var(--color-danger-active)] active:scale-[0.98]',
+          disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
+          'focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-danger)]',
+          className
+        )}
+        aria-label={ariaLabel}
       >
         {icon}
         {children}
@@ -109,6 +138,7 @@ export default function Button({
         'focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
         className
       )}
+      aria-label={ariaLabel}
     >
       {icon}
       {children}

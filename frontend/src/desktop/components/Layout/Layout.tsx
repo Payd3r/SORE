@@ -1,7 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useRef, TouchEvent } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import ScrollToTop from './ScrollToTop';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import UploadStatus from '../../components/Images/UploadStatus';
 import { useUpload } from '../../../contexts/UploadContext';
@@ -465,7 +464,6 @@ const Layout = () => {
         touchAction: 'pan-y'
       }}
     >
-      <ScrollToTop />
       {/* Area cliccabile per scrollare in alto */}
       <div 
         className="fixed top-0 right-0 h-12 w-1/2 z-[100]"

@@ -66,7 +66,7 @@ export default function Card(props: CardProps) {
         <div
           className={cn(
             'absolute inset-x-0 bottom-0 flex flex-col justify-end p-4',
-            'bg-[var(--glass-overlay)] backdrop-blur-md',
+            'pwa-card-gradient-overlay',
             'text-white'
           )}
         >
@@ -115,6 +115,9 @@ export default function Card(props: CardProps) {
         'overflow-hidden rounded-card bg-[var(--bg-card)]',
         'border border-[var(--border-default)] shadow-[var(--shadow-md)]',
         'transition-all duration-[var(--duration-fast)]',
+        '[&>:first-child]:rounded-t-card [&>:first-child:not(:last-child)]:rounded-b-none',
+        '[&>:last-child]:rounded-b-card [&>:last-child:not(:first-child)]:rounded-t-none',
+        '[&>:not(:first-child):not(:last-child)]:rounded-none',
         onClick && 'cursor-pointer active:opacity-95 hover:shadow-[var(--shadow-lg)] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
         className
       )}

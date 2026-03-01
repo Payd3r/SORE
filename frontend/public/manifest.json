@@ -7,7 +7,7 @@
   "start_url": "/?mode=pwa",
   "scope": "/",
   "background_color": "#ffffff",
-  "theme_color": "#FF6B35",
+  "theme_color": "#8B5CF6",
   "orientation": "portrait",
   "prefer_related_applications": false,
   "categories": ["lifestyle", "social"],

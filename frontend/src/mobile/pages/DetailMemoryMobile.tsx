@@ -3,12 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import {
-  IoCalendarOutline,
-  IoHeartOutline,
-  IoLocationOutline,
-  IoShareSocialOutline,
-} from 'react-icons/io5';
 import { getMemory, getMemoryCarousel, updateMemory, deleteMemory, type Memory } from '../../api/memory';
 import { getImageUrl } from '../../api/images';
 import { getTrackDetails, type SpotifyTrack } from '../../api/spotify';
@@ -16,6 +10,7 @@ import MemoryEditModal from '../../desktop/components/Memory/MemoryEditModal';
 import DeleteModal from '../../desktop/components/Memory/DeleteModal';
 import { MobileHeader } from '../components/layout';
 import { SegmentedControl, Button } from '../components/ui';
+import MaterialIcon from '../components/ui/MaterialIcon';
 
 interface ExtendedMemory extends Memory {
   description?: string | null;
@@ -165,25 +160,30 @@ export default function DetailMemoryMobile() {
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
                   aria-label="Condividi"
                 >
-                  <IoShareSocialOutline className="h-5 w-5" />
+                  <MaterialIcon name="share" size={20} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsFavorite((prev) => !prev)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
                   aria-label="Preferiti"
                 >
-                  <IoHeartOutline className={`h-5 w-5 ${isFavorite ? 'text-[var(--color-accent-pink)]' : ''}`} />
+                  <MaterialIcon
+                    name="favorite"
+                    size={20}
+                    fill={isFavorite ? 1 : 0}
+                    className={isFavorite ? 'text-[var(--color-accent-pink)]' : ''}
+                  />
                 </button>
               </div>
             }
           />
         </div>
 
-        <div className="relative h-[44vh] w-full overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="relative h-[45vh] w-full overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           {imageToShow ? (
             <img src={imageToShow} alt={memory.title} className="h-full w-full object-cover" />
           ) : (
@@ -209,7 +209,7 @@ export default function DetailMemoryMobile() {
         </div>
       </div>
 
-      <section className="-mt-5 rounded-t-[20px] bg-[var(--bg-card)] px-4 pb-28 pt-5 shadow-[var(--shadow-md)]">
+      <section className="relative z-10 -mt-[30px] rounded-t-[32px] bg-[var(--bg-card)] px-6 pb-28 pt-6 shadow-[var(--shadow-md)]">
         <h1 className="text-xl font-bold text-[var(--text-primary)]">{memory.title}</h1>
         {locationAndDate && (
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{locationAndDate}</p>
@@ -251,26 +251,23 @@ export default function DetailMemoryMobile() {
               <div className="grid gap-2 text-sm text-[var(--text-secondary)]">
                 {memory.start_date && (
                   <div className="flex items-center gap-2">
-                    <IoCalendarOutline className="h-4 w-4" />
+                    <MaterialIcon name="calendar_today" size={16} />
                     <span>{locationAndDate.split('•').pop()?.trim() || locationAndDate}</span>
                   </div>
                 )}
                 {memory.location && (
                   <div className="flex items-center gap-2">
-                    <IoLocationOutline className="h-4 w-4" />
+                    <MaterialIcon name="location_on" size={16} />
                     <span>{memory.location}</span>
                   </div>
                 )}
               </div>
             )}
 
-            {spotifyTrack && (
-              <div className="rounded-card border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3">
-                <p className="text-xs uppercase text-[var(--text-tertiary)]">Brano associato</p>
-                <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">{spotifyTrack.name}</p>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {spotifyTrack.artists.map((artist) => artist.name).join(', ')}
-                </p>
+            {(memory.song || spotifyTrack) && (
+              <div className="inline-flex items-center gap-2 rounded-[20px] bg-[#1DB954] px-3 py-1.5 text-[0.75rem] font-semibold text-white">
+                <MaterialIcon name="graphic_eq" size={16} />
+                <span>{spotifyTrack?.name ?? memory.song}</span>
               </div>
             )}
           </div>
@@ -322,13 +319,15 @@ export default function DetailMemoryMobile() {
 
       <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border-default)] bg-[var(--bg-card)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="grid grid-cols-3 gap-2">
+          <Button variant="secondary" onClick={handleShare}>
+            Condividi
+          </Button>
           <Button variant="secondary" onClick={() => setIsEditOpen(true)}>
             Modifica
           </Button>
-          <Button variant="secondary" onClick={() => setIsDeleteOpen(true)}>
+          <Button variant="danger" onClick={() => setIsDeleteOpen(true)}>
             Elimina
           </Button>
-          <Button onClick={handleShare}>Condividi</Button>
         </div>
       </div>
 

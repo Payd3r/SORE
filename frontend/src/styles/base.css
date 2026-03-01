@@ -1,0 +1,216 @@
+/**
+ * Base styles: Tailwind, reset, scrollbar, body, utilities
+ * Importato da main.tsx
+ */
+
+@import './desktop.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800 rounded-lg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white min-h-screen;
+  }
+  button {
+    @apply focus:outline-none;
+  }
+
+  input:focus,
+  textarea:focus {
+    outline: none;
+    border-color: transparent;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"],
+  input[type="week"],
+  textarea,
+  select {
+    @apply text-base;
+    font-size: 16px !important;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@layer utilities {
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: #111827;
+  background-color: #f2f2f7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  width: 100%;
+  display: block;
+  overflow: hidden;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: var(--ios-radius-sm, 12px);
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
+#root {
+  min-height: 100dvh;
+  width: 100%;
+}
+
+/* Touch optimizations (shared desktop + PWA su dispositivi touch) */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a[role="button"],
+  .btn,
+  .touch-target,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  button,
+  .btn,
+  [type="button"],
+  [type="submit"] {
+    padding: 12px !important;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .touch-margin > * {
+    margin: 6px;
+  }
+
+  .swipe-container {
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+main {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}

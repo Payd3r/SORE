@@ -4,6 +4,7 @@ import { UploadProvider } from './contexts/UploadContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
 import ProtectedRoute from './desktop/components/Layout/ProtectedRoute';
+import ScrollToTop from './desktop/components/Layout/ScrollToTop';
 import { Suspense, lazy, useEffect } from 'react';
 import Layout from './desktop/components/Layout/Layout';
 import { SidebarProvider } from './desktop/components/Layout/Layout';
@@ -17,6 +18,10 @@ const Home = lazy(() => import('./desktop/pages/Home'));
 const HomeMobile = lazy(() => import('./mobile/pages/HomeMobile'));
 const Profile = lazy(() => import('./desktop/pages/Profile'));
 const ProfileMobile = lazy(() => import('./mobile/pages/ProfileMobile'));
+const CouplesConnectionMobile = lazy(() => import('./mobile/pages/CouplesConnectionMobile'));
+const PrivacySecurityMobile = lazy(() => import('./mobile/pages/PrivacySecurityMobile'));
+const ShareSpaceMobile = lazy(() => import('./mobile/pages/ShareSpaceMobile'));
+const HelpCenterMobile = lazy(() => import('./mobile/pages/HelpCenterMobile'));
 const Gallery = lazy(() => import('./desktop/pages/Gallery'));
 const GalleryMobile = lazy(() => import('./mobile/pages/GalleryMobile'));
 const Memory = lazy(() => import('./desktop/pages/Memory'));
@@ -64,6 +69,23 @@ const ProfileSelector = () => {
   return isPwa ? <ProfileMobile /> : <Profile />;
 };
 
+const ProfileSubpageSelector = ({ page }: { page: 'coppia' | 'privacy' | 'condivisione' | 'aiuto' }) => {
+  const isPwa = useIsPwa();
+  if (!isPwa) return <Navigate to="/profilo" replace />;
+  switch (page) {
+    case 'coppia':
+      return <CouplesConnectionMobile />;
+    case 'privacy':
+      return <PrivacySecurityMobile />;
+    case 'condivisione':
+      return <ShareSpaceMobile />;
+    case 'aiuto':
+      return <HelpCenterMobile />;
+    default:
+      return <Navigate to="/profilo" replace />;
+  }
+};
+
 // Layout Selector - sceglie quale layout utilizzare in base alla modalità
 const LayoutSelector = () => {
   const isPwa = useIsPwa();
@@ -106,6 +128,7 @@ function App() {
         <UploadProvider>
           <SidebarProvider>
             <Router>
+              <ScrollToTop />
               <div className="min-h-[100dvh] w-full overflow-hidden">
                 <Suspense fallback={
                   <Loader
@@ -128,6 +151,10 @@ function App() {
                         <Route path="/mappa" element={<MappaSelector />} />
                         <Route path="/recap" element={<Recap />} />
                         <Route path="/profilo" element={<ProfileSelector />} />
+                        <Route path="/profilo/coppia" element={<ProfileSubpageSelector page="coppia" />} />
+                        <Route path="/profilo/privacy" element={<ProfileSubpageSelector page="privacy" />} />
+                        <Route path="/profilo/condivisione" element={<ProfileSubpageSelector page="condivisione" />} />
+                        <Route path="/profilo/aiuto" element={<ProfileSubpageSelector page="aiuto" />} />
                         <Route path="/logout" element={<div>Logout...</div>} />
                         <Route path="/upload" element={<UploadMobile />} />
                       </Route>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SORE - Dettaglio Evento</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 0;
+        }
+        .iphone-frame {
+            max-width: 430px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #ffffff;
+            position: relative;
+            overflow-x: hidden;
+            padding-bottom: 120px;}
+        .hero-image-container {
+            height: 45vh;
+            position: relative;
+        }
+        .content-card {
+            margin-top: -30px;
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            background-color: #ffffff;
+            position: relative;
+            z-index: 10;
+            padding: 24px;
+        }
+        .spotify-tag {
+            background: #1DB954;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .progress-bar-container {
+            height: 4px;
+            background-color: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #000;
+            border-radius: 2px;
+        }.bottom-nav-container {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            width: auto;
+        }
+        .bottom-nav {
+            background-color: #1a1a1a;
+            border-radius: 100px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 50%;
+            color: #9ca3af;transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .nav-item .material-symbols-outlined {
+            font-size: 24px;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .nav-item.active {
+            background-color: #ffffff;
+            color: #000000;
+            border-radius: 100px;
+            padding: 10px 20px;
+            gap: 8px;
+        }
+        .nav-item.active .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        .nav-label {
+            display: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .nav-item.active .nav-label {
+            display: block;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-gray-100">
+<div class="iphone-frame shadow-2xl">
+<section class="hero-image-container">
+<img alt="Anniversary Moment" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDd6yzkXt7ASySlFGcMG06iBYUp5HECtwvh6eXx3b7Vejn0PCJWKVI-9VGZIfvRDR5ttLz3j6DTwXjeY9iqz3mlhX0JFVqsUS2U1Tsqmy8uUwfsAjdMxhwmj4TWhUg1kjXxQ6fxaiNICpyOe58mVAxjEopndhf9ISE29A1fYCauDzHlem-JEIqx1mAYGf1z6b6gIMrDfhcQT0N2usKq76iyD6DXMJIq-wh0Rh0aYlXwwc6lnY5SFLtWA2_nnN535mcJoMhc3VT0CtHG"/>
+<div class="absolute top-12 left-6 right-6 flex justify-between items-center z-20">
+<button aria-label="Go back" class="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-gray-900" style="font-size: 24px;">arrow_back</span>
+</button>
+<button aria-label="Share" class="bg-white/90 backdrop-blur-md p-2 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-gray-900" style="font-size: 24px;">ios_share</span>
+</button>
+</div>
+<div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+<div class="w-2 h-2 rounded-full bg-white"></div>
+<div class="w-2 h-2 rounded-full bg-white/50"></div>
+<div class="w-2 h-2 rounded-full bg-white/50"></div>
+<div class="w-2 h-2 rounded-full bg-white/50"></div>
+</div>
+<div class="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 pointer-events-none"></div>
+</section>
+<main class="content-card">
+<header class="flex justify-between items-start mb-6">
+<div>
+<h1 class="text-2xl font-bold text-gray-900 tracking-tight">Il nostro Anniversario</h1>
+<div class="flex items-center gap-1 text-gray-500 mt-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<p class="font-medium text-sm">Ristorante Oro, Venezia</p>
+</div>
+</div>
+<div class="text-right">
+<span class="block text-xl font-bold text-gray-900">24</span>
+<span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Foto</span>
+</div>
+</header>
+<div class="mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="spotify-tag mb-3">
+<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+<path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.675.464-1.023.249-2.81-1.718-6.346-2.105-10.511-1.154-.403.093-.807-.158-.9-.561-.093-.403.158-.807.561-.9 4.56-1.042 8.47-.6 11.625 1.328.348.215.459.675.248 1.038zm1.464-3.26c-.271.442-.847.583-1.287.311-3.216-1.977-8.118-2.55-11.919-1.396-.5.152-1.023-.131-1.175-.63-.153-.5.131-1.023.63-1.175 4.343-1.319 9.758-.675 13.441 1.589.44.272.583.847.31 1.301zm.126-3.411c-3.858-2.29-10.222-2.502-13.918-1.381-.592.18-1.222-.158-1.402-.75-.18-.592.158-1.222.75-1.402 4.252-1.29 11.286-1.041 15.718 1.591.532.316.708 1.002.392 1.534-.316.532-1.002.708-1.54.392z"></path>
+</svg>
+                    Listening to
+                </div>
+<div class="flex items-center gap-3">
+<div class="relative w-10 h-10 rounded-md overflow-hidden bg-gray-200 shrink-0">
+<img alt="Album Art" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2YHb7BiNUzyM6bFcvPp9es4mWHjDZ9ncsGh86G93d3077xSlhG_R7i_M7G9-MSzpTKRS3iVOqG_8jye9tZGJhqcB_WitLmJbyjefj1v7xbWHssxIw4zTkoLZVPGsMH6zPYYVVYPmyrT4Bhl_GB0Qm1q-ZlYSJcCJvDHzVFE3Z011FcE2HvJgiUHh3yw5AQb0tcBECo0tfEMRD1Typ6I4Zw6CX0xm6sXp8oQ5A-5yv1KkbIXH3jHWi7H4_Ha_o7BvSBTwW674GIQy-"/>
+<div class="absolute inset-0 flex items-center justify-center bg-black/20">
+<span class="material-symbols-outlined text-white text-lg">play_arrow</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-gray-900 truncate">Perfect</p>
+<p class="text-xs text-gray-500 truncate">Ed Sheeran</p>
+</div>
+<div class="w-1/3">
+<div class="progress-bar-container">
+<div class="progress-bar-fill" style="width: 60%;"></div>
+</div>
+<div class="flex justify-between text-[10px] text-gray-400 mt-1 font-mono">
+<span>2:34</span>
+<span>4:23</span>
+</div>
+</div>
+</div>
+</div>
+<section class="mb-8">
+<h2 class="text-sm font-bold text-gray-900 mb-4 tracking-wide">Galleria</h2>
+<div class="grid grid-cols-4 gap-2">
+<img alt="Gallery 1" class="w-full h-20 object-cover rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNQ-fdkh4uPBkZLvTATlsRPGUIeY7mq9csCdzqHItGNcuDfoDI-1Xtv8ElcZnP6grmhIBsTaTKnGy7LNDz1NimvHIoUFBMICPMv-m3hEmkKG5G-K1tLOJIPz8kHbuzPb8XtHhtLse7zKplIZs73RypGTVsnSHqV0zJTLUBeVF6S4qCamvwtFwO2HVrEVmh2LjTK7UdGm3czft8q3dQ7s156k2BF9jg071hzO-hMOKdOOLytPWUeRIDvSLZ29sFRcntJjrfZSgAQ0Z7"/>
+<img alt="Gallery 2" class="w-full h-20 object-cover rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw9jRBb6EcoWJyESHNeE5h7NMFppLNYcYqMPiWM66f9xNzXBhzX2G1rHaBwJbvVXc6ks6s2icf32geKY__N-7myFFbT-o9kHhC_oVkA1tGIwTQxTY8y9rwrYIIUUCKkUh07cpmmx0rDm6u5Az2esnyQhhOK8gfVUuyqKIf3OVPJb-trOxcvir8Q9tV-3aWXD98lLDKSS0iO8YO1D0fT3Hh1LgJ1SQI2Vr0CRWAJEygB64Yq09KL0ovKxwv0oDrvbmcOmFEPhD7neOO"/>
+<img alt="Gallery 3" class="w-full h-20 object-cover rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHKzFwJHfPhGtfJQJemPX_8XufiRB2CTM6ynTva3q1RP6RdE2F9Hwz5mfjJTzWKuB7jHEtuzWdcU7lvDksePPlrUP38tAzUOGXwp2juvX7DzI1N97ftXV_HovLCmeFyYPCl8dc_S1WoVWWvR2ofEAjTB8acGMehrOi2n4yxR9SJND0Y7vFdSlzHI81id8alNoR3ZGXZ-HZ9GlFPx3_olB4lPZRM8xjNRG6nnSED0XO3r06XcgmG_Bw0xUG_U_FCV58spUD0rd6vWNG"/>
+<div class="relative">
+<img alt="Gallery 4" class="w-full h-20 object-cover rounded-xl brightness-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2YHb7BiNUzyM6bFcvPp9es4mWHjDZ9ncsGh86G93d3077xSlhG_R7i_M7G9-MSzpTKRS3iVOqG_8jye9tZGJhqcB_WitLmJbyjefj1v7xbWHssxIw4zTkoLZVPGsMH6zPYYVVYPmyrT4Bhl_GB0Qm1q-ZlYSJcCJvDHzVFE3Z011FcE2HvJgiUHh3yw5AQb0tcBECo0tfEMRD1Typ6I4Zw6CX0xm6sXp8oQ5A-5yv1KkbIXH3jHWi7H4_Ha_o7BvSBTwW674GIQy-"/>
+<span class="absolute inset-0 flex items-center justify-center text-white text-sm font-bold backdrop-blur-[2px] rounded-xl">+21</span>
+</div>
+</div>
+</section>
+<section class="mb-8">
+<h2 class="text-sm font-bold text-gray-900 mb-4 tracking-wide">Dettagli</h2>
+<div class="grid grid-cols-2 gap-3">
+<div class="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="bg-white p-2 rounded-xl shadow-sm text-gray-900 shrink-0">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+</div>
+<div>
+<p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Data</p>
+<p class="text-xs font-bold text-gray-900">14 Ott, 2023</p>
+</div>
+</div>
+<div class="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="bg-white p-2 rounded-xl shadow-sm text-gray-900 shrink-0">
+<span class="material-symbols-outlined text-[20px]">sunny</span>
+</div>
+<div>
+<p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Meteo</p>
+<p class="text-xs font-bold text-gray-900">Sole, 22°C</p>
+</div>
+</div>
+<div class="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="bg-white p-2 rounded-xl shadow-sm text-gray-900 shrink-0">
+<span class="material-symbols-outlined text-[20px]">group</span>
+</div>
+<div>
+<p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Con</p>
+<p class="text-xs font-bold text-gray-900">Io &amp; Te</p>
+</div>
+</div>
+<div class="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="bg-white p-2 rounded-xl shadow-sm text-gray-900 shrink-0">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</div>
+<div>
+<p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Luogo</p>
+<p class="text-xs font-bold text-gray-900">Venezia</p>
+</div>
+</div>
+</div>
+</section>
+<section class="mb-12">
+<h2 class="text-sm font-bold text-gray-900 mb-3 tracking-wide">Ricordo</h2>
+<p class="text-gray-600 text-sm leading-7">
+                  Abbiamo passato un pomeriggio indimenticabile perdendoci tra le calli di Venezia. Abbiamo finalmente trovato quel piccolo angolo tranquillo sul canale proprio mentre il sole iniziava a tramontare, dipingendo tutto d'oro. La musica che proveniva dal caffè vicino rendeva tutto simile a un film. Non dimenticherò mai il modo in cui mi hai guardato. <span class="text-black font-bold cursor-pointer">Leggi tutto</span>
+</p>
+</section>
+</main>
+<div class="bottom-nav-container">
+<nav class="bottom-nav">
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">home</span>
+</a>
+<a class="nav-item active" href="#">
+<span class="material-symbols-outlined">photo_library</span>
+<span class="nav-label">Galleria</span>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined">settings</span>
+</a>
+</nav>
+</div>
+</div>
+
+</body></html>

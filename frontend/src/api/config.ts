@@ -1,6 +1,8 @@
-// Configurazione dinamica per Docker
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
-const STATIC_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
+// In dev locale usa sempre localhost; in produzione usa VITE_API_BASE_URL
+const API_BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:3002'
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002');
+const STATIC_BASE_URL = API_BASE_URL;
 
 export const API_URLS = {
   base: API_BASE_URL,

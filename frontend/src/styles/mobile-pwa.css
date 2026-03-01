@@ -1,0 +1,107 @@
+/**
+ * Stili specifici per la PWA mobile
+ * Importato da PwaLayout. Carica design-system-pwa.css per le variabili CSS.
+ */
+
+@import './design-system-pwa.css';
+
+/* Disabilita selezione testo in modalità PWA */
+body.pwa-mode * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.pwa-mode input,
+body.pwa-mode textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  -khtml-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Nascondi scrollbar in modalità PWA */
+html.pwa-layout,
+body.pwa-layout,
+.pwa-layout * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html.pwa-layout::-webkit-scrollbar,
+body.pwa-layout::-webkit-scrollbar,
+.pwa-layout *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+}
+
+/* Supporto safe area iOS */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body.pwa-mode .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  body.pwa-mode .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 20px);
+  }
+
+  body.pwa-mode .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  body.pwa-mode .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Layout principale PWA (PwaLayout) */
+.pwa-root {
+  min-height: 100dvh;
+  max-width: 28rem; /* max-w-md */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Sfondo full-viewport per PWA (sostituisce style inline in PwaLayout) */
+.pwa-root .pwa-gradient-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--bg-page);
+}
+
+/* Altezza tab bar pill per calcolo FixedBottomBar (azioni) */
+.pwa-root {
+  --pwa-tab-bar-height: 4.5rem;
+}
+
+/* Tab bar pill (DownBar) - icone Material Symbols */
+.pwa-root .pwa-tab-bar .material-symbols-outlined {
+  font-size: 1.5rem;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Barra azioni fissa (FixedBottomBar variant actions) */
+.pwa-root .fixed-bottom-bar.fixed-bottom-bar--actions {
+  bottom: calc(var(--pwa-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Legacy: stili per tab bar quando usava FixedBottomBar (mantenuti per eventuali override) */
+.pwa-root .fixed-bottom-bar button svg {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  flex-shrink: 0;
+}

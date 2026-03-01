@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SORE - Viaggio Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f2f2f7;}
+        .iphone-frame {
+            max-width: 430px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #ffffff;
+            position: relative;
+            padding-bottom: 100px;overflow-x: hidden;
+        }
+        .hero-image-container {
+            height: 50vh;
+            position: relative;
+        }
+        .content-card {
+            margin-top: -40px;
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            background-color: #ffffff;
+            position: relative;
+            z-index: 10;
+            padding: 24px;
+        }.timeline-container {
+            position: relative;
+            padding-left: 20px;
+            margin-top: 24px;
+            margin-bottom: 32px;
+        }
+        .timeline-line {
+            position: absolute;
+            left: 7px;
+            top: 8px;
+            bottom: 0;
+            width: 2px;
+            background-color: #e5e5ea;}
+        .timeline-item {
+            position: relative;
+            padding-left: 24px;
+            padding-bottom: 32px;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -20px;
+            top: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #007aff;border: 3px solid #fff;
+            box-shadow: 0 0 0 1px #e5e5ea;
+            z-index: 2;
+        }
+        .timeline-dot.secondary {
+             background-color: #8e8e93;}.scrolling-wrapper {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            gap: 12px;
+            padding-bottom: 10px;
+            margin-left: -24px;
+            margin-right: -24px;
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+        .scrolling-card {
+            flex: 0 0 80%;
+            scroll-snap-align: center;
+        }.scrolling-wrapper::-webkit-scrollbar {
+            display: none;
+        }.floating-nav-container {
+            position: fixed;
+            bottom: 34px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 430px;
+            pointer-events: none;}
+        .floating-nav {
+            pointer-events: auto;
+            background-color: #1c1c1e;border-radius: 999px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8e8e93;
+            padding: 10px;
+            border-radius: 999px;
+            transition: all 0.3s ease;
+            position: relative;
+            height: 44px;
+            min-width: 44px;
+        }
+        .nav-item.active {
+            background-color: #f2f2f7;
+            color: #000000;
+            padding: 10px 16px;
+            gap: 8px;
+        }
+        .nav-label {
+            display: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .nav-item.active .nav-label {
+            display: block;
+        }
+        .nav-icon {
+            font-size: 24px;
+        }
+        .nav-item.active .nav-icon {
+            font-variation-settings: 'FILL' 1;
+        }.spotify-player {
+            background-color: #191414;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            margin-bottom: 24px;
+        }
+        .spotify-icon-container {
+            background-color: #1DB954;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-gray-50">
+<div class="iphone-frame shadow-2xl">
+<section class="hero-image-container">
+<img alt="Japan Trip Hero" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDd6yzkXt7ASySlFGcMG06iBYUp5HECtwvh6eXx3b7Vejn0PCJWKVI-9VGZIfvRDR5ttLz3j6DTwXjeY9iqz3mlhX0JFVqsUS2U1Tsqmy8uUwfsAjdMxhwmj4TWhUg1kjXxQ6fxaiNICpyOe58mVAxjEopndhf9ISE29A1fYCauDzHlem-JEIqx1mAYGf1z6b6gIMrDfhcQT0N2usKq76iyD6DXMJIq-wh0Rh0aYlXwwc6lnY5SFLtWA2_nnN535mcJoMhc3VT0CtHG"/>
+<div class="absolute top-12 left-6 right-6 flex justify-between items-center z-20">
+<button aria-label="Go back" class="bg-black/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-black/30 transition">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<button aria-label="Share" class="bg-black/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-black/30 transition">
+<span class="material-symbols-outlined">ios_share</span>
+</button>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
+</section>
+<main class="content-card">
+<header class="mb-6">
+<div class="flex justify-between items-end mb-2">
+<h1 class="text-3xl font-bold text-gray-900 tracking-tight">Viaggio in Giappone</h1>
+<div class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                        14 Giorni
+                    </div>
+</div>
+<div class="flex items-center text-gray-500 text-sm font-medium gap-2">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+<span>12 - 26 Aprile 2024</span>
+</div>
+</header>
+<div class="spotify-player shadow-sm">
+<div class="spotify-icon-container">
+<svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.215.353-.675.464-1.023.249-2.81-1.718-6.346-2.105-10.511-1.154-.403.093-.807-.158-.9-.561-.093-.403.158-.807.561-.9 4.56-1.042 8.47-.6 11.625 1.328.348.215.459.675.248 1.038zm1.464-3.26c-.271.442-.847.583-1.287.311-3.216-1.977-8.118-2.55-11.919-1.396-.5.152-1.023-.131-1.175-.63-.153-.5.131-1.023.63-1.175 4.343-1.319 9.758-.675 13.441 1.589.44.272.583.847.31 1.301zm.126-3.411c-3.858-2.29-10.222-2.502-13.918-1.381-.592.18-1.222-.158-1.402-.75-.18-.592.158-1.222.75-1.402 4.252-1.29 11.286-1.041 15.718 1.591.532.316.708 1.002.392 1.534-.316.532-1.002.708-1.54.392z"></path></svg>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold truncate">First Love</p>
+<p class="text-xs text-gray-400 truncate">Utada Hikaru</p>
+</div>
+<button class="text-white hover:text-green-400 transition">
+<span class="material-symbols-outlined">play_circle</span>
+</button>
+</div>
+<section class="grid grid-cols-2 gap-3 mb-8">
+<div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="flex items-center gap-2 mb-2 text-gray-500">
+<span class="material-symbols-outlined text-[20px]">photo_library</span>
+<span class="text-xs uppercase font-bold tracking-wider">Foto</span>
+</div>
+<p class="text-2xl font-bold text-gray-900">482</p>
+</div>
+<div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+<div class="flex items-center gap-2 mb-2 text-gray-500">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+<span class="text-xs uppercase font-bold tracking-wider">Città</span>
+</div>
+<p class="text-2xl font-bold text-gray-900">Kyoto, Tokyo</p>
+</div>
+</section>
+<section class="mb-8">
+<div class="flex justify-between items-center mb-4 px-1">
+<h2 class="text-lg font-bold text-gray-900">Galleria</h2>
+<button class="text-blue-600 text-sm font-medium">Vedi tutte</button>
+</div>
+<div class="scrolling-wrapper">
+<div class="scrolling-card relative aspect-[4/3] rounded-2xl overflow-hidden">
+<img alt="Tokyo Street" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNQ-fdkh4uPBkZLvTATlsRPGUIeY7mq9csCdzqHItGNcuDfoDI-1Xtv8ElcZnP6grmhIBsTaTKnGy7LNDz1NimvHIoUFBMICPMv-m3hEmkKG5G-K1tLOJIPz8kHbuzPb8XtHhtLse7zKplIZs73RypGTVsnSHqV0zJTLUBeVF6S4qCamvwtFwO2HVrEVmh2LjTK7UdGm3czft8q3dQ7s156k2BF9jg071hzO-hMOKdOOLytPWUeRIDvSLZ29sFRcntJjrfZSgAQ0Z7"/>
+<div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+<span class="text-white text-xs font-bold">Shibuya Crossing</span>
+</div>
+</div>
+<div class="scrolling-card relative aspect-[4/3] rounded-2xl overflow-hidden">
+<img alt="Kyoto Temple" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHKzFwJHfPhGtfJQJemPX_8XufiRB2CTM6ynTva3q1RP6RdE2F9Hwz5mfjJTzWKuB7jHEtuzWdcU7lvDksePPlrUP38tAzUOGXwp2juvX7DzI1N97ftXV_HovLCmeFyYPCl8dc_S1WoVWWvR2ofEAjTB8acGMehrOi2n4yxR9SJND0Y7vFdSlzHI81id8alNoR3ZGXZ-HZ9GlFPx3_olB4lPZRM8xjNRG6nnSED0XO3r06XcgmG_Bw0xUG_U_FCV58spUD0rd6vWNG"/>
+<div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+<span class="text-white text-xs font-bold">Kinkaku-ji</span>
+</div>
+</div>
+<div class="scrolling-card relative aspect-[4/3] rounded-2xl overflow-hidden">
+<img alt="Food" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw9jRBb6EcoWJyESHNeE5h7NMFppLNYcYqMPiWM66f9xNzXBhzX2G1rHaBwJbvVXc6ks6s2icf32geKY__N-7myFFbT-o9kHhC_oVkA1tGIwTQxTY8y9rwrYIIUUCKkUh07cpmmx0rDm6u5Az2esnyQhhOK8gfVUuyqKIf3OVPJb-trOxcvir8Q9tV-3aWXD98lLDKSS0iO8YO1D0fT3Hh1LgJ1SQI2Vr0CRWAJEygB64Yq09KL0ovKxwv0oDrvbmcOmFEPhD7neOO"/>
+<div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+<span class="text-white text-xs font-bold">Sushi Dinner</span>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="text-lg font-bold text-gray-900 mb-2">Timeline del Viaggio</h2>
+<div class="timeline-container">
+<div class="timeline-line"></div>
+<div class="timeline-item">
+<div class="timeline-dot"></div>
+<span class="text-xs text-gray-400 font-medium mb-1 block">12 Aprile • Tokyo</span>
+<h3 class="text-gray-900 font-bold text-base">Arrivo a Narita</h3>
+<p class="text-gray-500 text-sm mt-1 leading-relaxed">Siamo atterrati nel tardo pomeriggio e abbiamo preso subito il Narita Express per Shinjuku.</p>
+<div class="mt-3 flex gap-2">
+<img alt="Thumb" class="w-16 h-16 rounded-lg object-cover bg-gray-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2YHb7BiNUzyM6bFcvPp9es4mWHjDZ9ncsGh86G93d3077xSlhG_R7i_M7G9-MSzpTKRS3iVOqG_8jye9tZGJhqcB_WitLmJbyjefj1v7xbWHssxIw4zTkoLZVPGsMH6zPYYVVYPmyrT4Bhl_GB0Qm1q-ZlYSJcCJvDHzVFE3Z011FcE2HvJgiUHh3yw5AQb0tcBECo0tfEMRD1Typ6I4Zw6CX0xm6sXp8oQ5A-5yv1KkbIXH3jHWi7H4_Ha_o7BvSBTwW674GIQy-"/>
+</div>
+</div>
+<div class="timeline-item">
+<div class="timeline-dot secondary"></div>
+<span class="text-xs text-gray-400 font-medium mb-1 block">14 Aprile • Tokyo</span>
+<h3 class="text-gray-900 font-bold text-base">TeamLab Planets</h3>
+<p class="text-gray-500 text-sm mt-1 leading-relaxed">Esperienza immersiva incredibile. L'acqua arrivava alle ginocchia!</p>
+</div>
+<div class="timeline-item">
+<div class="timeline-dot"></div>
+<span class="text-xs text-gray-400 font-medium mb-1 block">17 Aprile • Kyoto</span>
+<h3 class="text-gray-900 font-bold text-base">Viaggio in Shinkansen</h3>
+<p class="text-gray-500 text-sm mt-1 leading-relaxed">Il treno proiettile è puntualissimo. Abbiamo visto il Monte Fuji dal finestrino.</p>
+</div>
+<div class="timeline-item pb-0">
+<div class="timeline-dot secondary"></div>
+<span class="text-xs text-gray-400 font-medium mb-1 block">19 Aprile • Kyoto</span>
+<h3 class="text-gray-900 font-bold text-base">Fushimi Inari Taisha</h3>
+<p class="text-gray-500 text-sm mt-1 leading-relaxed">La camminata tra i torii rossi è stata lunga ma ne è valsa la pena.</p>
+</div>
+</div>
+</section>
+</main>
+<div class="floating-nav-container">
+<nav class="floating-nav">
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined nav-icon">home</span>
+</a>
+<a class="nav-item active" href="#">
+<span class="material-symbols-outlined nav-icon">photo_library</span>
+<span class="nav-label">Ricordi</span>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined nav-icon">favorite</span>
+</a>
+<a class="nav-item" href="#">
+<span class="material-symbols-outlined nav-icon">person</span>
+</a>
+</nav>
+</div>
+</div>
+
+</body></html>

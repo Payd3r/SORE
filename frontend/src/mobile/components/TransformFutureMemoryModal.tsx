@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { IoCalendarOutline, IoClose } from 'react-icons/io5';
 import { updateMemoryType } from '../../api/memory';
+import MaterialIcon from './ui/MaterialIcon';
 import { useQueryClient } from '@tanstack/react-query';
 import { MemoryType } from '../../api/types';
 
@@ -67,7 +67,7 @@ export default function TransformFutureMemoryModal({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900">
-              <IoCalendarOutline className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+              <MaterialIcon name="calendar_today" size={18} className="text-blue-600 dark:text-blue-300" />
             </div>
             <div>
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -82,7 +82,7 @@ export default function TransformFutureMemoryModal({
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
-            <IoClose className="w-5 h-5" />
+            <MaterialIcon name="close" size={20} />
           </button>
         </div>
 

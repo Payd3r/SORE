@@ -1,9 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import './styles/base.css'
 import App from './App.tsx'
 import 'lazysizes'
 import 'lazysizes/plugins/attrchange/ls.attrchange'
+
+// Service Worker solo in produzione (in dev non esiste, Vite restituirebbe index.html → MIME text/html)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/service-worker.js')
+  })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

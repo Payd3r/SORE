@@ -20,6 +20,8 @@ import pushRoutes from './routes/push';
 // Import servizi
 import { setupNotificationCron } from './cron/notifications';
 
+// Carica .env dalla root del progetto per dev locale
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config();
 
 const app = express();

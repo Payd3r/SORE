@@ -5,6 +5,8 @@ services:
     image: mysql:8.0
     container_name: sore_db
     restart: unless-stopped
+    ports:
+      - "3307:3306"  # 3307 per evitare conflitto con altri DB su 3306
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-sore}

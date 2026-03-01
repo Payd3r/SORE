@@ -5,6 +5,9 @@ import { splitVendorChunkPlugin } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+  },
   plugins: [
     react(),
     splitVendorChunkPlugin(),
@@ -21,7 +24,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'map-vendor': ['leaflet', 'react-leaflet'],
           'ui-vendor': ['@headlessui/react', '@heroicons/react'],
         },

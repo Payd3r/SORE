@@ -1,10 +1,10 @@
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { IoLayersOutline, IoLocateOutline } from 'react-icons/io5';
 import Map from '../../desktop/components/Maps/Map';
+import MaterialIcon from '../components/ui/MaterialIcon';
 import { getMapImages } from '../../api/map';
 import { Button, Card } from '../components/ui';
-import { HeaderActions, MobileHeader } from '../components/layout';
+import { MobileHeader } from '../components/layout';
 import { useMobileLoadingState } from '../hooks/useMobileLoadingState';
 import { SkeletonMapMobile } from '../components/skeletons';
 
@@ -48,17 +48,14 @@ export default function MappaMobile() {
         className="absolute inset-x-0 top-0 z-50"
         variant="overlay"
         rightActions={
-          <div className="flex items-center gap-1">
-            <HeaderActions.Menu onClick={() => void refetch()} />
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
-              aria-label="Layers"
-            >
-              <IoLayersOutline className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-slate-200 text-slate-700 shadow-sm"
+            aria-label="Layers"
+          >
+            <MaterialIcon name="layers" size={20} />
+          </button>
         }
       />
 
@@ -86,9 +83,14 @@ export default function MappaMobile() {
         )}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 px-4 pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))]">
+      <div className="pointer-events-none absolute right-4 top-32 z-40">
         <div className="pointer-events-auto ml-auto flex w-fit flex-col gap-2">
-          <Button variant="icon" icon={<IoLocateOutline className="h-5 w-5" />} onClick={() => void refetch()} />
+          <Button
+            variant="icon"
+            className="h-12 w-12 rounded-xl border border-slate-100 bg-white/90 text-slate-600 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300"
+            icon={<MaterialIcon name="my_location" size={20} />}
+            onClick={() => void refetch()}
+          />
         </div>
       </div>
 

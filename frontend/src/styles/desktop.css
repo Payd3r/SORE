@@ -1,0 +1,480 @@
+/**
+ * Stili componenti desktop: form, button, tab-menu, DatePicker, upload, DetailMemory
+ * Usati da desktop e da modali condivise in PWA. Importato da main.tsx
+ */
+
+@layer components {
+  .input-base {
+    @apply w-full px-4 py-3 sm:py-2.5 rounded-xl text-sm transition-all duration-200 outline-none
+      min-h-[44px] sm:min-h-[38px]
+      bg-white dark:bg-gray-800
+      text-gray-900 dark:text-white
+      border border-gray-200 dark:border-gray-700
+      placeholder:text-gray-400 dark:placeholder:text-gray-500
+      focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+      dark:focus:border-blue-400 dark:focus:ring-blue-400/20;
+  }
+
+  .input-search {
+    @apply input-base pl-10;
+  }
+
+  .btn-base {
+    @apply px-4 py-3 sm:py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+      min-h-[44px] sm:min-h-[38px] min-w-[44px] sm:min-w-[38px]
+      touch-manipulation select-none
+      active:scale-[0.97]
+      focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-primary {
+    @apply btn-base
+      bg-blue-500 text-white
+      hover:bg-blue-600 active:bg-blue-700
+      dark:bg-blue-600 dark:hover:bg-blue-700 dark:active:bg-blue-800;
+  }
+
+  .btn-secondary {
+    @apply btn-base
+      bg-gray-100 text-gray-700
+      hover:bg-gray-200 active:bg-gray-300
+      focus:ring-gray-500/20
+      dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 dark:active:bg-gray-500;
+  }
+
+  .btn-danger {
+    @apply btn-base
+      bg-red-500 text-white
+      hover:bg-red-600 active:bg-red-700
+      focus:ring-red-500/20
+      dark:bg-red-600 dark:hover:bg-red-700 dark:active:bg-red-800;
+  }
+
+  .toggle-base {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full
+    transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2
+    disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .toggle-primary {
+    @apply toggle-base
+    bg-gray-200 focus:ring-blue-500/20
+    dark:bg-gray-700 dark:focus:ring-blue-400/20;
+  }
+
+  .toggle-primary[data-state="checked"] {
+    @apply bg-blue-500 dark:bg-blue-600;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
+  }
+
+  .modal-content {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-xl
+    max-w-2xl w-full mx-4 overflow-hidden;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+  }
+
+  .badge-base {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-primary {
+    @apply badge-base bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+  }
+
+  .badge-success {
+    @apply badge-base bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+  }
+
+  .badge-warning {
+    @apply badge-base bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+  }
+
+  .badge-danger {
+    @apply badge-base bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+  }
+
+  .tab-menu {
+    @apply flex p-0.5 rounded-xl bg-gray-50 dark:bg-gray-800
+      border border-gray-200 dark:border-gray-700 relative;
+  }
+
+  .tab-menu-item {
+    @apply flex items-center justify-center gap-1.5 sm:gap-2 flex-1 py-2 px-3 sm:px-4
+    rounded-lg font-medium text-sm transition-all duration-300 ease-in-out focus:outline-none
+    relative z-10;
+  }
+
+  .tab-menu-item svg {
+    @apply w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-transform duration-300 ease-in-out;
+  }
+
+  .tab-menu-item-active {
+    @apply bg-white dark:bg-gray-900 text-blue-500 shadow-sm
+    scale-[1.00] transform transition-all duration-300 ease-in-out;
+  }
+
+  .tab-menu-item-inactive {
+    @apply text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 bg-transparent
+    hover:scale-[1.00] transform transition-all duration-300 ease-in-out;
+  }
+
+  .tab-menu-button {
+    @apply flex items-center justify-center gap-1.5 sm:gap-2 flex-1
+      py-3 sm:py-2.5 px-4 sm:px-4
+      min-h-[44px] sm:min-h-[38px]
+      rounded-lg font-medium text-sm
+      transition-all duration-300 ease-in-out
+      touch-manipulation select-none
+      active:scale-[0.97]
+      focus:outline-none;
+  }
+
+  .tab-menu-button svg {
+    @apply w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-transform duration-300 ease-in-out;
+  }
+
+  .tab-menu-button-active {
+    @apply bg-white dark:bg-gray-900
+      text-blue-600 dark:text-blue-400
+      shadow-sm;
+  }
+
+  .tab-menu-button-inactive {
+    @apply text-gray-600 dark:text-gray-400
+      hover:bg-white/50 dark:hover:bg-gray-900/50
+      bg-transparent;
+  }
+
+  .btn {
+    @apply touch-manipulation select-none min-w-[44px] min-h-[44px];
+  }
+
+  @media (max-width: 640px) {
+    button:not([role='switch']),
+    [type='button']:not([role='switch']),
+    [type='submit']:not([role='switch']) {
+      @apply py-3 touch-manipulation select-none min-w-[44px] min-h-[44px];
+    }
+
+    button svg,
+    [type='button'] svg,
+    [type='submit'] svg {
+      @apply w-5 h-5 flex-shrink-0;
+    }
+  }
+
+  .btn-primary:active:not(:disabled) {
+    @apply bg-blue-700;
+  }
+
+  .btn-danger:active:not(:disabled) {
+    @apply bg-red-700;
+  }
+
+  button[role="combobox"],
+  button[role="listbox"] {
+    @apply min-h-[44px] sm:min-h-[38px] touch-manipulation select-none;
+  }
+
+  .react-datepicker__day {
+    @apply text-gray-900 dark:text-gray-100
+      text-sm
+      h-10 sm:h-8 w-10 sm:w-8
+      flex items-center justify-center
+      hover:bg-gray-50 dark:hover:bg-gray-700
+      rounded-md
+      transition-colors
+      cursor-pointer
+      touch-manipulation select-none
+      outline-none;
+  }
+
+  .react-datepicker__navigation button {
+    @apply min-h-[44px] sm:min-h-[38px] min-w-[44px] sm:min-w-[38px]
+      touch-manipulation select-none;
+  }
+}
+
+/* DatePicker */
+.date-picker-container {
+  @apply relative w-full;
+}
+
+.react-datepicker-wrapper {
+  @apply w-full;
+}
+
+.react-datepicker {
+  @apply font-sans bg-white dark:bg-gray-800
+    border border-gray-200 dark:border-gray-700
+    rounded-lg shadow-lg
+    w-[280px] sm:w-[250px];
+}
+
+.react-datepicker button {
+  @apply bg-transparent border-0 p-0 hover:border-0;
+}
+
+.react-datepicker button:focus,
+.react-datepicker button:focus-visible {
+  @apply outline-none;
+}
+
+.react-datepicker__month-container {
+  @apply w-full;
+}
+
+.react-datepicker__header {
+  @apply bg-gray-50 dark:bg-gray-800/50
+    border-b border-gray-200 dark:border-gray-700
+    px-2 pt-1 pb-3;
+}
+
+.react-datepicker__current-month {
+  @apply text-gray-900 dark:text-white
+    text-sm font-medium
+    py-1.5;
+}
+
+.react-datepicker__day-names {
+  @apply grid grid-cols-7 w-full border-b border-gray-100 dark:border-gray-700 pb-1;
+}
+
+.react-datepicker__day-name {
+  @apply text-gray-500 dark:text-gray-400
+    text-xs font-medium
+    flex items-center justify-center
+    h-8 sm:h-7 w-full;
+}
+
+.react-datepicker__month {
+  @apply p-1.5;
+}
+
+.react-datepicker__week {
+  @apply grid grid-cols-7 w-full;
+}
+
+.react-datepicker__day {
+  @apply text-gray-900 dark:text-gray-100
+    text-sm
+    h-8 sm:h-7 w-full
+    flex items-center justify-center
+    hover:bg-gray-50 dark:hover:bg-gray-700
+    rounded-md
+    transition-colors
+    cursor-pointer
+    outline-none;
+}
+
+.react-datepicker__day--selected {
+  @apply bg-blue-500 dark:bg-blue-600
+    text-white
+    hover:bg-blue-600 dark:hover:bg-blue-700;
+}
+
+.react-datepicker__day--keyboard-selected {
+  @apply bg-gray-50 dark:bg-gray-700
+    text-gray-900 dark:text-white;
+}
+
+.react-datepicker__day--outside-month {
+  @apply text-gray-300 dark:text-gray-600
+    hover:bg-transparent dark:hover:bg-transparent
+    cursor-default;
+}
+
+.react-datepicker__day--today {
+  @apply text-blue-500 dark:text-blue-400
+    font-medium;
+}
+
+.react-datepicker__day--disabled {
+  @apply text-gray-300 dark:text-gray-600
+    hover:bg-transparent dark:hover:bg-transparent
+    cursor-not-allowed;
+}
+
+.react-datepicker__navigation {
+  @apply absolute top-3 p-0;
+}
+
+.react-datepicker__navigation--previous {
+  @apply left-3;
+}
+
+.react-datepicker__navigation--next {
+  @apply right-3;
+}
+
+.react-datepicker__navigation-icon {
+  @apply outline-none focus:outline-none;
+}
+
+.react-datepicker__navigation button {
+  @apply outline-none focus:outline-none;
+}
+
+.react-datepicker__navigation button:focus-visible {
+  @apply outline-none ring-2 ring-blue-500/50 dark:ring-blue-400/50 ring-offset-2 dark:ring-offset-gray-800 rounded;
+}
+
+.react-datepicker__navigation-icon::before {
+  @apply border-gray-400 dark:border-gray-500;
+  border-width: 2px 2px 0 0;
+  height: 9px;
+  width: 9px;
+  top: 0;
+}
+
+.react-datepicker__input-container input {
+  @apply input-base w-full pl-10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%236B7280' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  background-size: 18px;
+}
+
+.dark .react-datepicker__input-container input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%239CA3AF' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5' /%3E%3C/svg%3E");
+}
+
+.react-datepicker-popper {
+  @apply z-[100] mt-1 w-auto;
+}
+
+.react-datepicker__triangle {
+  @apply hidden;
+}
+
+@media (max-width: 768px) {
+  .react-datepicker-popper {
+    transform: translateY(-50%) !important;
+    left: 15% !important;
+    position: fixed !important;
+    top: 50% !important;
+    z-index: 9999;
+  }
+
+  .react-datepicker-wrapper {
+    position: static !important;
+  }
+
+  .react-datepicker__input-container {
+    position: static !important;
+  }
+}
+
+/* Upload */
+.image-upload-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.upload-section {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.upload-button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #2196F3;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-button:hover {
+  background-color: #1976D2;
+}
+
+.upload-button:disabled {
+  background-color: #BDBDBD;
+  cursor: not-allowed;
+}
+
+.status-list {
+  margin-top: 20px;
+}
+
+.status-item {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.status-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.file-name {
+  font-size: 14px;
+  color: #333;
+  word-break: break-all;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #E0E0E0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #2196F3;
+  transition: width 0.3s ease;
+}
+
+/* DetailMemory (desktop) */
+.memory-detail {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+}
+
+.memory-detail .carousel-container {
+  touch-action: pan-x !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.memory-detail main {
+  overflow-y: auto !important;
+  touch-action: pan-y !important;
+}

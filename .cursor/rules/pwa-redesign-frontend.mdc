@@ -1,0 +1,28 @@
+---
+description: Come affrontare il redesign del frontend PWA mobile senza conflitti con desktop e CSS
+globs: frontend/src/mobile/**/*, frontend/src/styles/*pwa*
+alwaysApply: false
+---
+
+# Redesign PWA mobile – dove intervenire e cosa evitare
+
+## Dove mettere gli stili PWA
+
+- **Solo variabili (colori, spazi, durate):** `frontend/src/styles/design-system-pwa.css`. Modifica `:root` e `.dark`; le variabili sono usate con `var(--bg-card)`, `var(--color-primary)` ecc. nei componenti in `frontend/src/mobile/`.
+- **Regole e override PWA:** `frontend/src/styles/mobile-pwa.css`. Qui: `body.pwa-mode`, scrollbar in `.pwa-layout`, safe-area, stili sotto `.pwa-root`. Non aggiungere qui variabili.
+- **Componenti mobile:** usare classi Tailwind + variabili da design-system (`var(--bg-card)`, `var(--text-primary)`). Non introdurre classi globali in `base.css` o `desktop.css` per la sola PWA.
+
+## Cosa non modificare
+
+- **`frontend/src/styles/base.css`** e **`frontend/src/styles/desktop.css`**: condivisi con desktop. Non aggiungere stili specifici PWA; le modali desktop (MemoryEditModal, EditProfileModal, ecc.) usano le classi desktop (input-base, btn-primary, form-label).
+- **Routing e `useIsPwa()`:** non cambiare la logica in `App.tsx` (LayoutSelector, route, body class `pwa-mode`).
+- **Componenti desktop** in `frontend/src/desktop/`: usati dalla PWA (Map, modali). Limitarsi a fix minimi; il redesign riguarda i componenti in `frontend/src/mobile/`.
+
+## Ordine CSS (riferimento)
+
+`main.tsx` → `base.css` → `desktop.css`. Quando è PWA, `PwaLayout` carica `mobile-pwa.css` → `design-system-pwa.css`. I componenti in `frontend/src/mobile/` vivono dentro `.pwa-root`; le variabili del design system sono disponibili solo con PwaLayout montato.
+
+## Riferimenti
+
+- Struttura pagine e componenti: `frontend/docs/PROMPT-REDESIGN-PWA.md`
+- File CSS e dipendenze: `frontend/docs/CSS-DEPENDENCIES.md`

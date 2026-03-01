@@ -1,65 +1,76 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { IoChevronForwardOutline, IoMoonOutline, IoNotificationsOutline, IoKeyOutline, IoTrashOutline, IoLogOutOutline, IoPersonOutline } from 'react-icons/io5';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserInfo, getCoupleInfo } from '../../api/profile';
-import { getRecapData, getRecapConfronto, RecapStats, RecapConfronto } from '../../api/recap';
+import { getUserInfo, getCoupleInfo, updateUserInfo } from '../../api/profile';
+import { getRecapData, RecapStats } from '../../api/recap';
+import { getMapImages } from '../../api/map';
 import { UserInfo, CoupleInfo } from '../../api/types';
-import { getImageUrl } from '../../api/images';
 import EditProfileModal from '../../desktop/components/Profile/EditProfileModal';
-import DeleteAccountModal from '../../desktop/components/Profile/DeleteAccountModal';
-import { ChangePassModal } from '../../desktop/components/Profile/ChangePassModal';
 import { useIsPwa } from '../../utils/isPwa';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
-import { Button, Card, SegmentedControl } from '../components/ui';
-import { HeaderActions, MobileHeader, MobilePageWrapper } from '../components/layout';
+import { MobileHeader, MobilePageWrapper } from '../components/layout';
+import {
+  ProfileHeader,
+  JourneyCards,
+  TogetherForCard,
+  SettingsMenuRow,
+} from '../components/profile';
 import { SkeletonProfileHeaderMobile, SkeletonStatsMobile } from '../components/skeletons';
+import Card from '../components/ui/Card';
+import { ToggleSwitch } from '../components/ui';
+import MaterialIcon from '../components/ui/MaterialIcon';
 
-type ProfileTab = 'profile' | 'couple' | 'stats';
-
-const tabOptions: Array<{ key: ProfileTab; label: string }> = [
-  { key: 'profile', label: 'Profilo' },
-  { key: 'couple', label: 'Coppia' },
-  { key: 'stats', label: 'Statistiche' }
-];
+function getDaysTogether(anniversaryDate: string | null | undefined): number {
+  if (!anniversaryDate) return 0;
+  const start = new Date(anniversaryDate).getTime();
+  const now = Date.now();
+  return Math.max(0, Math.floor((now - start) / 86400000));
+}
 
 export default function ProfileMobile() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isPwaMode = useIsPwa();
   const { state: pushState, enablePush, disablePush } = usePushNotifications(isPwaMode);
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isChangePassModalOpen, setIsChangePassModalOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('darkMode');
-    return savedTheme ? savedTheme === 'true' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+
+  const [darkModeState, setDarkModeState] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  );
 
   useEffect(() => {
-    const isDarkActive = document.documentElement.classList.contains('dark');
-    if (isDarkActive !== darkMode) {
-      setDarkMode(isDarkActive);
-    }
-  }, [darkMode]);
+    const sync = () =>
+      setDarkModeState(document.documentElement.classList.contains('dark'));
+    sync();
+    window.addEventListener('themeChange', sync);
+    return () => window.removeEventListener('themeChange', sync);
+  }, []);
 
-  const toggleDarkMode = () => {
-    const nextMode = !darkMode;
-    setDarkMode(nextMode);
+  const toggleDarkMode = useCallback(async () => {
+    const nextMode = !document.documentElement.classList.contains('dark');
+    const themeValue = nextMode ? 'dark' : 'light';
+
     if (nextMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    setDarkModeState(nextMode);
     localStorage.setItem('darkMode', nextMode.toString());
     window.dispatchEvent(new Event('themeChange'));
-  };
+
+    if (user?.id) {
+      try {
+        const updated = await updateUserInfo({ theme_preference: themeValue });
+        updateUser({ ...user, theme_preference: updated.theme_preference });
+      } catch {
+        // Fallback: keep local state
+      }
+    }
+  }, [user, updateUser]);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -75,53 +86,50 @@ export default function ProfileMobile() {
   const { data: userInfoData, isLoading: isLoadingUser } = useQuery<UserInfo>({
     queryKey: ['user-info', user?.id],
     queryFn: async () => {
-      if (!user?.id) {
-        throw new Error('Utente non autenticato');
-      }
+      if (!user?.id) throw new Error('Utente non autenticato');
       return getUserInfo(parseInt(user.id, 10));
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: coupleInfo, isLoading: isLoadingCouple } = useQuery<CoupleInfo>({
     queryKey: ['couple-info', userInfoData?.couple_id],
     queryFn: async () => {
-      if (!userInfoData?.couple_id) {
-        throw new Error('Nessuna coppia associata all\'utente');
-      }
+      if (!userInfoData?.couple_id) throw new Error('Nessuna coppia associata');
       return getCoupleInfo(userInfoData.couple_id);
     },
     enabled: !!userInfoData?.couple_id,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: recapData, isLoading: isLoadingRecap } = useQuery<RecapStats>({
+  const { data: recapData } = useQuery<RecapStats>({
     queryKey: ['recap-data'],
     queryFn: getRecapData,
     staleTime: 5 * 60 * 1000,
-    enabled: activeTab === 'stats'
   });
 
-  const { data: confrontoData, isLoading: isLoadingConfronto } = useQuery<RecapConfronto>({
-    queryKey: ['recap-confronto'],
-    queryFn: getRecapConfronto,
+  const { data: mapImages } = useQuery({
+    queryKey: ['map-images'],
+    queryFn: getMapImages,
     staleTime: 5 * 60 * 1000,
-    enabled: activeTab === 'stats'
   });
 
   const partner = useMemo(() => {
-    if (!coupleInfo?.membri || !user?.id) {
-      return null;
-    }
-    return coupleInfo.membri.find((membro) => membro.id !== parseInt(user.id, 10)) ?? null;
+    if (!coupleInfo?.membri || !user?.id) return null;
+    return coupleInfo.membri.find((m) => m.id !== parseInt(user.id, 10)) ?? null;
   }, [coupleInfo?.membri, user?.id]);
 
-  useEffect(() => {
-    if (confrontoData?.data.users.length && !selectedUserId) {
-      setSelectedUserId(confrontoData.data.users[0].id_utente);
-    }
-  }, [confrontoData, selectedUserId]);
+  const displayName = coupleInfo?.name ?? [userInfoData?.name, partner?.name].filter(Boolean).join(' & ') ?? 'Lovers';
+  const daysTogether = getDaysTogether(coupleInfo?.anniversary_date ?? null);
+  const countriesCount = useMemo(() => {
+    if (!mapImages?.length) return 0;
+    const countries = new Set(mapImages.map((img) => img.country).filter(Boolean));
+    return countries.size;
+  }, [mapImages]);
+
+  const memoriesCount = recapData?.data?.statistics?.tot_ricordi ?? 0;
+  const tripsCount = recapData?.data?.statistics?.tot_ricordi_viaggi ?? 0;
 
   if (isLoadingUser || isLoadingCouple) {
     return (
@@ -146,199 +154,130 @@ export default function ProfileMobile() {
 
   return (
     <MobilePageWrapper accentBg className="h-full overflow-auto pb-24">
-      <MobileHeader title="Profilo" showBack={false} rightActions={<HeaderActions.Menu />} />
+      <MobileHeader title="Profilo" showBack={false} />
 
-      <section className="space-y-4 pt-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--bg-input)]">
-              {userInfoData.profile_picture_url ? (
-                <img src={getImageUrl(userInfoData.profile_picture_url)} alt={userInfoData.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[var(--text-secondary)]">
-                  {userInfoData.name[0]}
-                </div>
-              )}
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-[var(--text-primary)]">{userInfoData.name}</h2>
-              <p className="truncate text-sm text-[var(--text-secondary)]">{userInfoData.email}</p>
-              <p className="mt-1 text-xs text-[var(--text-tertiary)]">Partner: {partner?.name ?? 'Non disponibile'}</p>
-            </div>
-          </div>
-        </Card>
+      <section className="space-y-6 pt-4">
+        <ProfileHeader
+          avatarUrl={userInfoData.profile_picture_url}
+          displayName={displayName}
+          anniversaryDate={coupleInfo.anniversary_date}
+          onEditPhoto={() => setIsEditModalOpen(true)}
+        />
 
-        <SegmentedControl value={activeTab} options={tabOptions} onChange={setActiveTab} />
+        <JourneyCards
+          memoriesCount={memoriesCount}
+          tripsCount={tripsCount}
+          countriesCount={countriesCount}
+        />
 
-        {activeTab === 'profile' && (
-          <div className="space-y-3">
-            <Card className="p-0">
-              <SettingsRow
-                icon={<IoPersonOutline className="h-4 w-4" />}
-                label="Modifica profilo"
-                onClick={() => setIsEditModalOpen(true)}
-                withDivider
-              />
-              <SettingsRow
-                icon={<IoKeyOutline className="h-4 w-4" />}
-                label="Cambia password"
-                onClick={() => setIsChangePassModalOpen(true)}
-                withDivider
-              />
-              <SettingsRow
-                icon={<IoNotificationsOutline className="h-4 w-4" />}
-                label="Notifiche push"
-                value={pushState.enabled ? 'Attive' : 'Disattive'}
-                action={
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (pushState.loading) {
-                        return;
-                      }
-                      if (pushState.enabled) {
-                        void disablePush();
-                      } else {
-                        void enablePush();
-                      }
-                    }}
-                    className={`h-6 w-11 rounded-full px-0.5 transition-colors ${
-                      pushState.enabled ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-secondary)]'
-                    }`}
-                    aria-label="Toggle notifiche push"
-                  >
-                    <span
-                      className={`block h-5 w-5 rounded-full bg-white transition-transform ${
-                        pushState.enabled ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                }
-                withDivider
-              />
-              <SettingsRow
-                icon={<IoMoonOutline className="h-4 w-4" />}
-                label="Tema scuro"
-                value={darkMode ? 'Attivo' : 'Disattivo'}
-                action={
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleDarkMode();
-                    }}
-                    className={`h-6 w-11 rounded-full px-0.5 transition-colors ${
-                      darkMode ? 'bg-[var(--color-primary)]' : 'bg-[var(--bg-secondary)]'
-                    }`}
-                    aria-label="Toggle tema scuro"
-                  >
-                    <span
-                      className={`block h-5 w-5 rounded-full bg-white transition-transform ${
-                        darkMode ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                }
-                withDivider
-              />
-              <SettingsRow
-                icon={<IoTrashOutline className="h-4 w-4 text-red-500" />}
-                label="Elimina account"
-                onClick={() => setIsDeleteModalOpen(true)}
-              />
-            </Card>
-          </div>
-        )}
+        <TogetherForCard
+          daysTogether={daysTogether}
+          storageUsed="24.5 GB / 50 GB"
+          storagePercent={49}
+        />
 
-        {activeTab === 'couple' && (
-          <div className="space-y-3">
-            <Card className="p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Profilo coppia</h3>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">{coupleInfo.name}</p>
-              {coupleInfo.anniversary_date && (
-                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                  Anniversario: {new Date(coupleInfo.anniversary_date).toLocaleDateString('it-IT')}
-                </p>
-              )}
-            </Card>
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+            Profile
+          </h3>
+          <Card className="divide-y divide-[var(--border-default)] p-0">
+            <SettingsMenuRow
+              icon={<MaterialIcon name="person" size={20} className="text-[var(--color-primary)]" />}
+              iconBgClass="bg-[var(--color-primary)]/15"
+              label="Account Details"
+              onClick={() => setIsEditModalOpen(true)}
+              withDivider
+            />
+            <SettingsMenuRow
+              icon={<MaterialIcon name="favorite" size={20} className="text-[var(--color-accent-pink)]" />}
+              iconBgClass="bg-[var(--color-accent-pink)]/15"
+              label="Couples Connection"
+              onClick={() => navigate('/profilo/coppia')}
+              withDivider
+            />
+            <SettingsMenuRow
+              icon={<MaterialIcon name="notifications" size={20} className="text-[var(--color-link)]" />}
+              iconBgClass="bg-[var(--color-link)]/15"
+              label="Notifications"
+              action={
+                <ToggleSwitch
+                  checked={pushState.enabled}
+                  onChange={() => {
+                    if (pushState.loading) return;
+                    if (pushState.enabled) void disablePush();
+                    else void enablePush();
+                  }}
+                  disabled={pushState.loading}
+                  aria-label="Toggle notifiche"
+                />
+              }
+            />
+          </Card>
+        </div>
 
-            <Card className="p-4">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Partner</h3>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--bg-input)] text-sm font-semibold text-[var(--text-secondary)]">
-                  {partner?.name?.[0] ?? 'P'}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">{partner?.name ?? 'Partner'}</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">{partner?.email ?? 'Email non disponibile'}</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+            Preferences
+          </h3>
+          <Card className="divide-y divide-[var(--border-default)] p-0">
+            <SettingsMenuRow
+              icon={<MaterialIcon name="shield" size={20} className="text-[var(--idea-badge-emerald-text)]" />}
+              iconBgClass="bg-[var(--idea-badge-emerald-bg)]"
+              label="Privacy & Security"
+              onClick={() => navigate('/profilo/privacy')}
+              withDivider
+            />
+            <SettingsMenuRow
+              icon={<MaterialIcon name="share" size={20} className="text-[var(--color-primary)]" />}
+              iconBgClass="bg-[var(--color-primary)]/15"
+              label="Share Space"
+              onClick={() => navigate('/profilo/condivisione')}
+            />
+          </Card>
+        </div>
 
-        {activeTab === 'stats' && (
-          <div className="space-y-3">
-            {(isLoadingRecap || isLoadingConfronto) && <SkeletonStatsMobile />}
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+            Support
+          </h3>
+          <Card className="divide-y divide-[var(--border-default)] p-0">
+            <SettingsMenuRow
+              icon={<MaterialIcon name="help" size={20} className="text-[var(--text-tertiary)]" />}
+              iconBgClass="bg-[var(--bg-input)]"
+              label="Help Center"
+              onClick={() => navigate('/profilo/aiuto')}
+            />
+          </Card>
+        </div>
 
-            {recapData && (
-              <Card className="p-4">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Panoramica</h3>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <StatBox label="Ricordi" value={recapData.data.statistics.tot_ricordi ?? 0} />
-                  <StatBox label="Foto" value={recapData.data.statistics.tot_foto ?? 0} />
-                  <StatBox label="Idee" value={recapData.data.statistics.tot_idee ?? 0} />
-                  <StatBox label="Luoghi" value={recapData.data.statistics.tot_luoghi ?? 0} />
-                </div>
-              </Card>
-            )}
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+            Display
+          </h3>
+          <Card className="divide-y divide-[var(--border-default)] p-0">
+            <SettingsMenuRow
+              icon={<MaterialIcon name="dark_mode" size={20} className="text-[var(--text-secondary)]" />}
+              iconBgClass="bg-[var(--bg-input)]"
+              label="Dark Mode"
+              action={
+                <ToggleSwitch
+                  checked={darkModeState}
+                  onChange={() => void toggleDarkMode()}
+                  aria-label="Toggle Dark Mode"
+                />
+              }
+            />
+          </Card>
+        </div>
 
-            {confrontoData && confrontoData.data.users.length > 0 && (
-              <Card className="p-4">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Contributo utenti</h3>
-                <div className="mt-3 flex gap-2">
-                  {confrontoData.data.users.map((statUser) => (
-                    <button
-                      key={statUser.id_utente}
-                      type="button"
-                      onClick={() => setSelectedUserId(statUser.id_utente)}
-                      className={
-                        selectedUserId === statUser.id_utente
-                          ? 'rounded-full bg-[var(--color-primary)] px-3 py-1 text-xs font-medium text-[var(--text-inverse)]'
-                          : 'rounded-full bg-[var(--bg-input)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]'
-                      }
-                    >
-                      {statUser.nome_utente.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
-                {selectedUserId && (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {(() => {
-                      const selected = confrontoData.data.users.find((entry) => entry.id_utente === selectedUserId);
-                      if (!selected) {
-                        return null;
-                      }
-                      return (
-                        <>
-                          <StatBox label="Ricordi" value={selected.tot_ricordi_creati} />
-                          <StatBox label="Foto" value={selected.tot_images_create} />
-                          <StatBox label="Idee" value={selected.tot_idee_create} />
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-              </Card>
-            )}
-          </div>
-        )}
-
-        <Button variant="secondary" fullWidth onClick={handleLogout} className="mt-3 text-red-500">
-          <IoLogOutOutline className="h-4 w-4" />
-          Logout
-        </Button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-card bg-[var(--color-danger)] py-3.5 font-semibold uppercase text-white shadow-md transition-colors active:opacity-90"
+        >
+          <MaterialIcon name="logout" size={20} />
+          Log out
+        </button>
       </section>
 
       <EditProfileModal
@@ -348,56 +287,6 @@ export default function ProfileMobile() {
           refreshUserData();
         }}
       />
-      <DeleteAccountModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} />
-      <ChangePassModal
-        isOpen={isChangePassModalOpen}
-        onClose={() => {
-          setIsChangePassModalOpen(false);
-          refreshUserData();
-        }}
-      />
     </MobilePageWrapper>
-  );
-}
-
-function SettingsRow({
-  icon,
-  label,
-  value,
-  action,
-  onClick,
-  withDivider = false
-}: {
-  icon: ReactNode;
-  label: string;
-  value?: string;
-  action?: ReactNode;
-  onClick?: () => void;
-  withDivider?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full items-center justify-between px-4 py-3 text-left ${withDivider ? 'border-b border-[var(--border-default)]' : ''}`}
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="text-[var(--text-secondary)]">{icon}</span>
-        <span className="truncate text-sm text-[var(--text-primary)]">{label}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        {value && <span className="text-xs text-[var(--text-tertiary)]">{value}</span>}
-        {action ?? <IoChevronForwardOutline className="h-4 w-4 text-[var(--text-tertiary)]" />}
-      </div>
-    </button>
-  );
-}
-
-function StatBox({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-input bg-[var(--bg-input)] p-3 text-center">
-      <p className="text-lg font-semibold text-[var(--text-primary)]">{value}</p>
-      <p className="text-xs text-[var(--text-tertiary)]">{label}</p>
-    </div>
   );
 }

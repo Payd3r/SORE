@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SORE - Simple Memory Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .iphone-frame {
+            max-width: 430px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #ffffff;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .hero-image {
+            height: 50vh;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-gray-50">
+<div class="iphone-frame shadow-2xl">
+<section class="hero-image">
+<img alt="Memory Hero" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDd6yzkXt7ASySlFGcMG06iBYUp5HECtwvh6eXx3b7Vejn0PCJWKVI-9VGZIfvRDR5ttLz3j6DTwXjeY9iqz3mlhX0JFVqsUS2U1Tsqmy8uUwfsAjdMxhwmj4TWhUg1kjXxQ6fxaiNICpyOe58mVAxjEopndhf9ISE29A1fYCauDzHlem-JEIqx1mAYGf1z6b6gIMrDfhcQT0N2usKq76iyD6DXMJIq-wh0Rh0aYlXwwc6lnY5SFLtWA2_nnN535mcJoMhc3VT0CtHG"/>
+<div class="absolute top-12 left-6 right-6 flex justify-between items-center z-20">
+<button aria-label="Go back" class="bg-white/30 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/40 transition-colors">
+<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</button>
+<button aria-label="Edit" class="bg-white/30 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/40 transition-colors">
+<span class="material-symbols-outlined text-[24px]">edit</span>
+</button>
+</div>
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+<div class="w-1.5 h-1.5 rounded-full bg-white shadow-sm"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-white/40 shadow-sm"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-white/40 shadow-sm"></div>
+</div>
+</section>
+<main class="px-6 pt-8 pb-12">
+<header class="mb-8 text-center">
+<h1 class="text-2xl font-bold text-gray-900 mb-2 tracking-tight">Cena al Tramonto</h1>
+<p class="text-sm text-gray-500 font-medium">Sept 12, 2024 • Veneto, Italy</p>
+</header>
+<section class="mb-10">
+<p class="text-gray-600 text-[15px] leading-relaxed text-center max-w-xs mx-auto">
+                    A quiet afternoon exploring narrow streets, ending with a perfect sunset by the canal. Music from a nearby cafe set the mood.
+                </p>
+</section>
+<section class="mb-10">
+<div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 justify-center">
+<div class="flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden shadow-sm">
+<img alt="Detail 1" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNQ-fdkh4uPBkZLvTATlsRPGUIeY7mq9csCdzqHItGNcuDfoDI-1Xtv8ElcZnP6grmhIBsTaTKnGy7LNDz1NimvHIoUFBMICPMv-m3hEmkKG5G-K1tLOJIPz8kHbuzPb8XtHhtLse7zKplIZs73RypGTVsnSHqV0zJTLUBeVF6S4qCamvwtFwO2HVrEVmh2LjTK7UdGm3czft8q3dQ7s156k2BF9jg071hzO-hMOKdOOLytPWUeRIDvSLZ29sFRcntJjrfZSgAQ0Z7"/>
+</div>
+<div class="flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden shadow-sm">
+<img alt="Detail 2" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAw9jRBb6EcoWJyESHNeE5h7NMFppLNYcYqMPiWM66f9xNzXBhzX2G1rHaBwJbvVXc6ks6s2icf32geKY__N-7myFFbT-o9kHhC_oVkA1tGIwTQxTY8y9rwrYIIUUCKkUh07cpmmx0rDm6u5Az2esnyQhhOK8gfVUuyqKIf3OVPJb-trOxcvir8Q9tV-3aWXD98lLDKSS0iO8YO1D0fT3Hh1LgJ1SQI2Vr0CRWAJEygB64Yq09KL0ovKxwv0oDrvbmcOmFEPhD7neOO"/>
+</div>
+<div class="flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden shadow-sm">
+<img alt="Detail 3" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHKzFwJHfPhGtfJQJemPX_8XufiRB2CTM6ynTva3q1RP6RdE2F9Hwz5mfjJTzWKuB7jHEtuzWdcU7lvDksePPlrUP38tAzUOGXwp2juvX7DzI1N97ftXV_HovLCmeFyYPCl8dc_S1WoVWWvR2ofEAjTB8acGMehrOi2n4yxR9SJND0Y7vFdSlzHI81id8alNoR3ZGXZ-HZ9GlFPx3_olB4lPZRM8xjNRG6nnSED0XO3r06XcgmG_Bw0xUG_U_FCV58spUD0rd6vWNG"/>
+</div>
+</div>
+</section>
+<section class="border-t border-gray-100 pt-6">
+<div class="space-y-4 px-2">
+<div class="flex items-center gap-4">
+<div class="w-6 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+</div>
+<span class="text-sm text-gray-800 font-medium">September 12, 2024</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-6 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+</div>
+<span class="text-sm text-gray-800 font-medium">Sunny, 28°C</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-6 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[20px]">group</span>
+</div>
+<span class="text-sm text-gray-800 font-medium">With Elena &amp; Marc</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-6 flex justify-center text-gray-400">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</div>
+<span class="text-sm text-gray-800 font-medium">Grand Canal Spot</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+
+</body></html>
