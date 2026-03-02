@@ -87,6 +87,7 @@ export default function PhotoOverlay({
   );
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { atStart, atEnd } = useScrollEdgeMask(scrollRef);
 
   if (!isOpen || images.length === 0) {
@@ -177,6 +178,30 @@ export default function PhotoOverlay({
     setCurrentIndex(index);
   };
 
+  // Mantiene l'anteprima corrente visibile e preferibilmente centrata
+  // nella lista delle miniature quando cambia l'immagine selezionata.
+  useEffect(() => {
+    const container = scrollRef.current;
+    const activeThumb = thumbRefs.current[currentIndex];
+    if (!container || !activeThumb) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const thumbRect = activeThumb.getBoundingClientRect();
+
+    const containerCenter = containerRect.left + containerRect.width / 2;
+    const thumbCenter = thumbRect.left + thumbRect.width / 2;
+    const delta = thumbCenter - containerCenter;
+
+    if (Math.abs(delta) < 4) {
+      return;
+    }
+
+    container.scrollTo({
+      left: container.scrollLeft + delta,
+      behavior: "smooth",
+    });
+  }, [currentIndex, images.length]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -235,6 +260,9 @@ export default function PhotoOverlay({
                 {images.map((img, index) => (
                   <button
                     key={img.id}
+                    ref={(el) => {
+                      thumbRefs.current[index] = el;
+                    }}
                     type="button"
                     className={`pwa-photo-overlay-thumb ${index === currentIndex ? "pwa-photo-overlay-thumb-active" : ""
                       }`}

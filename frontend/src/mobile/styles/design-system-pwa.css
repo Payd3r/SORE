@@ -220,6 +220,39 @@ body.pwa-mode {
   color: var(--pwa-text-primary);
   background: var(--pwa-app-bg);
   font-family: var(--pwa-font-family);
+
+  /* Native App Experience: prevent text selection, callout menu and double-tap zoom */
+  -webkit-user-select: none;
+  /* Safari iOS */
+  -webkit-touch-callout: none;
+  /* iOS long press menu */
+  -webkit-tap-highlight-color: transparent;
+  /* Remove gray/blue tap highlight */
+  user-select: none;
+  /* Standard */
+  touch-action: manipulation;
+  /* Prevent double-tap zoom */
+}
+
+/* Re-enable text selection for interactive fields */
+body.pwa-mode input,
+body.pwa-mode textarea,
+body.pwa-mode [contenteditable="true"],
+body.pwa-mode .pwa-selectable-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Prevent image and component dragging for a more stable feel */
+body.pwa-mode img,
+body.pwa-mode button,
+body.pwa-mode .pwa-no-drag {
+  -webkit-user-drag: none;
+}
+
+/* Ensure no tap highlight for all components in PWA mode */
+body.pwa-mode * {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* === Tema scuro via classe (preferenza utente in app) === */

@@ -1928,7 +1928,8 @@ body.pwa-mode .pwa-bottom-sheet-handle {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: var(--pwa-spacing-md) var(--pwa-spacing-sm);
+  padding: var(--pwa-spacing-lg) var(--pwa-spacing-md);
+  min-height: 44px;
   cursor: grab;
   touch-action: none;
 }
