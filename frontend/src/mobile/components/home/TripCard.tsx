@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -28,10 +29,19 @@ function formatDateRange(start: string | null, end: string | null): string {
 export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
   const navigate = useNavigate();
   const isFuturo = memory.type?.toUpperCase() === "FUTURO";
-  const imagePath =
-    !isFuturo && (memory.images?.[0]?.webp_path || memory.images?.[0]?.thumb_big_path)
-      ? (memory.images?.[0]?.webp_path || memory.images?.[0]?.thumb_big_path || "")
-      : "";
+  const imagePath = useMemo(() => {
+    if (isFuturo) return "";
+    const images = memory.images ?? [];
+    if (images.length === 0) return "";
+
+    const preferred = images.find((img) => img.display_order === 1);
+    if (preferred) {
+      return preferred.webp_path || preferred.thumb_big_path || "";
+    }
+
+    const fallback = images[Math.floor(Math.random() * images.length)];
+    return fallback?.webp_path || fallback?.thumb_big_path || "";
+  }, [isFuturo, memory.images]);
 
   const handleClick = () => {
     if (isFuturo && onFuturoClick) {

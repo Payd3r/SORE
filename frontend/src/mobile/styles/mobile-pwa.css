@@ -3909,6 +3909,7 @@ body.pwa-mode .pwa-detail-content-sheet-scroll .pwa-detail-gallery-section .pwa-
 body.pwa-mode .pwa-detail-gallery-item {
   all: unset;
   display: block;
+  position: relative;
   aspect-ratio: 1;
   border-radius: 6px;
   overflow: hidden;
@@ -3918,6 +3919,22 @@ body.pwa-mode .pwa-detail-gallery-item {
   padding: 0 !important;
   min-width: 0;
   min-height: 0;
+}
+body.pwa-mode .pwa-detail-gallery-order-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
 }
 body.pwa-mode .pwa-detail-gallery-img {
   width: 100%;
@@ -3946,6 +3963,51 @@ body.pwa-mode .pwa-detail-gallery-lightbox-img {
   object-fit: contain;
   border-radius: 4px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+body.pwa-mode .pwa-detail-gallery-order-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+}
+body.pwa-mode .pwa-detail-gallery-order-menu {
+  width: min(480px, 100%);
+  border-radius: var(--pwa-radius-lg);
+  border: 1px solid var(--pwa-divider);
+  background: var(--pwa-card-bg);
+  box-shadow: var(--pwa-shadow-card);
+  padding: var(--pwa-spacing-md);
+}
+body.pwa-mode .pwa-detail-gallery-order-menu-title {
+  margin: 0;
+  font-size: var(--pwa-font-size-md);
+  font-weight: var(--pwa-font-weight-semibold);
+  color: var(--pwa-text-primary);
+}
+body.pwa-mode .pwa-detail-gallery-order-menu-text {
+  margin: var(--pwa-spacing-xs) 0 var(--pwa-spacing-md) 0;
+  font-size: var(--pwa-font-size-sm);
+  color: var(--pwa-text-secondary);
+}
+body.pwa-mode .pwa-detail-gallery-order-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--pwa-radius-md);
+  border: 1px solid var(--pwa-divider);
+  background: var(--pwa-bg-base);
+  color: var(--pwa-text-primary);
+  font-size: var(--pwa-font-size-sm);
+}
+body.pwa-mode .pwa-detail-gallery-order-menu-actions {
+  margin-top: var(--pwa-spacing-md);
+  display: flex;
+  gap: var(--pwa-spacing-sm);
+  justify-content: flex-end;
 }
 body.pwa-mode .pwa-detail-gallery-lightbox-close {
   position: absolute;

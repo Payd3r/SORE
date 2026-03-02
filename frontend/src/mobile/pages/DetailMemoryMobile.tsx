@@ -251,7 +251,11 @@ export default function DetailMemoryMobile() {
           />
           <div className="pwa-page-card">
             <DetailInfoSection memory={memory} />
-            <DetailGallerySection memory={memory} onAddPhotos={() => setUploadSheetOpen(true)} />
+            <DetailGallerySection
+              memory={memory}
+              memoryId={id}
+              onAddPhotos={() => setUploadSheetOpen(true)}
+            />
           </div>
         </section>
       ) : (

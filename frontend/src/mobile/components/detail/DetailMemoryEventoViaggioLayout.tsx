@@ -152,7 +152,7 @@ export default function DetailMemoryEventoViaggioLayout({
           <div className="pwa-detail-content-sheet-scroll">
             <DetailInfoSection memory={memory} />
             <DetailTimelineAccordion memory={memory} />
-            <DetailGallerySection memory={memory} onAddPhotos={onAddPhotos} />
+            <DetailGallerySection memory={memory} memoryId={memoryId} onAddPhotos={onAddPhotos} />
           </div>
         </div>
       </div>
