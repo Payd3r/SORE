@@ -4555,6 +4555,9 @@ body.pwa-mode .pwa-photo-overlay-thumb {
   border-radius: 10px;
   overflow: hidden;
   box-sizing: border-box;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   cursor: pointer;
   flex-shrink: 0;
   background: rgba(15, 23, 42, 0.7);

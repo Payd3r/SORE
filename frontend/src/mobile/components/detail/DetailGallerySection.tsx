@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getImageUrl, updateImageMetadata } from "../../../api/images";
 import type { Memory } from "../../../api/memory";
 import { invalidateOnMemoryChange } from "../../utils/queryInvalidations";
+import PwaSelect from "../ui/PwaSelect";
 
 type DetailGallerySectionProps = {
   memory: Memory;
@@ -92,8 +93,8 @@ export default function DetailGallerySection({
       nextOrder == null
         ? null
         : images.find(
-            (img) => img.id !== selectedOrderImage.id && img.display_order === nextOrder
-          ) ?? null;
+          (img) => img.id !== selectedOrderImage.id && img.display_order === nextOrder
+        ) ?? null;
 
     const updates: Array<Promise<void>> = [
       updateImageMetadata(String(selectedOrderImage.id), {
@@ -126,6 +127,14 @@ export default function DetailGallerySection({
     }
   };
 
+  const orderOptions = [
+    { value: "", label: "Nessun ordine" },
+    ...Array.from({ length: images.length }, (_, i) => ({
+      value: String(i + 1),
+      label: `Posizione ${i + 1}`,
+    })),
+  ];
+
   return (
     <div className="pwa-detail-gallery-section">
       <div className="pwa-detail-gallery-header">
@@ -138,7 +147,7 @@ export default function DetailGallerySection({
             aria-label="Aggiungi foto"
           >
             <span className="material-symbols-outlined">add_photo_alternate</span>
-            
+
           </button>
         )}
       </div>
@@ -208,19 +217,14 @@ export default function DetailGallerySection({
             <p className="pwa-detail-gallery-order-menu-text">
               Se l'ordine e' gia' occupato, le foto verranno scambiate.
             </p>
-            <select
-              className="pwa-detail-gallery-order-select"
+            <PwaSelect
+              id="gallery-order"
+              label="Cambia posizione"
               value={selectedOrder}
-              onChange={(e) => setSelectedOrder(e.target.value)}
+              options={orderOptions}
+              onChange={setSelectedOrder}
               disabled={isSavingOrder}
-            >
-              <option value="">Nessun ordine</option>
-              {Array.from({ length: images.length }, (_, i) => i + 1).map((order) => (
-                <option key={order} value={String(order)}>
-                  Posizione {order}
-                </option>
-              ))}
-            </select>
+            />
             <div className="pwa-detail-gallery-order-menu-actions">
               <button
                 type="button"

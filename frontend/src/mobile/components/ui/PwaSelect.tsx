@@ -11,6 +11,7 @@ type PwaSelectProps<T extends string> = {
   value: T;
   options: PwaSelectOption<T>[];
   onChange: (value: T) => void;
+  disabled?: boolean;
   "aria-label"?: string;
 };
 
@@ -20,6 +21,7 @@ export default function PwaSelect<T extends string>({
   value,
   options,
   onChange,
+  disabled,
   "aria-label": ariaLabel,
 }: PwaSelectProps<T>) {
   const [open, setOpen] = useState(false);
@@ -58,6 +60,7 @@ export default function PwaSelect<T extends string>({
         id={id}
         className="pwa-select-trigger"
         onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel ?? label ?? "Seleziona"}
