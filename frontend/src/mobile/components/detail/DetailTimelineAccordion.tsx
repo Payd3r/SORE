@@ -14,9 +14,10 @@ interface TimelineGroup {
 
 type DetailTimelineAccordionProps = {
   memory: Memory;
+  onImageClick?: (imageId: number) => void;
 };
 
-export default function DetailTimelineAccordion({ memory }: DetailTimelineAccordionProps) {
+export default function DetailTimelineAccordion({ memory, onImageClick }: DetailTimelineAccordionProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const groups = useMemo(() => {
@@ -112,10 +113,17 @@ export default function DetailTimelineAccordion({ memory }: DetailTimelineAccord
                         key={img.id}
                         className="pwa-detail-timeline-grid-item"
                       >
-                        <img
-                          src={getImageUrl(img.thumb_big_path ?? "")}
-                          alt=""
-                        />
+                        <button
+                          type="button"
+                          className="pwa-detail-timeline-grid-item-btn"
+                          onClick={() => onImageClick?.(img.id)}
+                          aria-label="Apri immagine nella timeline"
+                        >
+                          <img
+                            src={getImageUrl(img.thumb_big_path ?? "")}
+                            alt=""
+                          />
+                        </button>
                       </div>
                     ))}
                   </div>

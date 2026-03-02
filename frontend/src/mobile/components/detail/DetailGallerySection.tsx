@@ -8,12 +8,14 @@ type DetailGallerySectionProps = {
   memory: Memory;
   memoryId?: string;
   onAddPhotos?: () => void;
+  onImageClick?: (imageId: number) => void;
 };
 
 export default function DetailGallerySection({
   memory,
   memoryId,
   onAddPhotos,
+  onImageClick,
 }: DetailGallerySectionProps) {
   const queryClient = useQueryClient();
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
@@ -164,6 +166,10 @@ export default function DetailGallerySection({
               onClick={() => {
                 if (longPressTriggeredRef.current) {
                   longPressTriggeredRef.current = false;
+                  return;
+                }
+                if (onImageClick) {
+                  onImageClick(img.id);
                   return;
                 }
                 setSelectedImageId(img.id);

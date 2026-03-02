@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import type { Memory } from "../../../api/memory";
 
 type DetailMemoryHeaderProps = {
@@ -46,7 +47,12 @@ export default function DetailMemoryHeader({
   }, [menuOpen]);
 
   return (
-    <header className="pwa-detail-memory-header">
+    <motion.header
+      className="pwa-detail-memory-header"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <button
         type="button"
         className="pwa-detail-memory-back"
@@ -110,6 +116,7 @@ export default function DetailMemoryHeader({
           )}
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }
+

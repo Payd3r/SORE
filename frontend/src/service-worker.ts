@@ -33,21 +33,21 @@ const CACHE_HEADER_CACHED_AT = "x-sw-cached-at";
 
 const CACHE_CONFIG = {
   STATIC: {
-    name: "memory-grove-static-v2",
+    name: "memory-grove-static-v3",
     urls: ["/", "/index.html", "/manifest.json", "/offline.html"],
   },
   DYNAMIC: {
-    name: "memory-grove-dynamic-v2",
+    name: "memory-grove-dynamic-v3",
     maxEntries: 100,
     ttl: CACHE_TTL.DYNAMIC,
   },
   NETWORK_FIRST: {
-    name: "memory-grove-network-first-v2",
+    name: "memory-grove-network-first-v3",
     maxEntries: 50,
     ttl: CACHE_TTL.API_DEFAULT,
   },
   IMAGES: {
-    name: "memory-grove-images-v1",
+    name: "memory-grove-images-v2",
     maxEntries: 200,
     ttl: CACHE_TTL.IMAGES,
   },

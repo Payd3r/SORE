@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMemory, updateMemory, deleteMemory, createShareLink } from "../../api/memory";
 import type { Memory } from "../../api/memory";
+import { deleteImage, getImageUrl } from "../../api/images";
 import DetailMemoryHeader from "../components/detail/DetailMemoryHeader";
 import MemoryDetailSheetFuturo from "../components/detail/MemoryDetailSheetFuturo";
 import MemoryEditSheet from "../components/detail/MemoryEditSheet";
@@ -13,6 +14,7 @@ import DetailMemoryEventoViaggioLayout from "../components/detail/DetailMemoryEv
 import { DetailMemorySkeleton } from "../components/skeletons";
 import PwaBottomSheet from "../components/ui/BottomSheet";
 import { invalidateOnMemoryChange } from "../utils/queryInvalidations";
+import PhotoOverlay, { PhotoOverlayImage } from "../components/shared/PhotoOverlay";
 
 export default function DetailMemoryMobile() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,8 @@ export default function DetailMemoryMobile() {
   const [uploadSheetOpen, setUploadSheetOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [photoOverlayOpen, setPhotoOverlayOpen] = useState(false);
+  const [photoOverlayIndex, setPhotoOverlayIndex] = useState(0);
 
   const { data: memory, isLoading, error } = useQuery({
     queryKey: ["memory", id],
@@ -110,6 +114,34 @@ export default function DetailMemoryMobile() {
       </section>
     );
   }
+
+  const memoryImages = memory.images ?? [];
+
+  const overlayImages: PhotoOverlayImage[] = memoryImages.map((img) => ({
+    id: img.id,
+    fullUrl: getImageUrl(img.webp_path ?? img.thumb_big_path ?? ""),
+    thumbUrl: getImageUrl(img.thumb_big_path ?? img.webp_path ?? ""),
+    createdAt: img.created_at,
+  }));
+
+  const openPhotoOverlayByImageId = (imageId: number) => {
+    const index = overlayImages.findIndex((img) => img.id === imageId);
+    if (index === -1) return;
+    setPhotoOverlayIndex(index);
+    setPhotoOverlayOpen(true);
+  };
+
+  const handleDeletePhoto = async (image: PhotoOverlayImage) => {
+    if (!id) return;
+    try {
+      await deleteImage(String(image.id));
+      await invalidateOnMemoryChange(queryClient, id);
+      setPhotoOverlayOpen(false);
+    } catch (err) {
+      console.error(err);
+      window.alert("Impossibile eliminare la foto.");
+    }
+  };
 
   const handleSaveMemory = async (data: Partial<Memory>) => {
     if (!id) return;
@@ -240,6 +272,15 @@ export default function DetailMemoryMobile() {
           </div>
         </PwaBottomSheet>
       )}
+      <PhotoOverlay
+        isOpen={photoOverlayOpen}
+        images={overlayImages}
+        initialIndex={photoOverlayIndex}
+        memoryTitle={memory.title}
+        locationLabel={memory.location}
+        onClose={() => setPhotoOverlayOpen(false)}
+        onDeletePhoto={handleDeletePhoto}
+      />
       {isSimple ? (
         <section className="pwa-page pwa-page-detail-memory">
           <DetailMemoryHeader
@@ -255,6 +296,7 @@ export default function DetailMemoryMobile() {
               memory={memory}
               memoryId={id}
               onAddPhotos={() => setUploadSheetOpen(true)}
+              onImageClick={openPhotoOverlayByImageId}
             />
           </div>
         </section>
@@ -267,6 +309,7 @@ export default function DetailMemoryMobile() {
           onDelete={handleDelete}
           onShare={handleShare}
           onAddPhotos={() => setUploadSheetOpen(true)}
+          onOpenPhotoOverlay={openPhotoOverlayByImageId}
         />
       )}
     </>

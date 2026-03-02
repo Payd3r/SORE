@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import type { Memory } from "../../../api/memory";
 import { useDetailContentSheet } from "../../gestures/useDetailContentSheet";
 import DetailCarousel from "./DetailCarousel";
@@ -19,6 +20,7 @@ type DetailMemoryEventoViaggioLayoutProps = {
   onDelete: () => void;
   onShare?: () => void;
   onAddPhotos: () => void;
+  onOpenPhotoOverlay: (imageId: number) => void;
 };
 
 export default function DetailMemoryEventoViaggioLayout({
@@ -29,6 +31,7 @@ export default function DetailMemoryEventoViaggioLayout({
   onDelete,
   onShare,
   onAddPhotos,
+  onOpenPhotoOverlay,
 }: DetailMemoryEventoViaggioLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -67,9 +70,21 @@ export default function DetailMemoryEventoViaggioLayout({
         style={{ height: `${carouselHeightPercent}dvh` }}
       >
         <div className="pwa-detail-evento-viaggio-carousel">
-          <DetailCarousel memoryId={memoryId} />
+          <DetailCarousel
+            memoryId={memoryId}
+            onImageClick={(createdAt) => {
+              const img = memory.images.find((image) => image.created_at === createdAt);
+              if (!img) return;
+              onOpenPhotoOverlay(img.id);
+            }}
+          />
         </div>
-        <div className="pwa-detail-evento-viaggio-overlay">
+        <motion.div
+          className="pwa-detail-evento-viaggio-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
           <button
             type="button"
             className="pwa-detail-evento-viaggio-overlay-btn"
@@ -127,7 +142,7 @@ export default function DetailMemoryEventoViaggioLayout({
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <div
@@ -151,8 +166,13 @@ export default function DetailMemoryEventoViaggioLayout({
           </header>
           <div className="pwa-detail-content-sheet-scroll">
             <DetailInfoSection memory={memory} />
-            <DetailTimelineAccordion memory={memory} />
-            <DetailGallerySection memory={memory} memoryId={memoryId} onAddPhotos={onAddPhotos} />
+            <DetailTimelineAccordion memory={memory} onImageClick={onOpenPhotoOverlay} />
+            <DetailGallerySection
+              memory={memory}
+              memoryId={memoryId}
+              onAddPhotos={onAddPhotos}
+              onImageClick={onOpenPhotoOverlay}
+            />
           </div>
         </div>
       </div>

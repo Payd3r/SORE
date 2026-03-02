@@ -4285,14 +4285,19 @@ body.pwa-mode .pwa-detail-carousel-arrow {
   justify-content: center;
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   color: white;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 body.pwa-mode .pwa-detail-carousel-arrow .material-symbols-outlined {
   font-size: 28px;
+  width: 28px;
+  height: 28px;
 }
 
 body.pwa-mode .pwa-detail-carousel-arrow-prev {
@@ -4407,6 +4412,158 @@ body.pwa-mode .pwa-detail-timeline-grid-item img {
   object-fit: cover;
 }
 
+body.pwa-mode .pwa-detail-timeline-grid-item-btn {
+  all: unset;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Photo overlay for memory images */
+body.pwa-mode .pwa-photo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent),
+    radial-gradient(circle at bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.96));
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: max(env(safe-area-inset-top), 12px) 16px max(env(safe-area-inset-bottom), 16px) 16px;
+  box-sizing: border-box;
+}
+
+body.pwa-mode .pwa-photo-overlay-content {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--pwa-spacing-md);
+}
+
+body.pwa-mode .pwa-photo-overlay-top {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+body.pwa-mode .pwa-photo-overlay-top-badge {
+  pointer-events: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f9fafb;
+  font-size: var(--pwa-font-size-xs);
+  font-weight: var(--pwa-font-weight-medium);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  max-width: 90%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.pwa-mode .pwa-photo-overlay-image-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+body.pwa-mode .pwa-photo-overlay-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--pwa-radius-lg);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.75);
+}
+
+body.pwa-mode .pwa-photo-overlay-thumbs {
+  margin-top: var(--pwa-spacing-sm);
+}
+
+body.pwa-mode .pwa-photo-overlay-thumbs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 4px;
+  scrollbar-width: none;
+}
+
+body.pwa-mode .pwa-photo-overlay-thumbs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+body.pwa-mode .pwa-photo-overlay-thumb {
+  all: unset;
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+body.pwa-mode .pwa-photo-overlay-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body.pwa-mode .pwa-photo-overlay-thumb-active {
+  border-color: var(--pwa-accent, #6366f1);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.8);
+}
+
+body.pwa-mode .pwa-photo-overlay-footer {
+  margin-top: var(--pwa-spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--pwa-spacing-xs);
+}
+
+body.pwa-mode .pwa-photo-overlay-action {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f9fafb;
+  backdrop-filter: blur(16px);
+}
+
+body.pwa-mode .pwa-photo-overlay-action-share {
+  background: rgba(148, 163, 184, 0.75);
+}
+
+body.pwa-mode .pwa-photo-overlay-action-delete {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+body.pwa-mode .pwa-photo-overlay-action .material-symbols-outlined {
+  font-size: 26px;
+}
+
 /* Memory edit sheet */
 body.pwa-mode .pwa-memory-edit-sheet-header {
   display: flex;
@@ -4496,6 +4653,25 @@ body.pwa-mode .pwa-memory-edit-sheet-suggestion-meta {
   font-size: var(--pwa-font-size-xs);
   color: var(--pwa-text-secondary);
   margin-top: 2px;
+}
+
+/* Material Symbols Global Fix: prevents long ligature text from showing during font load */
+.material-symbols-outlined {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  vertical-align: middle;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga';
 }
 
 /* Detail gallery upload sheet */
@@ -4603,16 +4779,21 @@ body.pwa-mode .pwa-detail-evento-viaggio-overlay-btn {
   justify-content: center;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   border: none;
   color: var(--pwa-text-on-overlay);
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.2s ease;
 }
 
 body.pwa-mode .pwa-detail-evento-viaggio-overlay-btn .material-symbols-outlined {
   font-size: 24px;
+  width: 24px;
+  height: 24px;
   color: inherit;
 }
 

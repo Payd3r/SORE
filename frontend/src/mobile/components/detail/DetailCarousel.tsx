@@ -4,9 +4,11 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { getMemoryCarousel } from "../../../api/memory";
 import { getImageUrl } from "../../../api/images";
+import PwaSkeleton from "../skeletons/PwaSkeleton";
 
 type DetailCarouselProps = {
   memoryId: string;
+  onImageClick?: (createdAt: string) => void;
 };
 
 interface CarouselImageItem {
@@ -14,14 +16,14 @@ interface CarouselImageItem {
   created_at: string;
 }
 
-export default function DetailCarousel({ memoryId }: DetailCarouselProps) {
+export default function DetailCarousel({ memoryId, onImageClick }: DetailCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const minSwipeDistance = 50;
 
-  const { data: carouselData = [] } = useQuery({
+  const { data: carouselData = [], isLoading } = useQuery({
     queryKey: ["memoryCarousel", memoryId],
     queryFn: async () => {
       const res = await getMemoryCarousel(memoryId);
@@ -30,6 +32,16 @@ export default function DetailCarousel({ memoryId }: DetailCarouselProps) {
     enabled: !!memoryId,
     staleTime: 5 * 60 * 1000,
   });
+
+  if (isLoading) {
+    return (
+      <div className="pwa-detail-carousel">
+        <PwaSkeleton
+          style={{ width: "100%", height: "100%", borderRadius: 0 }}
+        />
+      </div>
+    );
+  }
 
   const images: { url: string; created_at: string }[] = (carouselData as CarouselImageItem[]).map(
     (img) => ({ url: getImageUrl(img.image), created_at: img.created_at })
@@ -86,6 +98,12 @@ export default function DetailCarousel({ memoryId }: DetailCarouselProps) {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onClick={() => {
+        if (!images.length) return;
+        const img = images[currentIndex];
+        if (!img.created_at) return;
+        onImageClick?.(img.created_at);
+      }}
       role="region"
       aria-label="Carousel foto del ricordo"
     >
@@ -111,7 +129,10 @@ export default function DetailCarousel({ memoryId }: DetailCarouselProps) {
           <button
             type="button"
             className="pwa-detail-carousel-arrow pwa-detail-carousel-arrow-prev"
-            onClick={goPrev}
+            onClick={(e) => {
+              e.stopPropagation();
+              goPrev();
+            }}
             aria-label="Foto precedente"
           >
             <span className="material-symbols-outlined">chevron_left</span>
@@ -119,7 +140,10 @@ export default function DetailCarousel({ memoryId }: DetailCarouselProps) {
           <button
             type="button"
             className="pwa-detail-carousel-arrow pwa-detail-carousel-arrow-next"
-            onClick={goNext}
+            onClick={(e) => {
+              e.stopPropagation();
+              goNext();
+            }}
             aria-label="Foto successiva"
           >
             <span className="material-symbols-outlined">chevron_right</span>
