@@ -15,7 +15,6 @@ export default function PwaHeaderNotifications() {
     isLoading,
     refetch,
     markAsRead,
-    markAllAsRead,
     deleteNotification,
   } = useNotificationsQuery();
 
@@ -37,7 +36,6 @@ export default function PwaHeaderNotifications() {
         unread={unread}
         isLoading={isLoading}
         onMarkAsRead={markAsRead}
-        onMarkAllAsRead={markAllAsRead}
         onDelete={deleteNotification}
         onDeleteAll={handleDeleteAll}
       />

@@ -34,7 +34,6 @@ type NotificationsSheetProps = {
   unread: number;
   isLoading: boolean;
   onMarkAsRead: (id: number) => Promise<unknown>;
-  onMarkAllAsRead: () => Promise<unknown>;
   onDelete: (id: number) => Promise<unknown>;
   onDeleteAll: () => Promise<unknown>;
 };
@@ -61,7 +60,6 @@ export default function NotificationsSheet({
   unread,
   isLoading,
   onMarkAsRead,
-  onMarkAllAsRead,
   onDelete,
   onDeleteAll,
 }: NotificationsSheetProps) {
@@ -82,11 +80,6 @@ export default function NotificationsSheet({
     if (n.url) {
       navigate(n.url);
     }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    await onMarkAllAsRead();
-    onClose();
   };
 
   const handleTouchStart = (e: React.TouchEvent, id: number) => {
@@ -123,15 +116,6 @@ export default function NotificationsSheet({
             )}
           </h2>
           <div className="pwa-notifications-sheet-header-actions">
-            {unread > 0 && (
-              <button
-                type="button"
-                className="pwa-notifications-sheet-mark-all"
-                onClick={handleMarkAllAsRead}
-              >
-                Segna tutte come lette
-              </button>
-            )}
             {notifications.length > 0 && (
               <button
                 type="button"
