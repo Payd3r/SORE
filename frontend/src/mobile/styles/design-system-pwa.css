@@ -205,7 +205,8 @@
   --pwa-bar-inner-radius: calc(var(--pwa-bar-radius) - var(--pwa-bar-inner-padding));
   --pwa-nav-icon-size: 22px;
   --pwa-fab-size: 52px;
-  --pwa-safe-bottom: env(safe-area-inset-bottom);
+  --pwa-safe-top: env(safe-area-inset-top, 0px);
+  --pwa-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* === Body PWA (usa variabili del design system) === */
