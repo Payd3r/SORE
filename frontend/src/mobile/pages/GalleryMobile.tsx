@@ -135,7 +135,6 @@ export default function GalleryMobile() {
     data: memories = [],
     status,
     error,
-    isFetching,
   } = useQuery({
     queryKey: ["memories", { sort: serverSort }],
     queryFn: () => getMemories({ sort: serverSort }),
