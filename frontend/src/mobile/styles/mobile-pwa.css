@@ -4274,12 +4274,12 @@ body.pwa-mode .pwa-detail-carousel-counter {
   z-index: 2;
 }
 
-body.pwa-mode .pwa-detail-carousel-arrow {
+/* Carousel arrows: removed body.pwa-mode to prevent flicker */
+.pwa-detail-carousel-arrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
-  all: unset;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4291,20 +4291,23 @@ body.pwa-mode .pwa-detail-carousel-arrow {
   background: rgba(0, 0, 0, 0.4);
   color: white;
   cursor: pointer;
+  border: none;
+  padding: 0;
   box-sizing: border-box;
 }
 
-body.pwa-mode .pwa-detail-carousel-arrow .material-symbols-outlined {
+.pwa-detail-carousel-arrow .material-symbols-outlined {
   font-size: 28px;
   width: 28px;
   height: 28px;
+  display: block;
 }
 
-body.pwa-mode .pwa-detail-carousel-arrow-prev {
+.pwa-detail-carousel-arrow-prev {
   left: var(--pwa-spacing-sm);
 }
 
-body.pwa-mode .pwa-detail-carousel-arrow-next {
+.pwa-detail-carousel-arrow-next {
   right: var(--pwa-spacing-sm);
 }
 
@@ -4773,7 +4776,8 @@ body.pwa-mode .pwa-detail-evento-viaggio-overlay>* {
   pointer-events: auto;
 }
 
-body.pwa-mode .pwa-detail-evento-viaggio-overlay-btn {
+/* Overlay buttons: removed body.pwa-mode to prevent flicker */
+.pwa-detail-evento-viaggio-overlay-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4784,16 +4788,20 @@ body.pwa-mode .pwa-detail-evento-viaggio-overlay-btn {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   border: none;
+  color: #ffffff;
+  /* Fallback for pwa-text-on-overlay */
   color: var(--pwa-text-on-overlay);
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   transition: opacity 0.2s ease;
+  padding: 0;
 }
 
-body.pwa-mode .pwa-detail-evento-viaggio-overlay-btn .material-symbols-outlined {
+.pwa-detail-evento-viaggio-overlay-btn .material-symbols-outlined {
   font-size: 24px;
   width: 24px;
   height: 24px;
+  display: block;
   color: inherit;
 }
 

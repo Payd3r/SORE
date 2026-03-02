@@ -46,12 +46,6 @@ export default function PhotoOverlay({
     setCurrentIndex(safeIndex);
   }, [initialIndex, images.length, isOpen]);
 
-  if (!isOpen || images.length === 0) {
-    return null;
-  }
-
-  const currentImage = images[Math.min(currentIndex, images.length - 1)];
-
   const handlePrev = useCallback(() => {
     setCurrentIndex((prev) => (prev <= 0 ? 0 : prev - 1));
   }, []);
@@ -90,6 +84,12 @@ export default function PhotoOverlay({
     },
     [onClose]
   );
+
+  if (!isOpen || images.length === 0) {
+    return null;
+  }
+
+  const currentImage = images[Math.min(currentIndex, images.length - 1)];
 
   const badgeText = (() => {
     const parts: string[] = [];
@@ -225,9 +225,8 @@ export default function PhotoOverlay({
                   <button
                     key={img.id}
                     type="button"
-                    className={`pwa-photo-overlay-thumb ${
-                      index === currentIndex ? "pwa-photo-overlay-thumb-active" : ""
-                    }`}
+                    className={`pwa-photo-overlay-thumb ${index === currentIndex ? "pwa-photo-overlay-thumb-active" : ""
+                      }`}
                     onClick={() => handleThumbClick(index)}
                     aria-label={`Mostra foto ${index + 1} di ${images.length}`}
                   >

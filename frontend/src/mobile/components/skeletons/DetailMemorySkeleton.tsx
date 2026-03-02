@@ -11,7 +11,6 @@ export default function DetailMemorySkeleton() {
         </div>
         <div className="pwa-detail-memory-actions">
           <PwaSkeleton style={{ width: 34, height: 34, borderRadius: 9999 }} />
-          <PwaSkeleton style={{ width: 34, height: 34, borderRadius: 9999 }} />
         </div>
       </header>
 
