@@ -90,6 +90,32 @@ export default function PhotoOverlay({
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { atStart, atEnd } = useScrollEdgeMask(scrollRef);
 
+  // Mantiene l'anteprima corrente visibile e preferibilmente centrata
+  // nella lista delle miniature quando cambia l'immagine selezionata.
+  useEffect(() => {
+    if (!isOpen || !images.length) return;
+
+    const container = scrollRef.current;
+    const activeThumb = thumbRefs.current[currentIndex];
+    if (!container || !activeThumb) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const thumbRect = activeThumb.getBoundingClientRect();
+
+    const containerCenter = containerRect.left + containerRect.width / 2;
+    const thumbCenter = thumbRect.left + thumbRect.width / 2;
+    const delta = thumbCenter - containerCenter;
+
+    if (Math.abs(delta) < 4) {
+      return;
+    }
+
+    container.scrollTo({
+      left: container.scrollLeft + delta,
+      behavior: "smooth",
+    });
+  }, [currentIndex, images.length, isOpen]);
+
   if (!isOpen || images.length === 0) {
     return null;
   }
@@ -177,30 +203,6 @@ export default function PhotoOverlay({
     if (index < 0 || index >= images.length) return;
     setCurrentIndex(index);
   };
-
-  // Mantiene l'anteprima corrente visibile e preferibilmente centrata
-  // nella lista delle miniature quando cambia l'immagine selezionata.
-  useEffect(() => {
-    const container = scrollRef.current;
-    const activeThumb = thumbRefs.current[currentIndex];
-    if (!container || !activeThumb) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const thumbRect = activeThumb.getBoundingClientRect();
-
-    const containerCenter = containerRect.left + containerRect.width / 2;
-    const thumbCenter = thumbRect.left + thumbRect.width / 2;
-    const delta = thumbCenter - containerCenter;
-
-    if (Math.abs(delta) < 4) {
-      return;
-    }
-
-    container.scrollTo({
-      left: container.scrollLeft + delta,
-      behavior: "smooth",
-    });
-  }, [currentIndex, images.length]);
 
   return (
     <AnimatePresence>
