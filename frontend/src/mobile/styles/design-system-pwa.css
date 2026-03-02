@@ -6,12 +6,18 @@
 :root {
   /* Typography */
   --pwa-font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --pwa-font-size-xs: 0.75rem;   /* 12px */
-  --pwa-font-size-sm: 0.875rem;  /* 14px */
-  --pwa-font-size-md: 1rem;      /* 16px */
-  --pwa-font-size-lg: 1.125rem;  /* 18px */
-  --pwa-font-size-xl: 1.375rem;  /* 22px */
-  --pwa-font-size-2xl: 1.75rem;  /* 28px */
+  --pwa-font-size-xs: 0.75rem;
+  /* 12px */
+  --pwa-font-size-sm: 0.875rem;
+  /* 14px */
+  --pwa-font-size-md: 1rem;
+  /* 16px */
+  --pwa-font-size-lg: 1.125rem;
+  /* 18px */
+  --pwa-font-size-xl: 1.375rem;
+  /* 22px */
+  --pwa-font-size-2xl: 1.75rem;
+  /* 28px */
   --pwa-font-weight-regular: 400;
   --pwa-font-weight-medium: 500;
   --pwa-font-weight-semibold: 600;
@@ -205,8 +211,8 @@
   --pwa-bar-inner-radius: calc(var(--pwa-bar-radius) - var(--pwa-bar-inner-padding));
   --pwa-nav-icon-size: 22px;
   --pwa-fab-size: 52px;
-  --pwa-safe-top: env(safe-area-inset-top, 0px);
-  --pwa-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --pwa-safe-top: env(safe-area-inset-top);
+  --pwa-safe-bottom: env(safe-area-inset-bottom);
 }
 
 /* === Body PWA (usa variabili del design system) === */

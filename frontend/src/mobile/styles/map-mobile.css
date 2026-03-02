@@ -14,7 +14,7 @@ body.pwa-mode .pwa-map-container {
 
 body.pwa-mode .pwa-map-status-overlay {
   position: absolute;
-  top: var(--pwa-spacing-lg);
+  top: calc(var(--pwa-safe-top, 0px) + var(--pwa-spacing-md));
   left: 50%;
   transform: translateX(-50%);
   z-index: 600;
@@ -193,6 +193,7 @@ body.pwa-mode .pwa-map-screen .leaflet-top.leaflet-left .leaflet-control-zoom {
 body.pwa-mode .leaflet-control-zoom {
   border: 0 !important;
   margin: var(--pwa-spacing-md) !important;
+  margin-top: calc(var(--pwa-safe-top, 0px) + var(--pwa-spacing-md)) !important;
   background: transparent !important;
 }
 

@@ -41,7 +41,7 @@ body.pwa-mode .pwa-main {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--pwa-bar-height) + var(--pwa-fab-size) + var(--pwa-safe-bottom) + var(--pwa-spacing-lg));
+  padding-bottom: calc(var(--pwa-fab-size) + var(--pwa-safe-bottom) + var(--pwa-spacing-lg));
   scrollbar-width: thin;
   scrollbar-color: var(--pwa-scrollbar-thumb) var(--pwa-scrollbar-track);
 }
@@ -78,7 +78,7 @@ body.pwa-mode .pwa-main::-webkit-scrollbar-thumb:active {
 }
 
 body.pwa-mode .pwa-page {
-  padding: calc(var(--pwa-spacing-xl) + var(--pwa-safe-top)) var(--pwa-content-padding) var(--pwa-spacing-2xl);
+  padding: calc(var(--pwa-safe-top, 0px) + var(--pwa-spacing-md)) var(--pwa-content-padding) var(--pwa-spacing-lg);
 }
 
 body.pwa-mode .pwa-page-header {
