@@ -4048,14 +4048,14 @@ body.pwa-mode .pwa-detail-gallery-empty-text {
 body.pwa-mode .pwa-detail-gallery-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 6px !important;
 }
 
 /* Specificità alta: evita override da regole globali (es. base.css) quando la galleria è dentro lo sheet */
 body.pwa-mode .pwa-detail-content-sheet-scroll .pwa-detail-gallery-section .pwa-detail-gallery-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 6px !important;
 }
 
 body.pwa-mode .pwa-detail-content-sheet-scroll .pwa-detail-gallery-section .pwa-detail-gallery-item {
@@ -4407,12 +4407,17 @@ body.pwa-mode .pwa-detail-timeline-grid-item {
   aspect-ratio: 1;
   border-radius: var(--pwa-radius-sm);
   overflow: hidden;
+  transform: translateZ(0);
+  /* Fix for Safari border-radius clipping */
+  -webkit-transform: translateZ(0);
 }
 
 body.pwa-mode .pwa-detail-timeline-grid-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: var(--pwa-radius-sm);
+  display: block;
 }
 
 body.pwa-mode .pwa-detail-timeline-grid-item-btn {
@@ -4421,6 +4426,7 @@ body.pwa-mode .pwa-detail-timeline-grid-item-btn {
   width: 100%;
   height: 100%;
   cursor: pointer;
+  border-radius: var(--pwa-radius-sm);
 }
 
 /* Photo overlay for memory images */
@@ -4457,18 +4463,30 @@ body.pwa-mode .pwa-photo-overlay-top {
 
 body.pwa-mode .pwa-photo-overlay-top-badge {
   pointer-events: auto;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.85);
+  padding: 8px 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
   color: #f9fafb;
-  font-size: var(--pwa-font-size-xs);
-  font-weight: var(--pwa-font-weight-medium);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-width: 85%;
   text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.pwa-mode .pwa-photo-overlay-top-date {
+  font-size: var(--pwa-font-size-xs);
+  font-weight: var(--pwa-font-weight-semibold);
+  opacity: 0.95;
+}
+
+body.pwa-mode .pwa-photo-overlay-top-location {
+  font-size: 11px;
+  opacity: 0.7;
+  font-weight: var(--pwa-font-weight-medium);
 }
 
 body.pwa-mode .pwa-photo-overlay-image-wrapper {
@@ -4496,10 +4514,28 @@ body.pwa-mode .pwa-photo-overlay-thumbs {
 body.pwa-mode .pwa-photo-overlay-thumbs-scroll {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 0 4px;
+  padding: 4px 12px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+body.pwa-mode .pwa-photo-overlay-thumbs-scroll.at-start {
+  mask-image: linear-gradient(to right, black 0%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, black 88%, transparent 100%);
+}
+
+body.pwa-mode .pwa-photo-overlay-thumbs-scroll.at-end {
+  mask-image: linear-gradient(to right, transparent 0%, black 12%, black 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 100%);
+}
+
+body.pwa-mode .pwa-photo-overlay-thumbs-scroll.at-start.at-end {
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
 body.pwa-mode .pwa-photo-overlay-thumbs-scroll::-webkit-scrollbar {
@@ -4514,7 +4550,6 @@ body.pwa-mode .pwa-photo-overlay-thumb {
   border-radius: 10px;
   overflow: hidden;
   box-sizing: border-box;
-  border: 2px solid transparent;
   cursor: pointer;
   flex-shrink: 0;
   background: rgba(15, 23, 42, 0.7);
@@ -4528,8 +4563,7 @@ body.pwa-mode .pwa-photo-overlay-thumb img {
 }
 
 body.pwa-mode .pwa-photo-overlay-thumb-active {
-  border-color: var(--pwa-accent, #6366f1);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.8);
+  box-shadow: 0 0 0 2px var(--pwa-accent, #6366f1);
 }
 
 body.pwa-mode .pwa-photo-overlay-footer {

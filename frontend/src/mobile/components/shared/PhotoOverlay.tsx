@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { useScrollEdgeMask } from "../../hooks";
 
 export interface PhotoOverlayImage {
   id: number;
@@ -85,28 +86,30 @@ export default function PhotoOverlay({
     [onClose]
   );
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { atStart, atEnd } = useScrollEdgeMask(scrollRef);
+
   if (!isOpen || images.length === 0) {
     return null;
   }
 
   const currentImage = images[Math.min(currentIndex, images.length - 1)];
 
-  const badgeText = (() => {
-    const parts: string[] = [];
+  const badgeParts = (() => {
+    const parts: { date?: string; location?: string | null } = {};
     if (locationLabel) {
-      parts.push(locationLabel);
+      parts.location = locationLabel;
     }
     if (currentImage.createdAt) {
       try {
-        const dateStr = format(new Date(currentImage.createdAt), "d MMM yyyy 'alle' HH:mm", {
+        parts.date = format(new Date(currentImage.createdAt), "d MMM yyyy 'alle' HH:mm", {
           locale: it,
         });
-        parts.push(dateStr);
       } catch {
         // ignore formatting errors
       }
     }
-    return parts.join(" • ");
+    return parts;
   })();
 
   const handleShare = async () => {
@@ -118,7 +121,7 @@ export default function PhotoOverlay({
     }
 
     try {
-      const shareText = badgeText || memoryTitle;
+      const shareText = (badgeParts.date ? badgeParts.date + (badgeParts.location ? " • " + badgeParts.location : "") : badgeParts.location) || memoryTitle;
 
       if (navigator.canShare && "canShare" in navigator) {
         try {
@@ -199,9 +202,14 @@ export default function PhotoOverlay({
             transition={{ duration: 0.2 }}
           >
             <div className="pwa-photo-overlay-top">
-              {badgeText && (
-                <div className="pwa-photo-overlay-top-badge" aria-label={badgeText}>
-                  {badgeText}
+              {(badgeParts.date || badgeParts.location) && (
+                <div className="pwa-photo-overlay-top-badge">
+                  {badgeParts.date && (
+                    <div className="pwa-photo-overlay-top-date">{badgeParts.date}</div>
+                  )}
+                  {badgeParts.location && (
+                    <div className="pwa-photo-overlay-top-location">{badgeParts.location}</div>
+                  )}
                 </div>
               )}
             </div>
@@ -220,7 +228,10 @@ export default function PhotoOverlay({
             </div>
 
             <div className="pwa-photo-overlay-thumbs" aria-label="Anteprime immagini">
-              <div className="pwa-photo-overlay-thumbs-scroll">
+              <div
+                ref={scrollRef}
+                className={`pwa-photo-overlay-thumbs-scroll${atStart ? " at-start" : ""}${atEnd ? " at-end" : ""}`}
+              >
                 {images.map((img, index) => (
                   <button
                     key={img.id}
@@ -260,4 +271,3 @@ export default function PhotoOverlay({
     </AnimatePresence>
   );
 }
-

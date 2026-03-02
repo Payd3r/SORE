@@ -124,32 +124,6 @@ export default function DetailCarousel({ memoryId, onImageClick }: DetailCarouse
       <div className="pwa-detail-carousel-counter">
         {currentIndex + 1} / {images.length}
       </div>
-      {images.length > 1 && (
-        <>
-          <button
-            type="button"
-            className="pwa-detail-carousel-arrow pwa-detail-carousel-arrow-prev"
-            onClick={(e) => {
-              e.stopPropagation();
-              goPrev();
-            }}
-            aria-label="Foto precedente"
-          >
-            <span className="material-symbols-outlined">chevron_left</span>
-          </button>
-          <button
-            type="button"
-            className="pwa-detail-carousel-arrow pwa-detail-carousel-arrow-next"
-            onClick={(e) => {
-              e.stopPropagation();
-              goNext();
-            }}
-            aria-label="Foto successiva"
-          >
-            <span className="material-symbols-outlined">chevron_right</span>
-          </button>
-        </>
-      )}
     </div>
   );
 }

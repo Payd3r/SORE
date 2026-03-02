@@ -25,6 +25,7 @@
   body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white min-h-screen;
   }
+
   button {
     @apply focus:outline-none;
   }
@@ -55,6 +56,7 @@
 }
 
 @supports (-webkit-touch-callout: none) {
+
   input,
   select,
   textarea {
@@ -82,11 +84,13 @@
 }
 
 @keyframes pulse-slow {
+
   0%,
   100% {
     opacity: 0.7;
     transform: scale(0.97);
   }
+
   50% {
     opacity: 0.9;
     transform: scale(1);
@@ -107,6 +111,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -120,6 +125,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -149,9 +155,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: none;
@@ -165,7 +173,8 @@ button:focus-visible {
 /* Touch optimizations (shared desktop + PWA su dispositivi touch) */
 /* Esclusi [role="switch"], pulsanti PWA (bar nav, FAB, pill categoria, avatar, campanella): padding/min-size gestiti da mobile-pwa.css */
 @media (hover: none) and (pointer: coarse) {
-  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell),
+
+  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb),
   a[role="button"],
   .btn:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
   .touch-target,
@@ -176,10 +185,10 @@ button:focus-visible {
     min-width: 44px;
   }
 
-  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell),
+  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb),
   .btn:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
-  [type="button"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell),
-  [type="submit"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell) {
+  [type="button"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb),
+  [type="submit"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb) {
     padding: 12px !important;
   }
 
@@ -195,7 +204,7 @@ button:focus-visible {
     font-size: 16px !important;
   }
 
-  .touch-margin > * {
+  .touch-margin>* {
     margin: 6px;
   }
 
