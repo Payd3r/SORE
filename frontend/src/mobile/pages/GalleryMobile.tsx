@@ -131,16 +131,19 @@ export default function GalleryMobile() {
   const serverSort: MemoriesSortBy =
     filters.sortBy === "most_viewed" ? "most_viewed" : "created_desc";
 
-  const { data: memories = [], isLoading, error } = useQuery({
+  const {
+    data: memories = [],
+    status,
+    error,
+    isFetching,
+  } = useQuery({
     queryKey: ["memories", { sort: serverSort }],
     queryFn: () => getMemories({ sort: serverSort }),
-    // Per la PWA mobile vogliamo che la galleria mostri sempre
-    // i ricordi più aggiornati possibile, senza cache lunga.
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnReconnect: "always",
-    refetchOnWindowFocus: false,
+    // Cache breve ma stabile: evita continui refetch mentre scorri
+    // e mantiene i dati precedenti durante i ricaricamenti.
+    staleTime: 60 * 1000, // 1 minuto
     placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
   });
 
   const { data: futuroMemory } = useQuery({
@@ -204,7 +207,7 @@ export default function GalleryMobile() {
     }
   }, [filteredAndSorted, prefetchMemoryDetails]);
 
-  if (isLoading) {
+  if (status === "pending") {
     return <GallerySkeleton />;
   }
 
