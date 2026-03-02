@@ -4838,8 +4838,8 @@ body.pwa-mode .pwa-detail-evento-viaggio-overlay>* {
   justify-content: center;
   width: 44px;
   height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 44px !important;
+  min-height: 44px !important;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.4);
   border: none;
@@ -4849,14 +4849,16 @@ body.pwa-mode .pwa-detail-evento-viaggio-overlay>* {
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   transition: opacity 0.2s ease;
-  padding: 0;
+  padding: 0 !important;
 }
 
 .pwa-detail-evento-viaggio-overlay-btn .material-symbols-outlined {
   font-size: 24px;
   width: 24px;
   height: 24px;
-  display: block;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
   color: inherit;
 }
 
