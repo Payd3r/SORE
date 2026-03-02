@@ -224,6 +224,7 @@ export default function DetailGallerySection({
               options={orderOptions}
               onChange={setSelectedOrder}
               disabled={isSavingOrder}
+              direction="up"
             />
             <div className="pwa-detail-gallery-order-menu-actions">
               <button

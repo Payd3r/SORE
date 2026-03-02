@@ -12,6 +12,7 @@ type PwaSelectProps<T extends string> = {
   options: PwaSelectOption<T>[];
   onChange: (value: T) => void;
   disabled?: boolean;
+  direction?: "up" | "down";
   "aria-label"?: string;
 };
 
@@ -22,6 +23,7 @@ export default function PwaSelect<T extends string>({
   options,
   onChange,
   disabled,
+  direction = "down",
   "aria-label": ariaLabel,
 }: PwaSelectProps<T>) {
   const [open, setOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function PwaSelect<T extends string>({
       </button>
       {open && (
         <ul
-          className="pwa-select-dropdown"
+          className={`pwa-select-dropdown pwa-select-dropdown-${direction}`}
           role="listbox"
           aria-activedescendant={id ? `${id}-opt-${value}` : undefined}
         >

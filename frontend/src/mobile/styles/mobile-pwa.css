@@ -326,7 +326,9 @@ body.pwa-mode .pwa-home-avatar {
   box-sizing: border-box;
   width: 44px;
   height: 44px;
-  padding: 0;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   border: 0;
   border-radius: 999px;
   overflow: hidden;
@@ -3009,12 +3011,20 @@ body.pwa-mode .pwa-select-trigger-icon .material-symbols-outlined {
   color: var(--pwa-text-secondary);
 }
 
+body.pwa-mode .pwa-select-dropdown-down {
+  top: 100%;
+  margin-top: 4px;
+}
+
+body.pwa-mode .pwa-select-dropdown-up {
+  bottom: 100%;
+  margin-bottom: 4px;
+}
+
 body.pwa-mode .pwa-select-dropdown {
   position: absolute;
-  top: 100%;
   left: 0;
   right: 0;
-  margin-top: 4px;
   padding: var(--pwa-spacing-xs);
   list-style: none;
   background: var(--pwa-card-bg);
@@ -3172,6 +3182,9 @@ body.pwa-mode .pwa-add-avatar {
   box-sizing: border-box;
   width: 44px;
   height: 44px;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   border-radius: 999px;
   overflow: hidden;
   background: var(--pwa-bg-tertiary);

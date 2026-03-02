@@ -114,9 +114,9 @@
 
   @media (max-width: 640px) {
 
-    button:not([role='switch']):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn):not(.pwa-photo-overlay-thumb),
-    [type='button']:not([role='switch']):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn):not(.pwa-photo-overlay-thumb),
-    [type='submit']:not([role='switch']):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn):not(.pwa-photo-overlay-thumb) {
+    button:not([role='switch']):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn):not(.pwa-photo-overlay-thumb):not(.pwa-home-avatar):not(.pwa-add-avatar),
+    [type='button']:not([role='switch']):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn):not(.pwa-photo-overlay-thumb):not(.pwa-home-avatar):not(.pwa-add-avatar),
+    [type='submit']:not([role='switch']):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn):not(.pwa-photo-overlay-thumb):not(.pwa-home-avatar):not(.pwa-add-avatar) {
       @apply py-3 touch-manipulation select-none min-w-[44px] min-h-[44px];
     }
 
