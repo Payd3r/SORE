@@ -134,7 +134,12 @@ export default function GalleryMobile() {
   const { data: memories = [], isLoading, error } = useQuery({
     queryKey: ["memories", { sort: serverSort }],
     queryFn: () => getMemories({ sort: serverSort }),
-    staleTime: 5 * 60 * 1000,
+    // Per la PWA mobile vogliamo che la galleria mostri sempre
+    // i ricordi più aggiornati possibile, senza cache lunga.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
+    refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,
   });
 

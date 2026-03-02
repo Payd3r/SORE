@@ -4739,6 +4739,41 @@ body.pwa-mode .pwa-memory-edit-sheet-suggestion-meta {
 }
 
 /* Detail gallery upload sheet */
+body.pwa-mode .pwa-upload-sheet {
+  /* Diminuisci padding a sinistra/destra e raggruppa meglio */
+  margin-left: -4px;
+}
+
+body.pwa-mode .pwa-upload-selection-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pwa-spacing-xs);
+  margin-bottom: var(--pwa-spacing-sm);
+}
+
+body.pwa-mode .pwa-upload-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--pwa-spacing-xs);
+  margin-top: -4px;
+}
+
+body.pwa-mode .pwa-upload-clear-btn {
+  all: unset;
+  font-size: var(--pwa-font-size-sm);
+  font-weight: var(--pwa-font-weight-medium);
+  color: var(--pwa-accent-red);
+  cursor: pointer;
+  padding: var(--pwa-spacing-xs) 0;
+}
+
+body.pwa-mode .pwa-btn-shorter {
+  min-height: 40px !important;
+  height: 40px !important;
+  font-size: var(--pwa-font-size-sm) !important;
+}
+
 body.pwa-mode .pwa-detail-gallery-upload-input {
   position: absolute;
   width: 0;
@@ -4753,8 +4788,8 @@ body.pwa-mode .pwa-detail-gallery-upload-trigger {
   justify-content: center;
   gap: var(--pwa-spacing-sm);
   width: 100%;
-  padding: var(--pwa-spacing-lg);
-  margin-bottom: var(--pwa-spacing-md);
+  padding: var(--pwa-spacing-md);
+  margin-bottom: 0;
   border: 2px dashed var(--pwa-divider);
   border-radius: var(--pwa-radius-lg);
   background: var(--pwa-pill-inactive-bg);
@@ -4764,7 +4799,7 @@ body.pwa-mode .pwa-detail-gallery-upload-trigger {
 }
 
 body.pwa-mode .pwa-detail-gallery-upload-trigger .material-symbols-outlined {
-  font-size: 28px;
+  font-size: 24px;
 }
 
 body.pwa-mode .pwa-detail-gallery-upload-trigger:disabled {
@@ -4773,7 +4808,7 @@ body.pwa-mode .pwa-detail-gallery-upload-trigger:disabled {
 }
 
 body.pwa-mode .pwa-detail-gallery-upload-error {
-  margin: 0 0 var(--pwa-spacing-md) 0;
+  margin: 0 0 var(--pwa-spacing-sm) 0;
   padding: var(--pwa-spacing-sm);
   font-size: var(--pwa-font-size-sm);
   color: var(--pwa-accent-red, #dc2626);
@@ -4782,7 +4817,7 @@ body.pwa-mode .pwa-detail-gallery-upload-error {
 }
 
 body.pwa-mode .pwa-detail-gallery-upload-count {
-  margin: 0 0 var(--pwa-spacing-sm) 0;
+  margin: 0;
   font-size: var(--pwa-font-size-sm);
   color: var(--pwa-text-secondary);
 }

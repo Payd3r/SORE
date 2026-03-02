@@ -66,7 +66,7 @@ export default function DetailGalleryUploadSheet({
   };
 
   return (
-    <div className="pwa-idea-detail-sheet">
+    <div className="pwa-idea-detail-sheet pwa-upload-sheet">
       <div className="pwa-memory-edit-sheet-header">
         <h2 className="pwa-memory-edit-sheet-title">Aggiungi foto</h2>
         <button
@@ -78,47 +78,53 @@ export default function DetailGalleryUploadSheet({
           <span className="material-symbols-outlined">close</span>
         </button>
       </div>
+
       {error && (
         <p className="pwa-detail-gallery-upload-error" role="alert">
           {error}
         </p>
       )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="pwa-detail-gallery-upload-input"
-        onChange={onSelect}
-        aria-label="Seleziona immagini"
-      />
-      <button
-        type="button"
-        className="pwa-detail-gallery-upload-trigger"
-        onClick={() => inputRef.current?.click()}
-        disabled={uploading}
-      >
-        <span className="material-symbols-outlined">add_photo_alternate</span>
-        Seleziona immagini
-      </button>
-      {files.length > 0 && (
-        <>
-          <p className="pwa-detail-gallery-upload-count">
-            {files.length} {files.length === 1 ? "file selezionato" : "file selezionati"}
-          </p>
-          <button
-            type="button"
-            className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel"
-            onClick={() => setFiles([])}
-          >
-            Svuota
-          </button>
-        </>
-      )}
+
+      <div className="pwa-upload-selection-group">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="pwa-detail-gallery-upload-input"
+          onChange={onSelect}
+          aria-label="Seleziona immagini"
+        />
+        <button
+          type="button"
+          className="pwa-detail-gallery-upload-trigger"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+        >
+          <span className="material-symbols-outlined">add_photo_alternate</span>
+          {files.length > 0 ? "Aggiungi altre foto" : "Seleziona immagini"}
+        </button>
+
+        {files.length > 0 && (
+          <div className="pwa-upload-info-row">
+            <p className="pwa-detail-gallery-upload-count">
+              {files.length} {files.length === 1 ? "foto selezionata" : "foto selezionate"}
+            </p>
+            <button
+              type="button"
+              className="pwa-upload-clear-btn"
+              onClick={() => setFiles([])}
+            >
+              Rimuovi tutte
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="pwa-idea-detail-actions">
         <button
           type="button"
-          className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel"
+          className="pwa-idea-detail-btn pwa-idea-detail-btn-cancel pwa-btn-shorter"
           onClick={onClose}
         >
           Annulla
