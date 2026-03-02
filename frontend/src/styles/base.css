@@ -174,7 +174,7 @@ button:focus-visible {
 /* Esclusi [role="switch"], pulsanti PWA (bar nav, FAB, pill categoria, avatar, campanella): padding/min-size gestiti da mobile-pwa.css */
 @media (hover: none) and (pointer: coarse) {
 
-  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb),
+  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn),
   a[role="button"],
   .btn:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
   .touch-target,
@@ -185,10 +185,10 @@ button:focus-visible {
     min-width: 44px;
   }
 
-  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb),
+  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn),
   .btn:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
-  [type="button"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb),
-  [type="submit"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb) {
+  [type="button"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn),
+  [type="submit"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell):not(.pwa-photo-overlay-thumb):not(.pwa-detail-gallery-item):not(.pwa-detail-timeline-grid-item-btn) {
     padding: 12px !important;
   }
 

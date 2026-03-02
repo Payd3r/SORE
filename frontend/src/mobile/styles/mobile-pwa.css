@@ -4069,14 +4069,16 @@ body.pwa-mode .pwa-detail-gallery-item {
   display: block;
   position: relative;
   aspect-ratio: 1;
-  border-radius: 6px;
+  border-radius: 6px !important;
   overflow: hidden;
   cursor: pointer;
   box-sizing: border-box;
-  /* Annulla padding da base.css (touch: padding 12px !important) per evitare gap tra le img */
+  /* Annulla padding da regole globali (es. base.css, desktop.css) */
   padding: 0 !important;
-  min-width: 0;
-  min-height: 0;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 body.pwa-mode .pwa-detail-gallery-order-badge {
@@ -4400,12 +4402,12 @@ body.pwa-mode .pwa-detail-timeline-item-content {
 body.pwa-mode .pwa-detail-timeline-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 4px !important;
 }
 
 body.pwa-mode .pwa-detail-timeline-grid-item {
   aspect-ratio: 1;
-  border-radius: var(--pwa-radius-sm);
+  border-radius: var(--pwa-radius-sm) !important;
   overflow: hidden;
   transform: translateZ(0);
   /* Fix for Safari border-radius clipping */
@@ -4416,7 +4418,7 @@ body.pwa-mode .pwa-detail-timeline-grid-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--pwa-radius-sm);
+  border-radius: var(--pwa-radius-sm) !important;
   display: block;
 }
 
@@ -4425,8 +4427,11 @@ body.pwa-mode .pwa-detail-timeline-grid-item-btn {
   display: block;
   width: 100%;
   height: 100%;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   cursor: pointer;
-  border-radius: var(--pwa-radius-sm);
+  border-radius: var(--pwa-radius-sm) !important;
 }
 
 /* Photo overlay for memory images */
