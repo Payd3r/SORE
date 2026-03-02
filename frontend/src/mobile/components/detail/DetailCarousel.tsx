@@ -33,16 +33,6 @@ export default function DetailCarousel({ memoryId, onImageClick }: DetailCarouse
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="pwa-detail-carousel">
-        <PwaSkeleton
-          style={{ width: "100%", height: "100%", borderRadius: 0 }}
-        />
-      </div>
-    );
-  }
-
   const images: { url: string; created_at: string }[] = (carouselData as CarouselImageItem[]).map(
     (img) => ({ url: getImageUrl(img.image), created_at: img.created_at })
   );
@@ -77,6 +67,16 @@ export default function DetailCarousel({ memoryId, onImageClick }: DetailCarouse
       else goNext();
     }
   }, [goPrev, goNext]);
+
+  if (isLoading) {
+    return (
+      <div className="pwa-detail-carousel">
+        <PwaSkeleton
+          style={{ width: "100%", height: "100%", borderRadius: 0 }}
+        />
+      </div>
+    );
+  }
 
   if (images.length === 0) {
     return (
