@@ -174,14 +174,14 @@ export default function HomeMobile() {
         song: null,
         images: item.image
           ? [
-              {
-                id: item.id,
-                thumb_big_path: item.image,
-                webp_path: null,
-                created_at: item.last_viewed_at,
-                display_order: null,
-              },
-            ]
+            {
+              id: item.id,
+              thumb_big_path: item.image,
+              webp_path: null,
+              created_at: item.last_viewed_at,
+              display_order: null,
+            },
+          ]
           : [],
         created_at: item.last_viewed_at,
         updated_at: item.last_viewed_at,
@@ -211,14 +211,14 @@ export default function HomeMobile() {
           song: null,
           images: item.image
             ? [
-                {
-                  id: item.id,
-                  thumb_big_path: item.image,
-                  webp_path: null,
-                  created_at: item.last_viewed_at ?? "",
-                  display_order: null,
-                },
-              ]
+              {
+                id: item.id,
+                thumb_big_path: item.image,
+                webp_path: null,
+                created_at: item.last_viewed_at ?? "",
+                display_order: null,
+              },
+            ]
             : [],
           created_at: item.last_viewed_at ?? "",
           updated_at: item.last_viewed_at ?? "",
@@ -294,22 +294,6 @@ export default function HomeMobile() {
             trips={trips}
             onFuturoClick={(m) => setFuturoSheetMemoryId(m.id)}
           />
-        </div>
-      )}
-
-      {recentlyViewedMemories.length > 0 && (
-        <div className="pwa-home-section">
-          <div className="pwa-section-title">
-            <h2>Ultimi ricordi visti</h2>
-            <button
-              type="button"
-              className="pwa-section-link"
-              onClick={() => navigate("/ricordi")}
-            >
-              Vedi tutti
-            </button>
-          </div>
-          <SimpleMemoriesCarousel memories={recentlyViewedMemories} />
         </div>
       )}
 
