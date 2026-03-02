@@ -60,7 +60,7 @@ router.get('/', auth, async (req: any, res) => {
       [coupleId]
     );
 
-    // Get latest ideas (completed and recent) for home
+    // Get latest ideas (unchecked first, then recently completed) for home
     const [ideas] = await pool.promise().query<Idea[]>(
       `SELECT 
         id,
@@ -71,7 +71,7 @@ router.get('/', auth, async (req: any, res) => {
         date_checked
        FROM ideas 
        WHERE couple_id = ?
-       ORDER BY date_checked DESC, created_at DESC
+       ORDER BY date_checked IS NOT NULL, date_checked DESC, created_at DESC
        LIMIT 10`,
       [coupleId]
     );

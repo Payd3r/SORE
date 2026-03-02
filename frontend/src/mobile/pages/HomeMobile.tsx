@@ -155,43 +155,6 @@ export default function HomeMobile() {
     return sortMemoriesByDate(filtered);
   }, [memories]);
 
-  const recentlyViewedMemories = useMemo(() => {
-    const recent = homeData?.data?.recently_viewed_memories ?? [];
-
-    return recent.map((item) => {
-      const memoryFromList = memories.find((memory) => memory.id === item.id);
-      if (memoryFromList) {
-        return memoryFromList;
-      }
-
-      return {
-        id: item.id,
-        title: item.title,
-        type: normalizeMemoryType(item.type),
-        start_date: item.start_date,
-        end_date: item.end_date,
-        location: null,
-        song: null,
-        images: item.image
-          ? [
-            {
-              id: item.id,
-              thumb_big_path: item.image,
-              webp_path: null,
-              created_at: item.last_viewed_at,
-              display_order: null,
-            },
-          ]
-          : [],
-        created_at: item.last_viewed_at,
-        updated_at: item.last_viewed_at,
-        tot_img: item.image ? 1 : 0,
-        view_count: item.view_count,
-        last_viewed_at: item.last_viewed_at,
-      } satisfies Memory;
-    });
-  }, [homeData, memories]);
-
   const mostViewedMemories = useMemo(() => {
     const items = homeData?.data?.most_viewed_memories ?? [];
 
