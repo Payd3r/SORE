@@ -111,25 +111,25 @@ body.pwa-mode .pwa-map-cluster-badge {
 body.pwa-mode .pwa-map-memory-sheet {
   display: flex;
   flex-direction: column;
-  gap: var(--pwa-spacing-sm);
-  padding: var(--pwa-spacing-sm) var(--pwa-spacing-md);
-  margin: 0 var(--pwa-spacing-md) var(--pwa-spacing-sm);
+  gap: var(--pwa-spacing-xs);
+  padding: var(--pwa-spacing-xs) 0;
+  margin: 0 var(--pwa-spacing-sm) var(--pwa-spacing-xs);
 }
 
 body.pwa-mode .pwa-map-memory-sheet-main {
   all: unset;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 86px 1fr;
-  gap: var(--pwa-spacing-md);
+  grid-template-columns: 72px 1fr;
+  gap: var(--pwa-spacing-sm);
   width: 100%;
   cursor: pointer;
 }
 
 body.pwa-mode .pwa-map-memory-sheet-media {
-  width: 86px;
-  height: 86px;
-  border-radius: var(--pwa-radius-lg);
+  width: 72px;
+  height: 72px;
+  border-radius: var(--pwa-radius-md);
   overflow: hidden;
   background: var(--pwa-surface-muted, #f3f4f6);
 }
@@ -150,23 +150,35 @@ body.pwa-mode .pwa-map-memory-sheet-content {
   gap: 4px;
 }
 
-body.pwa-mode .pwa-map-memory-sheet-type {
-  margin: 0;
-  font-size: var(--pwa-font-size-xs);
+body.pwa-mode .pwa-map-memory-sheet-header {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+body.pwa-mode .pwa-map-memory-sheet-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--pwa-pill-inactive-bg);
   color: var(--pwa-text-secondary);
+  font-size: 0.65rem;
+  font-weight: var(--pwa-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: var(--pwa-radius-pill, 999px);
+  border: 1px solid var(--pwa-divider);
 }
 
 body.pwa-mode .pwa-map-memory-sheet-title {
   margin: 0;
   color: var(--pwa-text-primary);
-  font-size: var(--pwa-font-size-lg);
+  font-size: var(--pwa-font-size-md);
   line-height: var(--pwa-line-height-tight);
   font-weight: var(--pwa-font-weight-semibold);
 }
 
 body.pwa-mode .pwa-map-memory-sheet-date {
   margin: 0;
-  font-size: var(--pwa-font-size-sm);
+  font-size: var(--pwa-font-size-xs);
   color: var(--pwa-text-secondary);
 }
 
@@ -175,7 +187,7 @@ body.pwa-mode .pwa-map-memory-sheet-cta {
   box-sizing: border-box;
   width: 100%;
   border-radius: var(--pwa-radius-lg);
-  padding: var(--pwa-spacing-md) var(--pwa-spacing-lg);
+  padding: var(--pwa-spacing-sm) var(--pwa-spacing-md);
   text-align: center;
   background: var(--pwa-btn-primary-bg);
   color: var(--pwa-btn-primary-fg);

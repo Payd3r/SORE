@@ -1978,6 +1978,8 @@ body.pwa-mode .pwa-bottom-sheet-panel-map {
 
 body.pwa-mode .pwa-bottom-sheet-content-map {
   padding-bottom: var(--pwa-spacing-lg);
+  padding-left: var(--pwa-spacing-xs);
+  padding-right: var(--pwa-spacing-xs);
 }
 
 /* Notifications sheet */

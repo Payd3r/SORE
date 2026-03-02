@@ -1,6 +1,15 @@
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 import { getImageUrl } from "../../../api/images";
 import type { MapMemory } from "../../../api/map";
+
+const TYPE_LABELS: Record<string, string> = {
+  VIAGGIO: "Viaggio",
+  EVENTO: "Evento",
+  SEMPLICE: "Semplice",
+  FUTURO: "Futuro",
+};
 
 type MapMemoryPreviewSheetProps = {
   memory: MapMemory;
@@ -9,11 +18,28 @@ type MapMemoryPreviewSheetProps = {
 
 function formatDateRange(startDate: string | null, endDate: string | null) {
   if (!startDate && !endDate) return "";
-  if (startDate && endDate) {
-    return `${new Date(startDate).toLocaleDateString("it-IT")} - ${new Date(endDate).toLocaleDateString("it-IT")}`;
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+
+  if (start && end) {
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const sameMonth = sameYear && start.getMonth() === end.getMonth();
+    const sameDay = sameMonth && start.getDate() === end.getDate();
+
+    if (sameDay) {
+      return format(start, "d MMM yyyy", { locale: it });
+    }
+    if (sameMonth) {
+      return `${format(start, "d", { locale: it })} – ${format(end, "d MMM yyyy", { locale: it })}`;
+    }
+    if (sameYear) {
+      return `${format(start, "d MMM", { locale: it })} – ${format(end, "d MMM yyyy", { locale: it })}`;
+    }
+    return `${format(start, "d MMM yyyy", { locale: it })} – ${format(end, "d MMM yyyy", { locale: it })}`;
   }
-  const date = startDate ?? endDate;
-  return date ? new Date(date).toLocaleDateString("it-IT") : "";
+
+  const date = start ?? end;
+  return date ? format(date, "d MMM yyyy", { locale: it }) : "";
 }
 
 export default function MapMemoryPreviewSheet({
@@ -23,6 +49,10 @@ export default function MapMemoryPreviewSheet({
   const navigate = useNavigate();
   const coverPath = memory.thumb_path || memory.thumb_small_path;
   const dateLabel = formatDateRange(memory.start_date, memory.end_date);
+
+  const typeUpper = memory.type?.toUpperCase();
+  const isSimple = typeUpper === "SEMPLICE";
+  const typeLabel = TYPE_LABELS[typeUpper] ?? memory.type;
 
   const goToDetail = () => {
     onClose();
@@ -48,7 +78,11 @@ export default function MapMemoryPreviewSheet({
           )}
         </div>
         <div className="pwa-map-memory-sheet-content">
-          <p className="pwa-map-memory-sheet-type">{memory.type}</p>
+          <div className="pwa-map-memory-sheet-header">
+            {!isSimple && typeLabel && (
+              <span className="pwa-map-memory-sheet-type-badge">{typeLabel}</span>
+            )}
+          </div>
           <h3 className="pwa-map-memory-sheet-title">{memory.title}</h3>
           {dateLabel ? <p className="pwa-map-memory-sheet-date">{dateLabel}</p> : null}
         </div>
@@ -63,3 +97,4 @@ export default function MapMemoryPreviewSheet({
     </article>
   );
 }
+

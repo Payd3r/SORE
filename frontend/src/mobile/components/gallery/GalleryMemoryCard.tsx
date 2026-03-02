@@ -29,27 +29,30 @@ export default function GalleryMemoryCard({ memory, onFuturoClick }: GalleryMemo
   const startDate = memory.start_date ? new Date(memory.start_date) : null;
   const endDate = memory.end_date ? new Date(memory.end_date) : null;
 
-  const formatDateStr = (d: Date, includeYear: boolean) =>
-    format(d, includeYear ? "d MMM yyyy" : "d MMM", { locale: it });
+  const isSimple = memory.type?.toUpperCase() === "SEMPLICE";
+  const typeLabel = TYPE_LABELS[memory.type] ?? memory.type;
+  const hasSong = Boolean(memory.song?.trim());
 
   let dateStr = "";
   if (startDate && endDate) {
     const sameYear = startDate.getFullYear() === endDate.getFullYear();
-    const sameDay = startDate.getTime() === endDate.getTime();
+    const sameMonth = sameYear && startDate.getMonth() === endDate.getMonth();
+    const sameDay = sameMonth && startDate.getDate() === endDate.getDate();
+
     if (sameDay) {
-      dateStr = formatDateStr(startDate, true);
+      dateStr = format(startDate, "d MMM yyyy", { locale: it });
+    } else if (sameMonth) {
+      dateStr = `${format(startDate, "d", { locale: it })} – ${format(endDate, "d MMM yyyy", { locale: it })}`;
     } else if (sameYear) {
-      dateStr = `${formatDateStr(startDate, false)} – ${formatDateStr(endDate, false)} ${startDate.getFullYear()}`;
+      dateStr = `${format(startDate, "d MMM", { locale: it })} – ${format(endDate, "d MMM yyyy", { locale: it })}`;
     } else {
-      dateStr = `${formatDateStr(startDate, true)} – ${formatDateStr(endDate, true)}`;
+      dateStr = `${format(startDate, "d MMM yyyy", { locale: it })} – ${format(endDate, "d MMM yyyy", { locale: it })}`;
     }
   } else if (startDate) {
-    dateStr = formatDateStr(startDate, true);
+    dateStr = format(startDate, "d MMM yyyy", { locale: it });
   } else if (endDate) {
-    dateStr = formatDateStr(endDate, true);
+    dateStr = format(endDate, "d MMM yyyy", { locale: it });
   }
-  const typeLabel = TYPE_LABELS[memory.type] ?? memory.type;
-  const hasSong = Boolean(memory.song?.trim());
 
   const handleClick = () => {
     if (isFuturo && onFuturoClick) {
@@ -78,7 +81,9 @@ export default function GalleryMemoryCard({ memory, onFuturoClick }: GalleryMemo
           </div>
         )}
         <div className="pwa-gallery-memory-card-overlay" />
-        <span className="pwa-gallery-memory-card-type-badge">{typeLabel}</span>
+        {!isSimple && (
+          <span className="pwa-gallery-memory-card-type-badge">{typeLabel}</span>
+        )}
       </div>
       <div className="pwa-gallery-memory-card-content">
         <h3 className="pwa-gallery-memory-card-title">{memory.title}</h3>
