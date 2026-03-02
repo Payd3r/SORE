@@ -1562,6 +1562,12 @@ body.pwa-mode .pwa-trip-card-img {
   height: 100%;
   object-fit: cover;
   border-radius: 28px 28px 0 0;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+body.pwa-mode .pwa-trip-card-img.is-loaded {
+  opacity: 1;
 }
 
 body.pwa-mode .pwa-trip-card-placeholder {

@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Memory } from "../../../api/memory";
 import { getImageUrl } from "../../../api/images";
+import PwaSkeleton from "../skeletons/PwaSkeleton";
 
 type TripCardProps = {
   memory: Memory;
@@ -28,21 +29,27 @@ function formatDateRange(start: string | null, end: string | null): string {
 
 export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
   const navigate = useNavigate();
+  const [isLoaded, setIsLoaded] = useState(false);
   const isFuturo = memory.type?.toUpperCase() === "FUTURO";
+
   const imagePath = useMemo(() => {
     if (isFuturo) return "";
+
+    // Se la memory ha già il campo 'image' (di solito webp_path dal backend home)
+    if ((memory as any).image) return (memory as any).image;
+
     const images = memory.images ?? [];
     if (images.length === 0) return "";
 
     const preferred = images.find((img) => img.display_order === 1);
     if (preferred) {
-      // Prioritizziamo webp_path (alta risoluzione) o image (originale) sopra le thumb
-      return (preferred as any).image || preferred.webp_path || preferred.thumb_big_path || "";
+      // Prioritizziamo webp_path (alta risoluzione) sopra le thumb
+      return preferred.webp_path || preferred.thumb_big_path || "";
     }
 
     const fallback = images[Math.floor(Math.random() * images.length)];
-    return (fallback as any)?.image || fallback?.webp_path || fallback?.thumb_big_path || "";
-  }, [isFuturo, memory.images]);
+    return fallback?.webp_path || fallback?.thumb_big_path || "";
+  }, [isFuturo, (memory as any).image, memory.images]);
 
   const handleClick = () => {
     if (isFuturo && onFuturoClick) {
@@ -64,11 +71,24 @@ export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
       >
         <div className="pwa-trip-card-media">
           {imagePath ? (
-            <img
-              src={getImageUrl(imagePath)}
-              alt=""
-              className="pwa-trip-card-img"
-            />
+            <>
+              {!isLoaded && (
+                <PwaSkeleton
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    zIndex: 1,
+                    borderRadius: 0,
+                  }}
+                />
+              )}
+              <img
+                src={getImageUrl(imagePath)}
+                alt=""
+                className={`pwa-trip-card-img ${isLoaded ? "is-loaded" : ""}`}
+                onLoad={() => setIsLoaded(true)}
+              />
+            </>
           ) : (
             <div className="pwa-trip-card-placeholder" />
           )}

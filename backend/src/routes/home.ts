@@ -37,7 +37,7 @@ router.get('/', auth, async (req: any, res) => {
         m.title,
         m.start_date as data_inizio,
         m.end_date as data_fine,
-        MIN(i.thumb_big_path) as image
+        MIN(i.webp_path) as image
        FROM memories m
        LEFT JOIN images i ON i.memory_id = m.id
        WHERE m.couple_id = ?
@@ -51,7 +51,7 @@ router.get('/', auth, async (req: any, res) => {
     const [images] = await pool.promise().query<Image[]>(
       `SELECT 
         id,
-        thumb_big_path,
+        webp_path,
         created_at
        FROM images 
        WHERE couple_id = ?
@@ -97,7 +97,7 @@ router.get('/', auth, async (req: any, res) => {
         m.end_date,
         m.view_count,
         m.last_viewed_at,
-        MIN(i.thumb_big_path) as image
+        MIN(i.webp_path) as image
       FROM memories m
       LEFT JOIN images i ON i.memory_id = m.id
       WHERE m.couple_id = ?
@@ -117,7 +117,7 @@ router.get('/', auth, async (req: any, res) => {
         m.end_date,
         m.view_count,
         m.last_viewed_at,
-        MIN(i.thumb_big_path) as image
+        MIN(i.webp_path) as image
       FROM memories m
       LEFT JOIN images i ON i.memory_id = m.id
       WHERE m.couple_id = ?
@@ -133,7 +133,7 @@ router.get('/', auth, async (req: any, res) => {
         return {
           id: image.id,
           created_at: image.created_at,
-          image: image.thumb_big_path
+          image: (image as any).webp_path
         };
       } catch (error) {
         console.error(`Error processing image ${image.id}:`, error);
