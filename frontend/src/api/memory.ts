@@ -6,6 +6,7 @@ import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 export type MemoriesSortBy = 'created_desc' | 'most_viewed';
+export type MemoryImageType = 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 
 export interface Memory {
   id: number;
@@ -20,7 +21,7 @@ export interface Memory {
     thumb_big_path: string | null;
     webp_path: string | null;
     created_at: string;
-    type?: string;
+    type?: MemoryImageType;
     display_order: number | null;
   }[];
   created_at: string;
@@ -57,7 +58,7 @@ export interface MemoryImage {
   thumb_big_path: string | null;
   webp_path: string | null;
   created_at: string;
-  type?: string;
+  type?: MemoryImageType;
   display_order: number | null;
   width: number;
   height: number;
