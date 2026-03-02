@@ -163,9 +163,9 @@ button:focus-visible {
 }
 
 /* Touch optimizations (shared desktop + PWA su dispositivi touch) */
-/* Esclusi [role="switch"], pulsanti PWA (bar nav, FAB, pill categoria): padding/min-size gestiti da mobile-pwa.css */
+/* Esclusi [role="switch"], pulsanti PWA (bar nav, FAB, pill categoria, avatar, campanella): padding/min-size gestiti da mobile-pwa.css */
 @media (hover: none) and (pointer: coarse) {
-  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
+  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell),
   a[role="button"],
   .btn:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
   .touch-target,
@@ -176,10 +176,10 @@ button:focus-visible {
     min-width: 44px;
   }
 
-  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
+  button:not([role="switch"]):not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell),
   .btn:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
-  [type="button"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill),
-  [type="submit"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill) {
+  [type="button"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell),
+  [type="submit"]:not(.pwa-nav-button):not(.pwa-fab):not(.pwa-gallery-category-pill):not(.pwa-home-avatar):not(.pwa-add-avatar):not(.pwa-notification-bell) {
     padding: 12px !important;
   }
 
