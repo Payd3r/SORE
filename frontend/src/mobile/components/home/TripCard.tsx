@@ -36,11 +36,12 @@ export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
 
     const preferred = images.find((img) => img.display_order === 1);
     if (preferred) {
-      return preferred.webp_path || preferred.thumb_big_path || "";
+      // Prioritizziamo webp_path (alta risoluzione) o image (originale) sopra le thumb
+      return (preferred as any).image || preferred.webp_path || preferred.thumb_big_path || "";
     }
 
     const fallback = images[Math.floor(Math.random() * images.length)];
-    return fallback?.webp_path || fallback?.thumb_big_path || "";
+    return (fallback as any)?.image || fallback?.webp_path || fallback?.thumb_big_path || "";
   }, [isFuturo, memory.images]);
 
   const handleClick = () => {
