@@ -45,7 +45,7 @@ function createClusterIcon(isDark: boolean) {
     const thumbs = markers
       .slice(0, 3)
       .map((marker: any) => marker.options?.memoryThumb as string | undefined)
-      .filter(Boolean);
+      .filter((t): t is string => Boolean(t));
 
     if (childCount <= 3 && thumbs.length >= 2) {
       const imagesHtml = thumbs

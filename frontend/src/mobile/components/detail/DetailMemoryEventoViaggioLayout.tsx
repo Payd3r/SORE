@@ -44,8 +44,9 @@ export default function DetailMemoryEventoViaggioLayout({
   const carouselHeightPercent = 100 - heightPercent;
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (e: Event) => {
+      const target = e.target as Node | null;
+      if (menuRef.current && target && !menuRef.current.contains(target)) {
         setMenuOpen(false);
       }
     };

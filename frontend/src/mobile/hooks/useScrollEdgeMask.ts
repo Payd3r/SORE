@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export function useScrollEdgeMask(scrollRef: React.RefObject<HTMLDivElement | null>) {
   const [atStart, setAtStart] = useState(true);
