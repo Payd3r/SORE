@@ -8,8 +8,8 @@
   <link rel="icon" type="image/png" sizes="152x152" href="/icons/icon-152x152.png" />
   <link rel="icon" type="image/png" sizes="167x167" href="/icons/icon-167x167.png" />
 
-  <link rel="icon" type="image/png" href="/favicon.png?v=2" />
-  <link rel="manifest" href="/manifest.json?v=2" />
+  <link rel="icon" type="image/png" href="/favicon.png?v=3" />
+  <link rel="manifest" href="/manifest.json?v=3" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="SORE - Album Tecnologico" />
   <meta name="theme-color" content="#8B5CF6" />
@@ -23,10 +23,10 @@
   <meta name="mobile-web-app-status-bar-style" content="black-translucent" />
 
   <!-- iOS Icons -->
-  <link rel="apple-touch-icon" href="/icons/icon-152x152.png?v=2" />
-  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png?v=2" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png?v=2" />
-  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png?v=2" />
+  <link rel="apple-touch-icon" href="/icons/icon-152x152.png?v=3" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png?v=3" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png?v=3" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png?v=3" />
 
   <!-- iOS Splash Screens - Light Theme -->
   <link rel="apple-touch-startup-image" href="/splash/light/apple-splash-2048-2732.png"
@@ -44,12 +44,129 @@
   <link rel="apple-touch-startup-image" href="/splash/dark/apple-splash-1536-2048.png"
     media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (prefers-color-scheme: dark)" />
 
-  <!-- Font e icone PWA: preconnect + caricamento -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" />
+  <!-- Font e icone PWA: preload font locali per caricamento istantaneo -->
+  <link rel="preload" href="/fonts/Inter-VariableFont.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+  <link rel="preload" href="/fonts/material-symbols-outlined.woff2" as="font" type="font/woff2"
+    crossorigin="anonymous" />
+
+  <style>
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: swap;
+      src: url('/fonts/Inter-VariableFont.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'Material Symbols Outlined';
+      font-style: normal;
+      font-weight: 100 700;
+      font-display: block;
+      src: url('/fonts/material-symbols-outlined.woff2') format('woff2');
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* PWA Loading Screen Base Styles (Offline & Instant) */
+    :root {
+      --pwa-loader-bg: #f5f5f5;
+      --pwa-loader-text: #1c1c1e;
+      --pwa-loader-subtext: #6c6c6e;
+      --pwa-loader-spinner: #1c1c1e;
+      --pwa-loader-border: #d1d1d6;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --pwa-loader-bg: #1c1c1e;
+        --pwa-loader-text: #ffffff;
+        --pwa-loader-subtext: #b0b0b0;
+        --pwa-loader-spinner: #e8e8ed;
+        --pwa-loader-border: #48484a;
+      }
+    }
+
+    /* Sfondo predefinito scuro/chiaro prima che React si avvii */
+    body {
+      background-color: var(--pwa-loader-bg);
+      margin: 0;
+    }
+
+    .pwa-loading-screen-inline {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--pwa-loader-bg);
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--pwa-loader-text);
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .pwa-loading-screen-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      max-width: 280px;
+      text-align: center;
+    }
+
+    .pwa-loading-screen-logo {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      opacity: 0.95;
+    }
+
+    .pwa-loading-screen-spinner {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid var(--pwa-loader-border);
+      border-top-color: var(--pwa-loader-spinner);
+      animation: pwa-loading-spin 0.9s linear infinite;
+    }
+
+    .pwa-loading-screen-text {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .pwa-loading-screen-subtext {
+      margin: 0;
+      font-size: 14px;
+      color: var(--pwa-loader-subtext);
+      line-height: 1.35;
+    }
+
+    @keyframes pwa-loading-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 
   <!-- Preconnect ai domini esterni -->
   <link rel="preconnect" href="https://api.example.com" />
@@ -61,7 +178,16 @@
 </head>
 
 <body class="min-h-screen bg-gray-50">
-  <div id="root" class="min-h-screen"></div>
+  <div id="root" class="min-h-screen">
+    <div class="pwa-loading-screen-inline" aria-live="polite">
+      <div class="pwa-loading-screen-inner">
+        <div class="pwa-loading-screen-logo" aria-hidden="true">SORE</div>
+        <div class="pwa-loading-screen-spinner" aria-hidden="true"></div>
+        <p class="pwa-loading-screen-text">Caricamento...</p>
+        <p class="pwa-loading-screen-subtext">Stiamo preparando la tua esperienza.</p>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Memory } from "../../../api/memory";
 import { getImageUrl } from "../../../api/images";
 import PwaSkeleton from "../skeletons/PwaSkeleton";
+import { usePwaPrefetch } from "../../hooks";
 
 type TripCardProps = {
   memory: Memory;
@@ -31,25 +32,20 @@ export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
   const navigate = useNavigate();
   const [isLoaded, setIsLoaded] = useState(false);
   const isFuturo = memory.type?.toUpperCase() === "FUTURO";
+  const { prefetchMemoryDetails } = usePwaPrefetch();
 
-  const imagePath = useMemo(() => {
-    if (isFuturo) return "";
+  const handlePrefetch = useCallback(() => {
+    if (!isFuturo) void prefetchMemoryDetails([memory.id]);
+  }, [isFuturo, memory.id, prefetchMemoryDetails]);
 
-    // Se la memory ha già il campo 'image' (di solito webp_path dal backend home)
-    if ((memory as any).image) return (memory as any).image;
+  const images = memory.images ?? [];
+  const imageObj = useMemo(() => {
+    if (isFuturo || images.length === 0) return null;
+    return images.find((img) => img.display_order === 1) || images[0];
+  }, [isFuturo, images]);
 
-    const images = memory.images ?? [];
-    if (images.length === 0) return "";
-
-    const preferred = images.find((img) => img.display_order === 1);
-    if (preferred) {
-      // Prioritizziamo webp_path (alta risoluzione) sopra le thumb
-      return preferred.webp_path || preferred.thumb_big_path || "";
-    }
-
-    const fallback = images[Math.floor(Math.random() * images.length)];
-    return fallback?.webp_path || fallback?.thumb_big_path || "";
-  }, [isFuturo, (memory as any).image, memory.images]);
+  const hdPath = imageObj?.webp_path || (memory as any).image;
+  const placeholderPath = imageObj?.thumb_small_path || imageObj?.thumb_path;
 
   const handleClick = () => {
     if (isFuturo && onFuturoClick) {
@@ -67,12 +63,24 @@ export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
         className="pwa-trip-card-tap-area"
         onClick={handleClick}
         onKeyDown={(e) => e.key === "Enter" && handleClick()}
+        onMouseEnter={handlePrefetch}
+        onTouchStart={handlePrefetch}
         aria-label={`Vedi ${memory.title}`}
       >
         <div className="pwa-trip-card-media">
-          {imagePath ? (
+          {hdPath ? (
             <>
-              {!isLoaded && (
+              {/* Immagine segnaposto a bassa risoluzione (sfocata) */}
+              {placeholderPath && !isLoaded && (
+                <img
+                  src={getImageUrl(placeholderPath)}
+                  alt=""
+                  className="pwa-trip-card-placeholder-img"
+                />
+              )}
+
+              {/* Skeleton solo se non c'è nemmeno il placeholder */}
+              {!isLoaded && !placeholderPath && (
                 <PwaSkeleton
                   style={{
                     position: "absolute",
@@ -82,8 +90,10 @@ export default function TripCard({ memory, onFuturoClick }: TripCardProps) {
                   }}
                 />
               )}
+
+              {/* Immagine HD che si sovrappone */}
               <img
-                src={getImageUrl(imagePath)}
+                src={getImageUrl(hdPath)}
                 alt=""
                 className={`pwa-trip-card-img ${isLoaded ? "is-loaded" : ""}`}
                 onLoad={() => setIsLoaded(true)}

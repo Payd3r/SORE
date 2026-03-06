@@ -5,6 +5,7 @@ import {
   markAsRead as apiMarkAsRead,
   markAllAsRead as apiMarkAllAsRead,
   deleteNotification as apiDeleteNotification,
+  deleteAllNotifications as apiDeleteAllNotifications,
 } from "../../api/notifications";
 import { invalidateOnNotificationChange } from "../utils/queryInvalidations";
 
@@ -54,6 +55,13 @@ export function useNotificationsQuery() {
     },
   });
 
+  const deleteAllMutation = useMutation({
+    mutationFn: apiDeleteAllNotifications,
+    onSuccess: async () => {
+      await invalidateOnNotificationChange(queryClient);
+    },
+  });
+
   const notifications = query.data?.notifications ?? [];
   const unread = query.data?.unread ?? 0;
   const total = query.data?.total ?? 0;
@@ -67,5 +75,6 @@ export function useNotificationsQuery() {
     markAsRead: markAsReadMutation.mutateAsync,
     markAllAsRead: markAllAsReadMutation.mutateAsync,
     deleteNotification: deleteMutation.mutateAsync,
+    deleteAllNotifications: deleteAllMutation.mutateAsync,
   };
 }

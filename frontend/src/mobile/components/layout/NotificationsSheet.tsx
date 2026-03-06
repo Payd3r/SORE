@@ -66,7 +66,7 @@ export default function NotificationsSheet({
   const navigate = useNavigate();
   const touchStartXRef = useRef<number>(0);
   const deletedBySwipeRef = useRef<number | null>(null);
-  const [swipe, setSwipe] = useState<{ id: number; offset: number } | null>(null);
+  const [swipe, setSwipe] = useState<{ id: number; offset: number; isReleasing?: boolean } | null>(null);
 
   const handleNotificationClick = async (n: Notification) => {
     if (deletedBySwipeRef.current === n.id) {
@@ -84,23 +84,31 @@ export default function NotificationsSheet({
 
   const handleTouchStart = (e: React.TouchEvent, id: number) => {
     touchStartXRef.current = e.touches[0].clientX;
-    setSwipe({ id, offset: 0 });
+    setSwipe({ id, offset: 0, isReleasing: false });
   };
 
   const handleTouchMove = (e: React.TouchEvent, id: number) => {
-    if (!swipe || swipe.id !== id) return;
+    if (!swipe || swipe.id !== id || swipe.isReleasing) return;
     const delta = e.touches[0].clientX - touchStartXRef.current;
-    setSwipe((prev) => (prev ? { ...prev, offset: delta } : null));
+    setSwipe({ id, offset: delta, isReleasing: false });
   };
 
   const handleTouchEnd = (e: React.TouchEvent, id: number) => {
     if (!swipe || swipe.id !== id) return;
+
     if (Math.abs(swipe.offset) >= SWIPE_DELETE_THRESHOLD) {
       e.preventDefault();
       deletedBySwipeRef.current = id;
-      onDelete(id);
+      setSwipe((prev) => prev ? { ...prev, offset: Math.sign(prev.offset) * window.innerWidth, isReleasing: true } : null);
+
+      setTimeout(() => {
+        onDelete(id);
+        setSwipe(null);
+      }, 200);
+    } else {
+      setSwipe((prev) => prev ? { ...prev, offset: 0, isReleasing: true } : null);
+      setTimeout(() => setSwipe(null), 200);
     }
-    setSwipe(null);
   };
 
   return (
@@ -153,7 +161,10 @@ export default function NotificationsSheet({
                       className={`pwa-notifications-sheet-item ${isUnread(n.status) ? "pwa-notifications-sheet-item-unread" : ""}`}
                       style={
                         isSwiping
-                          ? { transform: `translateX(${swipe.offset}px)` }
+                          ? {
+                            transform: `translateX(${swipe.offset}px)`,
+                            transition: swipe.isReleasing ? "transform 0.2s ease-out" : "none"
+                          }
                           : undefined
                       }
                       onClick={() => handleNotificationClick(n)}

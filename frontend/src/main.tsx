@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/base.css'
+import 'material-symbols/outlined.css'
 import './mobile/styles/design-system-pwa.css'
 import App from './App.tsx'
 import 'lazysizes'
@@ -13,8 +14,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   })
 }
 
+const app = <App />
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  import.meta.env.DEV ? <StrictMode>{app}</StrictMode> : app,
 )
+

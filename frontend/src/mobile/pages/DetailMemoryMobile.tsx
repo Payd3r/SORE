@@ -117,7 +117,7 @@ export default function DetailMemoryMobile() {
 
   const memoryImages = memory.images ?? [];
 
-  const overlayImages: PhotoOverlayImage[] = memoryImages.map((img) => ({
+  const overlayImages: PhotoOverlayImage[] = [...memoryImages].reverse().map((img) => ({
     id: img.id,
     fullUrl: getImageUrl(img.webp_path ?? img.thumb_big_path ?? ""),
     thumbUrl: getImageUrl(img.thumb_big_path ?? img.webp_path ?? ""),

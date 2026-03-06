@@ -76,7 +76,7 @@ export default function DetailGallerySection({
     longPressTimerRef.current = window.setTimeout(() => {
       longPressTriggeredRef.current = true;
       setOrderMenuImageId(imageId);
-    }, 450);
+    }, 800);
   };
 
   const handleApplyOrder = async () => {
@@ -167,7 +167,7 @@ export default function DetailGallerySection({
         </div>
       ) : (
         <div className="pwa-detail-gallery-grid">
-          {images.map((img) => (
+          {[...images].reverse().map((img) => (
             <button
               key={img.id}
               type="button"

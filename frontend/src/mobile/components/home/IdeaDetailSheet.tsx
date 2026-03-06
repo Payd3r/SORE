@@ -5,6 +5,7 @@ import { it } from "date-fns/locale";
 import type { Idea } from "../../../api/ideas";
 import { checkIdea, updateIdea } from "../../../api/ideas";
 import { invalidateOnIdeaChange } from "../../utils/queryInvalidations";
+import { linkify } from "../../../utils/textUtils";
 
 const IDEA_TYPE_LABELS: Record<string, string> = {
   RISTORANTI: "Ristoranti",
@@ -165,7 +166,7 @@ export default function IdeaDetailSheet({
         <>
           <h2 className="pwa-idea-detail-title">{idea.title}</h2>
           {idea.description && (
-            <p className="pwa-idea-detail-desc">{idea.description}</p>
+            <p className="pwa-idea-detail-desc">{linkify(idea.description)}</p>
           )}
           <div className="pwa-idea-detail-actions">
             {canEditOrDelete && (

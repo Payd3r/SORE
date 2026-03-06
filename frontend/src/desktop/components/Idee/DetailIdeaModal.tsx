@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { deleteIdea, updateIdea } from '../../../api/ideas';
 import { createPortal } from 'react-dom';
+import { linkify } from '../../../utils/textUtils';
 
 interface DetailIdeaModalProps {
   idea: Idea | null;
@@ -30,7 +31,7 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
 
   // Mutation per l'aggiornamento dell'idea
   const updateMutation = useMutation({
-    mutationFn: (updatedData: { title: string; description: string }) => 
+    mutationFn: (updatedData: { title: string; description: string }) =>
       updateIdea(idea!.id, updatedData),
     onSuccess: (updatedIdea) => {
       queryClient.setQueryData(['idea', updatedIdea.id], updatedIdea);
@@ -121,9 +122,9 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
   };
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 z-[9999]"
-      style={{ 
+      style={{
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         height: '100vh',
         width: '100vw',
@@ -136,7 +137,7 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
       }}
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-[90vw] sm:w-[30vw] max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
         style={{
@@ -221,7 +222,7 @@ export default function DetailIdeaModal({ idea: initialIdea, isOpen, onClose, on
                 />
               ) : (
                 <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-                  {idea.description || 'Nessuna descrizione'}
+                  {idea.description ? linkify(idea.description) : 'Nessuna descrizione'}
                 </p>
               )}
             </div>

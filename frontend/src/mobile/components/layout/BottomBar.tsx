@@ -129,7 +129,7 @@ export default function BottomBar() {
                     type="button"
                     className={`pwa-nav-button ${active ? "pwa-nav-button-active" : ""}`}
                     style={active ? { paddingLeft: 28, paddingRight: 28 } : undefined}
-                    onClick={() => navigate(item.to)}
+                    onClick={() => navigate(item.to, { viewTransition: true })}
                     onMouseEnter={() => scheduleRoutePrefetch(item.to as PrefetchRoute)}
                     onTouchStart={() => scheduleRoutePrefetch(item.to as PrefetchRoute)}
                     onMouseLeave={() => cancelRoutePrefetch(item.to as PrefetchRoute)}
@@ -152,7 +152,7 @@ export default function BottomBar() {
           type="button"
           className={`pwa-fab ${isAddActive ? "pwa-fab-active" : ""}`}
           style={isAddActive ? { paddingLeft: 28, paddingRight: 28 } : undefined}
-          onClick={() => navigate("/add")}
+          onClick={() => navigate("/add", { viewTransition: true })}
           aria-current={isAddActive ? "page" : undefined}
           aria-label={isAddActive ? undefined : "Aggiungi ricordo o idea"}
         >

@@ -62,7 +62,7 @@ export default function MemoryCardList({ memory, onClick, futureMemories }: Memo
 
   const typeStyle = getTypeLabel(memory?.type || '');
   const firstImage = memory?.images[0];
-  
+
   // Determiniamo quale percorso immagine utilizzare in base al tipo di ricordo
   const imagePath = isViaggio || isSemplice
     ? (firstImage?.webp_path || firstImage?.thumb_big_path || '')

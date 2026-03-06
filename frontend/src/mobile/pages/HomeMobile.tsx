@@ -176,6 +176,8 @@ export default function HomeMobile() {
             ? [
               {
                 id: item.id,
+                thumb_path: null,
+                thumb_small_path: null,
                 thumb_big_path: item.image,
                 webp_path: null,
                 created_at: item.last_viewed_at ?? "",
@@ -188,7 +190,7 @@ export default function HomeMobile() {
           tot_img: item.image ? 1 : 0,
           view_count: item.view_count,
           last_viewed_at: item.last_viewed_at,
-        } satisfies Memory;
+        } as Memory;
       });
     }
 

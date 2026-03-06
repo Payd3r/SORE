@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Memory, MemoryType } from '../../../api/memory';
+import { MemoryType, MemoryImage, MemoryWithImages } from '../../../api/memory';
 import { getImageUrl } from '../../../api/images';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
@@ -8,20 +8,6 @@ import { getTrackDetails, SpotifyTrack } from '../../../api/spotify';
 import { FaSpotify } from 'react-icons/fa';
 import { IoCalendarOutline, IoLocationOutline, IoMusicalNotesOutline } from 'react-icons/io5';
 import TransformFutureMemoryModal from './TransformFutureMemoryModal';
-
-interface MemoryImage {
-  id: number;
-  thumb_big_path: string | null;
-  webp_path: string | null;
-  created_at: string;
-  width: number;
-  height: number;
-  display_order: number | null;
-}
-
-interface MemoryWithImages extends Memory {
-  images: MemoryImage[];
-}
 
 interface MemoryCardProps {
   memory?: MemoryWithImages;
@@ -39,10 +25,10 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
   // Ottimizza il layout delle immagini
   const optimizeImageLayout = useMemo(() => {
     if (!memory?.images?.length) return [];
-    
+
     const isViaggio = memory.type.toLowerCase() === 'viaggio';
     const isEvento = memory.type.toLowerCase() === 'evento';
-    
+
     // Ordina le immagini per data di creazione
     const sortedImages = [...memory.images].sort((a, b) => {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -54,24 +40,26 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
       const selectedImages = sortedImages.slice(0, 5);
       // Trova l'immagine con il miglior rapporto per la copertina (idealmente landscape)
       const coverIndex = selectedImages.findIndex(img => {
-        const aspectRatio = img.width / img.height;
+        const width = img.width || 0;
+        const height = img.height || 1;
+        const aspectRatio = width / height;
         return aspectRatio >= 1.3 && aspectRatio <= 1.8; // Rapporto ideale per la copertina
       });
-      
+
       if (coverIndex !== -1) {
         // Sposta l'immagine migliore all'inizio
         const [bestCover] = selectedImages.splice(coverIndex, 1);
         selectedImages.unshift(bestCover);
       }
-      
+
       return selectedImages;
     }
-    
+
     // Per gli eventi, prendi le prime 4 immagini
     if (isEvento) {
       return sortedImages.slice(0, 4);
     }
-    
+
     // Per i ricordi semplici, prendi solo la prima immagine
     return sortedImages.slice(0, 1);
   }, [memory?.images, memory?.type]);
@@ -212,27 +200,27 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
           onClick={() => setShowTransformModal(true)}
           style={{ minHeight: 220 }}
         >
-        <div className="flex flex-col items-center gap-2 w-full">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800 mb-2">
-            <IoCalendarOutline className="w-9 h-9 text-blue-600 dark:text-blue-300" />
-          </div>
-          <span className="inline-block px-3 py-1 mb-2 rounded-full text-xs font-semibold bg-blue-500 text-white shadow-sm uppercase tracking-wide">Futuro</span>
-          <h3 className="font-bold text-lg text-blue-900 dark:text-blue-100 mb-1 line-clamp-2">{memory?.title}</h3>
-          {memory?.start_date && (
-            <div className="flex items-center justify-center gap-1 text-blue-700 dark:text-blue-200 text-sm mb-2">
-              <IoCalendarOutline className="w-4 h-4" />
-              <span>In programma per il {formatDate(memory.start_date)}</span>
+          <div className="flex flex-col items-center gap-2 w-full">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-200 dark:bg-blue-800 mb-2">
+              <IoCalendarOutline className="w-9 h-9 text-blue-600 dark:text-blue-300" />
             </div>
-          )}
-          <p className="text-sm text-blue-800 dark:text-blue-200 opacity-80 mt-2">Presto potrai aggiungere foto e dettagli a questo ricordo!</p>
+            <span className="inline-block px-3 py-1 mb-2 rounded-full text-xs font-semibold bg-blue-500 text-white shadow-sm uppercase tracking-wide">Futuro</span>
+            <h3 className="font-bold text-lg text-blue-900 dark:text-blue-100 mb-1 line-clamp-2">{memory?.title}</h3>
+            {memory?.start_date && (
+              <div className="flex items-center justify-center gap-1 text-blue-700 dark:text-blue-200 text-sm mb-2">
+                <IoCalendarOutline className="w-4 h-4" />
+                <span>In programma per il {formatDate(memory.start_date)}</span>
+              </div>
+            )}
+            <p className="text-sm text-blue-800 dark:text-blue-200 opacity-80 mt-2">Presto potrai aggiungere foto e dettagli a questo ricordo!</p>
+          </div>
         </div>
-      </div>
-      
-      <TransformFutureMemoryModal
-        isOpen={showTransformModal}
-        onClose={() => setShowTransformModal(false)}
-        memory={memory}
-      />
+
+        <TransformFutureMemoryModal
+          isOpen={showTransformModal}
+          onClose={() => setShowTransformModal(false)}
+          memory={memory}
+        />
       </>
     );
   }
@@ -245,29 +233,27 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
       <div className="relative h-full flex flex-col">
         {/* Image Grid Section */}
         <div className="relative flex-grow">
-          <div className={`grid gap-0.5 h-full ${
-            isViaggio ? 'grid-cols-3 grid-rows-2 min-h-[200px] sm:min-h-[180px]' :
+          <div className={`grid gap-0.5 h-full ${isViaggio ? 'grid-cols-3 grid-rows-2 min-h-[200px] sm:min-h-[180px]' :
             isEvento ? 'grid-cols-4 grid-rows-1 min-h-[160px] sm:min-h-[180px]' :
-            'grid-cols-1 grid-rows-1 min-h-[140px] sm:min-h-[200px]'
-          }`}>
+              'grid-cols-1 grid-rows-1 min-h-[140px] sm:min-h-[200px]'
+            }`}>
             {optimizedImages.map((image, index) => (
               <div
                 key={index}
-                className={`relative overflow-hidden ${
-                  isViaggio && index === 0 ? 'col-span-2 row-span-2' :
+                className={`relative overflow-hidden ${isViaggio && index === 0 ? 'col-span-2 row-span-2' :
                   isViaggio ? 'col-span-1 row-span-1' :
-                  isEvento ? 'col-span-1' :
-                  'col-span-1 row-span-1'
-                }`}
+                    isEvento ? 'col-span-1' :
+                      'col-span-1 row-span-1'
+                  }`}
               >
                 <img
                   src={getImageUrl(
                     // Utilizziamo webp_path per:
                     // 1. La prima immagine di un viaggio
                     // 2. L'unica immagine di un ricordo semplice
-                    ((isViaggio && index === 0 && image.webp_path) || 
-                    (memory?.type.toLowerCase() === 'semplice' && image.webp_path) || 
-                    image.thumb_big_path) || ''
+                    ((isViaggio && index === 0 && image.webp_path) ||
+                      (memory?.type.toLowerCase() === 'semplice' && image.webp_path) ||
+                      image.thumb_big_path) || ''
                   )}
                   alt={`${memory?.title} - ${index + 1}`}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 sm:group-hover:scale-105"
@@ -281,12 +267,11 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
               </div>
             ))}
           </div>
-          <div className={`absolute inset-0 bg-gradient-to-t ${
-            memory?.type.toLowerCase() === 'semplice' 
-              ? 'from-black/40 via-black/5 to-transparent dark:from-black/70'
-              : 'from-black/70 via-black/5 to-transparent'
-          }`} />
-          
+          <div className={`absolute inset-0 bg-gradient-to-t ${memory?.type.toLowerCase() === 'semplice'
+            ? 'from-black/40 via-black/5 to-transparent dark:from-black/70'
+            : 'from-black/70 via-black/5 to-transparent'
+            }`} />
+
           {/* Content Overlay */}
           <div className="absolute inset-0 flex flex-col justify-between p-3 text-white z-10">
             {/* Badge Section - Top */}
@@ -320,10 +305,9 @@ export default function MemoryCard({ memory, onClick, futureMemories }: MemoryCa
                   )}
                 </div>
               )}
-              
-              <h3 className={`font-bold ${
-                isViaggio ? 'text-lg mb-1' : isEvento ? 'text-base mb-1.5' : 'text-base mb-1.5'
-              }`}>
+
+              <h3 className={`font-bold ${isViaggio ? 'text-lg mb-1' : isEvento ? 'text-base mb-1.5' : 'text-base mb-1.5'
+                }`}>
                 {memory?.title}
               </h3>
 

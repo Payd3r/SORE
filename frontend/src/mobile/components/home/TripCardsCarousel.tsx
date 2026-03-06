@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import type { Memory } from "../../../api/memory";
 import TripCard from "./TripCard";
 
@@ -21,60 +21,64 @@ function getScaleForIndex(containerCenter: number, cardIndex: number): number {
 
 export default function TripCardsCarousel({ trips, onFuturoClick }: TripCardsCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
+  // Refs per i wrapper di ogni card (per manipolare transform direttamente sul DOM)
+  const itemRefsRef = useRef<HTMLDivElement[]>([]);
+  const rafRef = useRef<number | null>(null);
 
-  const updateScroll = useCallback(() => {
+  const updateScales = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setScrollLeft(el.scrollLeft);
-    setContainerWidth(el.clientWidth);
+    const containerCenter = el.scrollLeft + el.clientWidth / 2;
+    const paddingInline = Math.max(0, (el.clientWidth - CARD_WIDTH) / 2);
+    el.style.paddingLeft = `${paddingInline}px`;
+    el.style.paddingRight = `${paddingInline}px`;
+
+    itemRefsRef.current.forEach((item, index) => {
+      if (!item) return;
+      const scale = getScaleForIndex(containerCenter, index);
+      const cardCenter = index * CARD_TOTAL + CARD_WIDTH / 2;
+      const isCenter = Math.abs(cardCenter - containerCenter) < CARD_WIDTH * 0.6;
+      item.style.transform = `scale(${scale})`;
+      item.style.zIndex = isCenter ? "2" : "1";
+    });
   }, []);
+
+  const onScroll = useCallback(() => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(updateScales);
+  }, [updateScales]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    updateScroll();
-    el.addEventListener("scroll", updateScroll, { passive: true });
-    const ro = new ResizeObserver(updateScroll);
+    updateScales();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(updateScales);
     ro.observe(el);
     return () => {
-      el.removeEventListener("scroll", updateScroll);
+      el.removeEventListener("scroll", onScroll);
       ro.disconnect();
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [updateScroll, trips.length]);
+  }, [onScroll, updateScales, trips.length]);
 
   if (trips.length === 0) return null;
 
-  const containerCenter = scrollLeft + containerWidth / 2;
-  const paddingInline = containerWidth > 0 ? Math.max(0, (containerWidth - CARD_WIDTH) / 2) : 24;
-
   return (
-    <div
-      ref={scrollRef}
-      className="pwa-trip-carousel"
-      style={{ paddingLeft: paddingInline, paddingRight: paddingInline }}
-    >
+    <div ref={scrollRef} className="pwa-trip-carousel">
       <div className="pwa-trip-carousel-inner">
-        {trips.map((memory, index) => {
-          const scale = containerWidth > 0 ? getScaleForIndex(containerCenter, index) : 1;
-          const isCenter = containerWidth > 0 && Math.abs((index * CARD_TOTAL + CARD_WIDTH / 2) - containerCenter) < CARD_WIDTH * 0.6;
-          return (
-            <div
-              key={memory.id}
-              className="pwa-trip-carousel-item"
-              style={{
-                width: CARD_WIDTH,
-                flexShrink: 0,
-                transform: `scale(${scale})`,
-                zIndex: isCenter ? 2 : 1,
-              }}
-            >
-              <TripCard memory={memory} onFuturoClick={onFuturoClick} />
-            </div>
-          );
-        })}
+        {trips.map((memory, index) => (
+          <div
+            key={memory.id}
+            ref={(el) => { if (el) itemRefsRef.current[index] = el; }}
+            className="pwa-trip-carousel-item"
+            style={{ width: CARD_WIDTH, flexShrink: 0 }}
+          >
+            <TripCard memory={memory} onFuturoClick={onFuturoClick} />
+          </div>
+        ))}
       </div>
     </div>
   );
 }
+

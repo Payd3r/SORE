@@ -26,7 +26,7 @@ const TouchDatePicker = ({ selected, onChange, dateFormat, locale }: {
   const handleWrapperTouch = (e: TouchEvent<HTMLDivElement>) => {
     // Preveniamo la propagazione dell'evento touch
     e.stopPropagation();
-    
+
     // Quando l'utente tocca il datepicker, rimuoviamo il focus da qualsiasi elemento
     // per assicurarci che la tastiera mobile si chiuda
     if (document.activeElement instanceof HTMLElement) {
@@ -81,7 +81,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
     if (isOpen && image?.id) {
       // Non mostriamo il loading iniziale perché usiamo la thumbnail
       setImageError(null);
-      
+
       const imageId = parseInt(image.id, 10);
       if (isNaN(imageId)) {
         setImageError('ID immagine non valido');
@@ -141,15 +141,15 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
     if (!image || !fullImageData?.data) return;
 
     onClose();
-    navigate('/mappa', { 
-      state: { 
+    navigate('/mappa', {
+      state: {
         latitude: fullImageData.data.latitude,
         longitude: fullImageData.data.longitude,
         imageId: image.id,
         imagePath: image.thumb_big_path,
         zoom: 18,
         focusedImage: true
-      } 
+      }
     });
   };
 
@@ -189,7 +189,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
       // Invalida tutte le query relative alle immagini per aggiornare i dati
       await queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
       await queryClient.invalidateQueries({ queryKey: ['image', image?.id] });
-      
+
       // Aggiorna i dati locali
       if (image) {
         image.type = editData.type;
@@ -202,7 +202,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
           fullImageData.data.display_order = newOrder;
         }
       }
-      
+
       setIsEditing(false);
 
       // Resetto editData ai valori aggiornati
@@ -320,9 +320,9 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
               onError={() => {
                 setImageError('Errore nel caricamento dell\'immagine');
               }}
-              
+
             />
-          )}          
+          )}
         </div>
 
         {/* Dettagli Desktop */}
@@ -349,8 +349,8 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 </select>
               ) : (
                 <span className="px-3 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded-full uppercase">
-                {displayImage.type}
-              </span>
+                  {displayImage.type}
+                </span>
               )}
             </div>
             {/* Card Tipo e Data/Ora */}
@@ -387,14 +387,14 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-lg font-medium text-white">
-                    {displayImage.created_by_name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-xs text-gray-500 dark:text-gray-400">Caricata da</span>
+                      {displayImage.created_by_name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">Caricata da</span>
                     <span className="block text-sm font-medium text-gray-900 dark:text-white break-words">
-                    {displayImage.created_by_name}
-                  </span>
+                      {displayImage.created_by_name}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -423,10 +423,10 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
                 >
                   <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </div>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
                   <span className="text-sm font-medium text-left">Visualizza sulla mappa</span>
                 </button>
               </div>
@@ -487,7 +487,7 @@ const ImageDetailModal = ({ isOpen, onClose, image, onImageDeleted }: ImageDetai
               )}
             </div>
 
-            
+
           </div>
         </div>
       </div>

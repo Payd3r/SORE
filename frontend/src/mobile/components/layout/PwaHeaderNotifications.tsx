@@ -16,10 +16,11 @@ export default function PwaHeaderNotifications() {
     refetch,
     markAsRead,
     deleteNotification,
+    deleteAllNotifications,
   } = useNotificationsQuery();
 
   const handleDeleteAll = async () => {
-    await Promise.all(notifications.map((n) => deleteNotification(n.id)));
+    await deleteAllNotifications();
   };
 
   useEffect(() => {

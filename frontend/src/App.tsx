@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { UploadProvider } from './contexts/UploadContext';
+import { IsPwaProvider, useIsPwaContext } from './contexts/IsPwaContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createAppQueryClient, setupPwaQueryPersistence } from './lib/react-query';
 import ProtectedRoute from './desktop/components/Layout/ProtectedRoute';
@@ -10,8 +11,8 @@ import Layout from './desktop/components/Layout/Layout';
 import { SidebarProvider } from './desktop/components/Layout/Layout';
 import DesktopLoader from './desktop/components/Layout/Loader';
 import PwaLoadingScreen from './mobile/components/ui/PwaLoadingScreen';
-import { useIsPwa } from './utils/isPwa';
 import MappaMobile from './mobile/pages/MappaMobile';
+
 
 // Lazy loading delle pagine
 const WelcomeAuthenticate = lazy(() => import('./desktop/pages/WelcomeAuthenticate'));
@@ -43,44 +44,43 @@ const PwaLayout = lazy(() => import('./mobile/pwa/PwaLayout'));
 
 // Componente che sceglie quale versione della Home mostrare
 const HomeSelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <HomeMobile /> : <Home />;
 };
 
 // Componente che sceglie quale versione della Galleria mostrare
 const GallerySelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <GalleryMobile /> : <Gallery />;
 };
 
 const IdeasSelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <IdeasMobile /> : <Ideas />;
 };
 
 // Per altre pagine che potrebbero avere una versione mobile in futuro
 const MappaSelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <MappaMobile /> : <Mappa />;
 };
 
 const MemorySelector = () => {
-  const isPwa = useIsPwa();
-  return isPwa ? <Memory /> : <Memory />;
+  return <Memory />;
 };
 
 const DetailMemorySelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <DetailMemoryMobile /> : <DetailMemory />;
 };
 
 const ProfileSelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <ProfileMobile /> : <Profile />;
 };
 
 const ProfileSubpageSelector = ({ page }: { page: 'coppia' | 'privacy' | 'condivisione' | 'aiuto' }) => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   if (!isPwa) return <Navigate to="/profilo" replace />;
   switch (page) {
     case 'coppia':
@@ -98,12 +98,12 @@ const ProfileSubpageSelector = ({ page }: { page: 'coppia' | 'privacy' | 'condiv
 
 // Layout Selector - sceglie quale layout utilizzare in base alla modalità
 const LayoutSelector = () => {
-  const isPwa = useIsPwa();
+  const isPwa = useIsPwaContext();
   return isPwa ? <PwaLayout /> : <Layout />;
 };
 
-function App() {
-  const isPwa = useIsPwa();
+function AppInner() {
+  const isPwa = useIsPwaContext();
   const persistenceCleanupRef = useRef<(() => void) | null>(null);
   const queryClient = useMemo(() => createAppQueryClient(isPwa), [isPwa]);
 
@@ -200,6 +200,14 @@ function App() {
         </UploadProvider>
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function App() {
+  return (
+    <IsPwaProvider>
+      <AppInner />
+    </IsPwaProvider>
   );
 }
 

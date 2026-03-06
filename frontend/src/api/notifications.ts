@@ -92,6 +92,21 @@ export const markAllAsRead = async (): Promise<void> => {
 };
 
 /**
+ * Elimina tutte le notifiche
+ */
+export const deleteAllNotifications = async (): Promise<void> => {
+  try {
+    await axios.delete(
+      `${API_URLS.base}/api/notifications/all`,
+      { headers: getAuthHeaders() }
+    );
+  } catch (error) {
+    console.error("Errore nell'eliminazione di tutte le notifiche: ", error);
+    throw error;
+  }
+};
+
+/**
  * Elimina una notifica
  * @param notificationId ID della notifica da eliminare
  */

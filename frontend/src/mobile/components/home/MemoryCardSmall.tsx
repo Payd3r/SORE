@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Memory } from "../../../api/memory";
 import { getImageUrl } from "../../../api/images";
+import { usePwaPrefetch } from "../../hooks";
 
 type MemoryCardSmallProps = {
   memory: Memory;
@@ -18,6 +19,11 @@ type MemoryCardSmallProps = {
 export default function MemoryCardSmall({ memory, onFuturoClick, size = "default", showDate = true }: MemoryCardSmallProps) {
   const navigate = useNavigate();
   const isFuturo = memory.type?.toUpperCase() === "FUTURO";
+  const { prefetchMemoryDetails } = usePwaPrefetch();
+
+  const handlePrefetch = useCallback(() => {
+    if (!isFuturo) void prefetchMemoryDetails([memory.id]);
+  }, [isFuturo, memory.id, prefetchMemoryDetails]);
   const imagePath = useMemo(() => {
     if (isFuturo) return "";
     const images = memory.images ?? [];
@@ -49,6 +55,8 @@ export default function MemoryCardSmall({ memory, onFuturoClick, size = "default
       type="button"
       className={`pwa-memory-card-small${size === "large" ? " pwa-memory-card-small--large" : ""}`}
       onClick={handleClick}
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
     >
       <div className="pwa-memory-card-small-media">
         {imagePath ? (

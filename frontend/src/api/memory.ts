@@ -8,6 +8,19 @@ export type MemoryType = 'VIAGGIO' | 'EVENTO' | 'SEMPLICE' | 'FUTURO';
 export type MemoriesSortBy = 'created_desc' | 'most_viewed';
 export type MemoryImageType = 'COPPIA' | 'PAESAGGIO' | 'SINGOLO' | 'CIBO';
 
+export interface MemoryImage {
+  id: number;
+  thumb_path: string | null;
+  thumb_small_path: string | null;
+  thumb_big_path: string | null;
+  webp_path: string | null;
+  created_at: string;
+  type?: MemoryImageType;
+  display_order: number | null;
+  width?: number;  // Rendiamo opzionali questi per compatibilità dove non presenti
+  height?: number;
+}
+
 export interface Memory {
   id: number;
   title: string;
@@ -16,14 +29,7 @@ export interface Memory {
   end_date: string | null;
   location?: string | null;
   song?: string | null;
-  images: {
-    id: number;
-    thumb_big_path: string | null;
-    webp_path: string | null;
-    created_at: string;
-    type?: MemoryImageType;
-    display_order: number | null;
-  }[];
+  images: MemoryImage[];
   created_at: string;
   updated_at: string;
   tot_img: number;
@@ -53,19 +59,8 @@ export interface CarouselResponse {
   data: CarouselImage[];
 }
 
-export interface MemoryImage {
-  id: number;
-  thumb_big_path: string | null;
-  webp_path: string | null;
-  created_at: string;
-  type?: MemoryImageType;
-  display_order: number | null;
-  width: number;
-  height: number;
-}
-
 export interface MemoryWithImages extends Memory {
-  images: MemoryImage[];
+  // Eredita images: MemoryImage[] da Memory, ma qui garantiamo che ci siano sempre
 }
 
 export interface CreateShareLinkResponse {
@@ -214,4 +209,3 @@ export const createShareLink = async (memoryId: string): Promise<CreateShareLink
 
   return response.json();
 };
-
